@@ -39,3 +39,45 @@ struct Cpu {
     /// Exception Link Register 1
     elr_el1: u64,
 }
+
+#[derive(Debug, Clone, Copy)]
+struct PState {
+    /// Negative
+    n: bool,
+    /// Zero
+    z: bool,
+    /// Carry
+    c: bool,
+    /// Overflow
+    v: bool,
+
+    /// Stack pointer
+    sp: u8,
+    current_el: ExceptionLevel,
+
+    /// Debug
+    d: bool,
+    /// Async
+    a: bool,
+    /// IRQ
+    i: bool,
+    /// FIQ
+    f: bool,
+
+    /// Execution state
+    /// 0 === AArch64
+    nrw: bool,
+    /// Software-step
+    /// Until we support MDSCR this will be always 0
+    ss: bool,
+    /// Illegal
+    il: bool,
+}
+
+#[derive(Debug, Clone, Copy)]
+enum ExceptionLevel {
+    EL0,
+    EL1,
+    EL2,
+    EL3,
+}
