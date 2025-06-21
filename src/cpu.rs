@@ -1,7 +1,13 @@
+const GPRS: usize = 32;
+const ZERO_REG: usize = 31;
+
+const HIGH_32_MASK: u64 = 0xFFFF_FFFF_0000_0000;
+const LOW_32_MASK: u64 = 0xFFFF_FFFFu64;
+
 #[derive(Debug, Clone, Copy)]
 struct Cpu {
     /// 64-Bit General Purpose Register
-    x: [u64; 32],
+    x: [u64; GPRS],
 
     /// Program Counter
     pc: u64,
@@ -38,6 +44,55 @@ struct Cpu {
     elr_el2: u64,
     /// Exception Link Register 1
     elr_el1: u64,
+
+    pstate: PState,
+}
+
+impl Cpu {
+    fn sp_read(&self) -> u64 {
+        if self.pstate.sp == 0 {
+            return self.sp_el0;
+        }
+        match self.pstate.el() {
+            ExceptionLevel::EL0 => self.sp_el0,
+            ExceptionLevel::EL1 => self.sp_el1,
+            ExceptionLevel::EL2 => self.sp_el2,
+            ExceptionLevel::EL3 => self.sp_el3,
+        }
+    }
+    fn sp_write(&mut self, value: u64) {
+        if self.pstate.sp == 0 {
+            self.sp_el0 = value;
+        } else {
+            match self.pstate.el() {
+                ExceptionLevel::EL0 => self.sp_el0 = value,
+                ExceptionLevel::EL1 => self.sp_el1 = value,
+                ExceptionLevel::EL2 => self.sp_el2 = value,
+                ExceptionLevel::EL3 => self.sp_el3 = value,
+            }
+        }
+    }
+
+    /// When n == 31 we return 0
+    fn x_read(&self, n: usize, width: u8) -> u64 {
+        assert!(n < GPRS);
+        assert!(width <= 64 && width % 8 == 0);
+        if n != ZERO_REG {
+            let mask = if width == 64 { !0u64 } else { (1 << width) - 1 };
+            return self.x[n] & mask;
+        }
+        0
+    }
+
+    fn x_write(&mut self, n: usize, value: u64, is_32b: bool) {
+        assert!(n < GPRS);
+        if is_32b {
+            // We want lower 32 bits when value is 32bit
+            self.x[n] = (self.x[n] & HIGH_32_MASK) | (value & LOW_32_MASK);
+        } else {
+            self.x[n] = value;
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -72,6 +127,12 @@ struct PState {
     ss: bool,
     /// Illegal
     il: bool,
+}
+
+impl PState {
+    fn el(&self) -> ExceptionLevel {
+        self.current_el
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
