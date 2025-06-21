@@ -4,7 +4,7 @@ const ZERO_REG: usize = 31;
 const HIGH_32_MASK: u64 = 0xFFFF_FFFF_0000_0000;
 const LOW_32_MASK: u64 = 0xFFFF_FFFFu64;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Default, Debug, Clone, Copy)]
 struct Cpu {
     /// 64-Bit General Purpose Register
     x: [u64; GPRS],
@@ -49,6 +49,21 @@ struct Cpu {
 }
 
 impl Cpu {
+    fn init() -> Self {
+        let mut cpu = Cpu::default();
+        cpu.pstate.sp = 1;
+        cpu.sp_el0 = 1024;
+        cpu.sp_el1 = 1024 * 2;
+        cpu.sp_el2 = 1024 * 3;
+        cpu.sp_el3 = 1024 * 4;
+
+        cpu.x[31] = cpu.sp_el0;
+        // TODO: Use bitflags crate(?)
+        cpu.sctlr_el1 |= 1 << 1; // SCTLR_A
+        cpu.sctlr_el1 |= 1 << 2; // SCTLR_C
+        cpu.sctlr_el1 |= 1 << 12; // SCTLR_I 
+        cpu
+    }
     fn sp_read(&self) -> u64 {
         if self.pstate.sp == 0 {
             return self.sp_el0;
@@ -95,7 +110,7 @@ impl Cpu {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Default, Debug, Clone, Copy)]
 struct PState {
     /// Negative
     n: bool,
@@ -135,10 +150,11 @@ impl PState {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Default, Debug, Clone, Copy)]
 enum ExceptionLevel {
     EL0,
     EL1,
     EL2,
+    #[default]
     EL3,
 }
