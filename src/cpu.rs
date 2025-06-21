@@ -1,3 +1,5 @@
+use crate::get_bits_ct;
+
 const GPRS: usize = 32;
 const ZERO_REG: usize = 31;
 
@@ -108,6 +110,31 @@ impl Cpu {
             self.x[n] = value;
         }
     }
+
+    fn pstate_from_spsr(&mut self, spsr: u64, illegal_spsr_state: bool) {
+        self.pstate.ss = false;
+        if illegal_spsr_state {
+            self.pstate.il = false;
+        } else {
+            self.pstate.il = get_bits_ct!(spsr, 20, 1) != 0;
+            if get_bits_ct!(spsr, 4, 1) == 1 {
+                panic!("We haven't implemented AArch32 support!");
+            } else {
+                self.pstate.nrw = false;
+                self.pstate.current_el = ExceptionLevel::from_bits(get_bits_ct!(spsr, 2, 2) as u8);
+                self.sp_write(get_bits_ct!(spsr, 0, 1));
+            }
+        }
+        if self.pstate.il == true && self.pstate.nrw == true {
+            panic!("We haven't implemented AArch32 support!");
+        }
+        self.pstate.nzcv_from_spsr(spsr);
+        if self.pstate.nrw {
+            panic!("We haven't implemented AArch32 support!");
+        } else {
+            self.pstate.daif_from_spsr(spsr);
+        }
+    }
 }
 
 #[derive(Default, Debug, Clone, Copy)]
@@ -148,6 +175,18 @@ impl PState {
     fn el(&self) -> ExceptionLevel {
         self.current_el
     }
+    fn nzcv_from_spsr(&mut self, spsr: u64) {
+        self.n = get_bits_ct!(spsr, 31, 1) != 0;
+        self.z = get_bits_ct!(spsr, 30, 1) != 0;
+        self.c = get_bits_ct!(spsr, 29, 1) != 0;
+        self.v = get_bits_ct!(spsr, 28, 1) != 0;
+    }
+    fn daif_from_spsr(&mut self, spsr: u64) {
+        self.d = get_bits_ct!(spsr, 9, 1) != 0;
+        self.a = get_bits_ct!(spsr, 8, 1) != 0;
+        self.i = get_bits_ct!(spsr, 7, 1) != 0;
+        self.f = get_bits_ct!(spsr, 6, 1) != 0;
+    }
 }
 
 #[derive(Default, Debug, Clone, Copy)]
@@ -157,4 +196,16 @@ enum ExceptionLevel {
     EL2,
     #[default]
     EL3,
+}
+
+impl ExceptionLevel {
+    fn from_bits(bits: u8) -> Self {
+        match bits {
+            0b0 => Self::EL0,
+            0b01 => Self::EL1,
+            0b10 => Self::EL2,
+            0b11 => Self::EL3,
+            _ => panic!("Invalid bits"),
+        }
+    }
 }
