@@ -13,7 +13,7 @@ const USING_AARCH32: bool = false;
 const IS_SECURE_EL2_ENABLED: bool = false;
 
 #[derive(Default, Debug, Clone, Copy)]
-struct Cpu {
+pub struct Cpu {
     /// 64-Bit General Purpose Register
     x: [u64; GPRS],
 

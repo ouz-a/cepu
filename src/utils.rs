@@ -6,3 +6,7 @@ macro_rules! get_bits_ct {
         (($val >> START) & ((1 << LEN) - 1))
     }};
 }
+
+pub const fn get_bits_u32(val: u32, start: usize, len: usize) -> u32 {
+    (val >> start) & ((1u32 << len) - 1)
+}
