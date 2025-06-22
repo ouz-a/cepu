@@ -6,6 +6,12 @@ const ZERO_REG: usize = 31;
 const HIGH_32_MASK: u64 = 0xFFFF_FFFF_0000_0000;
 const LOW_32_MASK: u64 = 0xFFFF_FFFFu64;
 
+const HAVE_AARCH64: bool = false;
+const HAVE_EL: bool = true;
+const HAVE_AARCH32: bool = false;
+const USING_AARCH32: bool = false;
+const IS_SECURE_EL2_ENABLED: bool = false;
+
 #[derive(Default, Debug, Clone, Copy)]
 struct Cpu {
     /// 64-Bit General Purpose Register
@@ -47,6 +53,7 @@ struct Cpu {
     /// Exception Link Register 1
     elr_el1: u64,
 
+    event_register: bool,
     pstate: PState,
 }
 
@@ -111,6 +118,56 @@ impl Cpu {
         }
     }
 
+    fn sys_reg_write(
+        &mut self,
+        sys_op0: u8,
+        sys_op1: u8,
+        sys_crn: u8,
+        sys_crm: u8,
+        sys_op2: u8,
+        t: u8,
+    ) {
+        let comp: u64 = ((sys_op0 as u64) << 32)
+            | ((sys_op1 as u64) << 24)
+            | ((sys_crn as u64) << 16)
+            | ((sys_crm as u64) << 8)
+            | (sys_op2 as u64);
+
+        let register: MsrRegisters = comp.into();
+        match register {
+            MsrRegisters::Unknown => {
+                panic!("Value {comp} not convered, please check the ARM docs!")
+            }
+            MsrRegisters::ElrEl3 => {
+                if self.pstate.current_el.is_el3() {
+                    self.elr_el3 = self.x_read(t.into(), 64);
+                } else {
+                    panic!("Can't modify ELR_EL3, at current exception level");
+                }
+            }
+            MsrRegisters::SpsrEl3 => {
+                if self.pstate.current_el.is_el3() {
+                    self.spsr_el3 = self.x_read(t.into(), 64);
+                }
+                panic!("Can't modify SPSR_EL3, at current exception level");
+            }
+            MsrRegisters::ScrEl3 => {
+                if self.pstate.current_el.is_el3() {
+                    self.scr_el3 = self.x_read(t.into(), 64);
+                } else {
+                    panic!("Can't modify SCR_EL3, at current exception level");
+                }
+            }
+            MsrRegisters::SpEl1 => {
+                if self.pstate.current_el.is_el2() || self.pstate.current_el.is_el3() {
+                    self.sp_el1 = self.x_read(t.into(), 64);
+                } else {
+                    panic!("Can't modify SP_EL1, at current exception level");
+                }
+            }
+        }
+    }
+
     fn pstate_from_spsr(&mut self, spsr: u64, illegal_spsr_state: bool) {
         self.pstate.ss = false;
         if illegal_spsr_state {
@@ -134,6 +191,57 @@ impl Cpu {
         } else {
             self.pstate.daif_from_spsr(spsr);
         }
+    }
+
+    fn el_from_spsr(&mut self, spsr: u64, valid: &mut bool, bits: &mut u8) {
+        let spsr_4 = (spsr >> 4) & 1;
+        if spsr_4 == 0 {
+            let el = get_bits_ct!(spsr, 2, 1) as u8;
+            *bits = el;
+            if !HAVE_AARCH64 {
+                *valid = false;
+            } else if !HAVE_EL {
+                *valid = false;
+            } else if ((spsr >> 1) & 1) == 1 {
+                *valid = false;
+            } else if (self.pstate.current_el == ExceptionLevel::EL0) && ((spsr & 1) == 1) {
+                *valid = false;
+            } else if (self.pstate.current_el == ExceptionLevel::EL2)
+                && HAVE_EL
+                && !IS_SECURE_EL2_ENABLED
+                && ((self.scr_el3 & 1) == 0)
+            {
+                *valid = false;
+            }
+        } else if HAVE_AARCH32 {
+            panic!("We haven't implemented AArch32 support!");
+        } else {
+            *valid = false;
+        }
+        if !*valid {
+            panic!("Not a valid exception!");
+        }
+    }
+
+    fn aarch64_exception_return(&mut self, new_pc_in: u64, spsr: u64) {
+        let illegal_psr_state = self.illegal_exception_return(spsr);
+        self.pstate_from_spsr(spsr, illegal_psr_state);
+
+        self.event_register = true;
+        self.pc = new_pc_in;
+    }
+
+    fn illegal_exception_return(&mut self, spsr: u64) -> bool {
+        let mut valid = false;
+        let mut target = 0;
+        self.el_from_spsr(spsr, &mut valid, &mut target);
+        if !valid {
+            return true;
+        }
+        if ExceptionLevel::from_bits(target) > self.pstate.current_el {
+            return true;
+        }
+        return false;
     }
 }
 
@@ -189,7 +297,7 @@ impl PState {
     }
 }
 
-#[derive(Default, Debug, Clone, Copy)]
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 enum ExceptionLevel {
     EL0,
     EL1,
@@ -208,4 +316,53 @@ impl ExceptionLevel {
             _ => panic!("Invalid bits"),
         }
     }
+    #[inline]
+    pub const fn is_el0(self) -> bool {
+        matches!(self, Self::EL0)
+    }
+    #[inline]
+    pub const fn is_el1(self) -> bool {
+        matches!(self, Self::EL1)
+    }
+    #[inline]
+    pub const fn is_el2(self) -> bool {
+        matches!(self, Self::EL2)
+    }
+    #[inline]
+    pub const fn is_el3(self) -> bool {
+        matches!(self, Self::EL3)
+    }
+}
+
+macro_rules! msr_enum {
+    ($($variant:ident = $value:expr),* $(,)?) => {
+        #[repr(u64)]
+        #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+        enum MsrRegisters {
+            $($variant = $value,)*
+            Unknown = 99999999999,
+        }
+
+        impl From<u64> for MsrRegisters {
+            #[inline(always)]
+            fn from(v: u64) -> Self {
+                match v {
+                    $($value => Self::$variant,)*
+                    _ => Self::Unknown,
+                }
+            }
+        }
+
+        impl From<MsrRegisters> for u64 {
+            #[inline(always)]
+            fn from(r: MsrRegisters) -> u64 { r as u64 }
+        }
+    };
+}
+
+msr_enum! {
+    ElrEl3  = 12985827329,
+    SpsrEl3 = 12985827328,
+    ScrEl3  = 12985630976,
+    SpEl1   = 12952273152,
 }
