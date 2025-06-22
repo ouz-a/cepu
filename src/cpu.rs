@@ -1,7 +1,9 @@
 use crate::get_bits_ct;
 
 const GPRS: usize = 32;
+
 const ZERO_REG: usize = 31;
+pub const SP_REGISTER: usize = 31;
 
 const HIGH_32_MASK: u64 = 0xFFFF_FFFF_0000_0000;
 const LOW_32_MASK: u64 = 0xFFFF_FFFFu64;
@@ -15,10 +17,10 @@ const IS_SECURE_EL2_ENABLED: bool = false;
 #[derive(Default, Debug, Clone, Copy)]
 pub struct Cpu {
     /// 64-Bit General Purpose Register
-    x: [u64; GPRS],
+    pub x: [u64; GPRS],
 
     /// Program Counter
-    pc: u64,
+    pub pc: u64,
 
     /// Stack Pointer EL0
     sp_el0: u64,
@@ -54,7 +56,7 @@ pub struct Cpu {
     elr_el1: u64,
 
     event_register: bool,
-    pstate: PState,
+    pub pstate: PState,
 }
 
 impl Cpu {
@@ -73,7 +75,27 @@ impl Cpu {
         cpu.sctlr_el1 |= 1 << 12; // SCTLR_I 
         cpu
     }
-    fn sp_read(&self) -> u64 {
+
+    pub fn get_elr_elx(&self) -> u64 {
+        if self.pstate.current_el.is_el0() || self.pstate.current_el.is_el1() {
+            return self.elr_el1;
+        } else if self.pstate.current_el.is_el2() {
+            return self.elr_el2;
+        } else {
+            return self.elr_el3;
+        }
+    }
+    pub fn get_spsr_elx(&self) -> u64 {
+        if self.pstate.current_el.is_el0() || self.pstate.current_el.is_el1() {
+            return self.spsr_el1;
+        } else if self.pstate.current_el.is_el2() {
+            return self.spsr_el2;
+        } else {
+            return self.spsr_el3;
+        }
+    }
+
+    pub fn sp_read(&self) -> u64 {
         if self.pstate.sp == 0 {
             return self.sp_el0;
         }
@@ -84,7 +106,7 @@ impl Cpu {
             ExceptionLevel::EL3 => self.sp_el3,
         }
     }
-    fn sp_write(&mut self, value: u64) {
+    pub fn sp_write(&mut self, value: u64) {
         if self.pstate.sp == 0 {
             self.sp_el0 = value;
         } else {
@@ -98,7 +120,7 @@ impl Cpu {
     }
 
     /// When n == 31 we return 0
-    fn x_read(&self, n: usize, width: u8) -> u64 {
+    pub fn x_read(&self, n: usize, width: u8) -> u64 {
         assert!(n < GPRS);
         assert!(width <= 64 && width % 8 == 0);
         if n != ZERO_REG {
@@ -108,7 +130,7 @@ impl Cpu {
         0
     }
 
-    fn x_write(&mut self, n: usize, value: u64, is_32b: bool) {
+    pub fn x_write(&mut self, n: usize, value: u64, is_32b: bool) {
         assert!(n < GPRS);
         if is_32b {
             // We want lower 32 bits when value is 32bit
@@ -118,7 +140,7 @@ impl Cpu {
         }
     }
 
-    fn sys_reg_write(
+    pub fn sys_reg_write(
         &mut self,
         sys_op0: u8,
         sys_op1: u8,
@@ -168,7 +190,7 @@ impl Cpu {
         }
     }
 
-    fn pstate_from_spsr(&mut self, spsr: u64, illegal_spsr_state: bool) {
+    pub fn pstate_from_spsr(&mut self, spsr: u64, illegal_spsr_state: bool) {
         self.pstate.ss = false;
         if illegal_spsr_state {
             self.pstate.il = false;
@@ -223,7 +245,7 @@ impl Cpu {
         }
     }
 
-    fn aarch64_exception_return(&mut self, new_pc_in: u64, spsr: u64) {
+    pub fn aarch64_exception_return(&mut self, new_pc_in: u64, spsr: u64) {
         let illegal_psr_state = self.illegal_exception_return(spsr);
         self.pstate_from_spsr(spsr, illegal_psr_state);
 
@@ -245,29 +267,45 @@ impl Cpu {
     }
 }
 
+pub enum PstateField {
+    Daifset,
+    Daifclr,
+    Pan,
+    Uao,
+    Dit,
+    Ssbs,
+    Tco,
+    Svcrsm,
+    Svcrza,
+    Svcrsmza,
+    Allint,
+    Pm,
+    Sp,
+}
+
 #[derive(Default, Debug, Clone, Copy)]
-struct PState {
+pub struct PState {
     /// Negative
-    n: bool,
+    pub n: bool,
     /// Zero
-    z: bool,
+    pub z: bool,
     /// Carry
-    c: bool,
+    pub c: bool,
     /// Overflow
-    v: bool,
+    pub v: bool,
 
     /// Stack pointer
-    sp: u8,
-    current_el: ExceptionLevel,
+    pub sp: u8,
+    pub current_el: ExceptionLevel,
 
     /// Debug
-    d: bool,
+    pub d: bool,
     /// Async
-    a: bool,
+    pub a: bool,
     /// IRQ
-    i: bool,
+    pub i: bool,
     /// FIQ
-    f: bool,
+    pub f: bool,
 
     /// Execution state
     /// 0 === AArch64
@@ -298,7 +336,7 @@ impl PState {
 }
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-enum ExceptionLevel {
+pub enum ExceptionLevel {
     EL0,
     EL1,
     EL2,
@@ -338,7 +376,7 @@ macro_rules! msr_enum {
     ($($variant:ident = $value:expr),* $(,)?) => {
         #[repr(u64)]
         #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-        enum MsrRegisters {
+        pub enum MsrRegisters {
             $($variant = $value,)*
             Unknown = 99999999999,
         }

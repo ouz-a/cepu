@@ -1,4 +1,4 @@
-use crate::{cpu::Cpu, get_bits_ct, utils::get_bits_u32};
+use crate::{cpu::Cpu, data_processing::*, get_bits_ct, utils::get_bits_u32};
 
 #[derive(Debug, Clone, Copy)]
 enum RegisterFieldName {}
@@ -21,7 +21,7 @@ struct DecodedInstruction {
 
 type InstructionHandler = fn(&mut Cpu, &DecodedInstruction);
 #[derive(Debug, Clone, Copy)]
-struct Instruction {
+pub struct Instruction {
     mask: u32,
     value: u32,
     name: InstructionName,

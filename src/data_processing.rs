@@ -1,0 +1,234 @@
+use crate::cpu::{Cpu, SP_REGISTER};
+
+#[repr(u8)]
+enum ShiftTypes {
+    StLsl = 0b00,
+    StLsr = 0b01,
+    StAsr = 0b10,
+    StRor = 0b11,
+}
+
+fn decode_shift(bits: u8) -> ShiftTypes {
+    match bits & 0b11 {
+        0b00 => ShiftTypes::StLsl,
+        0b01 => ShiftTypes::StLsr,
+        0b10 => ShiftTypes::StAsr,
+        0b11 => ShiftTypes::StRor,
+        _ => unreachable!(),
+    }
+}
+
+pub struct AddResult {
+    pub result: u64,
+    pub n: bool,
+    pub z: bool,
+    pub c: bool,
+    pub v: bool,
+}
+
+pub fn add_with_carry(x: u64, y: u64, carry_in: u64) -> AddResult {
+    assert!(carry_in <= 1, "carry_in must be 0 or 1");
+
+    let wide_u = x as u128 + y as u128 + carry_in as u128;
+    let result = wide_u as u64;
+    let c = wide_u > u64::MAX as u128;
+
+    let wide_s = (x as i64) as i128 + (y as i64) as i128 + carry_in as i128;
+    let v = wide_s < i64::MIN as i128 || wide_s > i64::MAX as i128;
+
+    let n = (result as i64) < 0;
+    let z = result == 0;
+
+    AddResult { result, n, z, c, v }
+}
+
+fn instruction_addd_immediate(cpu: &mut Cpu, d: u64, n: u64, imm12: u16, is_32b: bool) {
+    let operand1 = if d == SP_REGISTER as u64 {
+        cpu.sp_read()
+    } else {
+        cpu.x_read(n as usize, if is_32b { 32 } else { 64 })
+    };
+    let result = add_with_carry(operand1, imm12 as u64, 0);
+
+    if d == SP_REGISTER as u64 {
+        cpu.sp_write(result.result);
+    } else {
+        cpu.x_write(d as usize, result.result, is_32b);
+    }
+}
+
+fn instruction_imm_add(cpu: &mut Cpu, d: u64, n: u64, imm12: u16, datasize: u8) {
+    let op1 = if n == 31 { cpu.sp_read() } else { cpu.x_read(n as usize, datasize) };
+    let op2: u64 = imm12 as u64;
+    let res = add_with_carry(op1, op2, 0);
+    cpu.pstate.c = res.c;
+    cpu.pstate.n = res.n;
+    cpu.pstate.z = res.z;
+    cpu.pstate.v = res.v;
+
+    if d == SP_REGISTER as u64 {
+        cpu.sp_write(res.result);
+    } else {
+        cpu.x_write(d as usize, res.result, datasize == 32);
+    }
+}
+
+fn instruction_imm_sub(cpu: &mut Cpu, d: u64, n: u64, imm24: u32, datasize: u8) {
+    let op1;
+    if n == SP_REGISTER as u64 {
+        op1 = cpu.sp_read();
+    } else {
+        op1 = cpu.x_read(n as usize, datasize);
+    }
+    let op2 = imm24 as u64;
+
+    let res = add_with_carry(op1, !op2, 1);
+    if d == SP_REGISTER as u64 {
+        cpu.sp_write(res.result);
+    } else {
+        cpu.x_write(d as usize, res.result, datasize == 32);
+    }
+}
+
+fn instruction_imm_subs(cpu: &mut Cpu, d: u64, n: u64, imm24: u32, datasize: u8) {
+    let mut op1 = 0;
+    if n == SP_REGISTER as u64 {
+        panic!("TODO: We haven't implemented this yet");
+    } else {
+        op1 = cpu.x_read(n as usize, datasize);
+    }
+    let op2 = imm24 as u64;
+
+    let res = add_with_carry(op1, op2, 1);
+    cpu.pstate.c = res.c;
+    cpu.pstate.n = res.n;
+    cpu.pstate.z = res.z;
+    cpu.pstate.v = res.v;
+
+    let is_32b = datasize == 32;
+    // ITS COMP INSTRUCTION
+    if d == SP_REGISTER as u64 {
+        return;
+    }
+    cpu.x_write(d as usize, res.result, is_32b);
+}
+
+fn instruction_multiply_add(cpu: &mut Cpu, d: u64, n: u64, m: u64, a: u64, datasize: u8) {
+    let op1 = cpu.x_read(n as usize, datasize);
+    let op2 = cpu.x_read(m as usize, datasize);
+    let op3 = cpu.x_read(a as usize, datasize);
+
+    let res = op3 + (op1 * op2);
+    let is_32b = datasize == 32;
+    cpu.x_write(d as usize, res, is_32b);
+}
+
+fn instruction_udiv(cpu: &mut Cpu, d: u8, n: u8, m: u8, datasize: u8) {
+    let op1 = cpu.x_read(n as usize, datasize);
+    let op2 = cpu.x_read(m as usize, datasize);
+
+    let is_32b = datasize == 32;
+    if op2 == 0 {
+        cpu.x_write(n as usize, 0, is_32b);
+    } else {
+        let result: u64 = op1 / op2;
+        cpu.x_write(d as usize, result, is_32b);
+    }
+}
+
+fn instruction_add_shifted_register(
+    cpu: &mut Cpu,
+    n: u8,
+    m: u8,
+    d: u8,
+    shift_amount: u8,
+    s_type: ShiftTypes,
+    datasize: u8,
+    is_32b: bool,
+) {
+    let op1 = cpu.x_read(n as usize, datasize);
+    let op2 = shift_reg(cpu, m, s_type, shift_amount, datasize);
+    let res = add_with_carry(op1, op2, 0);
+    cpu.pstate.c = res.c;
+    cpu.x_write(d as usize, res.result, is_32b);
+}
+
+fn instruction_sub_shifted_register(
+    cpu: &mut Cpu,
+    n: u8,
+    m: u8,
+    d: u8,
+    shift_amount: u8,
+    s_type: ShiftTypes,
+    datasize: u8,
+    is_32b: bool,
+) {
+    let op1 = cpu.x_read(n as usize, datasize);
+    let op2 = !shift_reg(cpu, m, s_type, shift_amount, datasize);
+    let res = add_with_carry(op1, op2, 1);
+    cpu.pstate.c = res.c;
+    cpu.x_write(d as usize, res.result, is_32b);
+}
+
+fn instruction_movz(cpu: &mut Cpu, d: u8, imm16: u16, shift: u8, is_32b: bool) {
+    let result = (imm16 << shift) as u64;
+    cpu.x_write(d as usize, result, is_32b);
+}
+
+fn instruction_mov(cpu: &mut Cpu, d: u64, n: u64, is_32b: bool) {
+    let dat = cpu.x_read(n as usize, if is_32b { 32 } else { 64 });
+    cpu.x_write(d as usize, dat, is_32b);
+}
+
+fn instruction_movn(cpu: &mut Cpu, reg_num: u64, imm16: u16, shift: u8, is_32b: bool) {
+    let mut result: u64 = 0;
+    result = (imm16 as u64) << shift;
+    result = !(result);
+    cpu.x_write(reg_num as usize, result, is_32b);
+}
+
+fn instruction_movk(cpu: &mut Cpu, reg_num: u64, imm16: u16, shift: u8, is_32b: bool) {
+    let mut result;
+    if !is_32b {
+        result = cpu.x_read(reg_num as usize, 64);
+    } else {
+        result = cpu.x_read(reg_num as usize, 32);
+    }
+    let mask: u64 = !(0xFFFFu64 << shift);
+    result = result & mask;
+    result = result | ((imm16 as u64) << shift);
+    cpu.x_write(reg_num as usize, result, is_32b);
+}
+
+#[inline]
+pub fn shift_lsl(x: u64, amount: u8) -> u64 {
+    if amount == 0 { x } else { x << (amount as u32) }
+}
+
+/// Logical shift-right (LSR)
+#[inline]
+pub fn shift_lsr(x: u64, amount: u8) -> u64 {
+    if amount == 0 { x } else { x >> (amount as u32) }
+}
+
+/// Arithmetic shift-right (ASR) – sign-extending
+#[inline]
+pub fn shift_asr(x: u64, amount: u8) -> u64 {
+    if amount == 0 { x } else { ((x as i64) >> (amount as u32)) as u64 }
+}
+
+/// Rotate-right (ROR)
+#[inline]
+pub fn shift_ror(x: u64, amount: u8) -> u64 {
+    if amount == 0 { x } else { x.rotate_right(amount as u32) }
+}
+
+fn shift_reg(cpu: &Cpu, m: u8, s_type: ShiftTypes, shift_amount: u8, datasize: u8) -> u64 {
+    let val = cpu.x_read(m as usize, datasize);
+    match s_type {
+        ShiftTypes::StLsl => shift_lsl(val, shift_amount),
+        ShiftTypes::StLsr => shift_lsr(val, shift_amount),
+        ShiftTypes::StAsr => shift_asr(val, shift_amount),
+        ShiftTypes::StRor => shift_ror(val, shift_amount),
+    }
+}

@@ -1,0 +1,113 @@
+use crate::{
+    cpu::{Cpu, ExceptionLevel, PstateField},
+    get_bits_ct,
+};
+
+pub fn condition_holds(cpu: &Cpu, cond: u8) -> bool {
+    let mut result = match cond >> 1 {
+        0b000 => cpu.pstate.z,
+        0b001 => cpu.pstate.c,
+        0b010 => cpu.pstate.n,
+        0b011 => cpu.pstate.v,
+        0b100 => cpu.pstate.c && !cpu.pstate.z,
+        0b101 => cpu.pstate.n == cpu.pstate.v,
+        0b110 => cpu.pstate.n == cpu.pstate.v && !cpu.pstate.z,
+        0b111 => true,
+        _ => panic!("Unknown condition"),
+    };
+
+    if (cond & 0b0001) == 0b1 && cond != 0b1111 {
+        result = !result;
+    }
+    result
+}
+
+#[inline(always)]
+pub fn effective_tbi(el: u8) -> bool {
+    el == 0
+}
+
+// TODO: Properly implement this
+#[inline(always)]
+pub fn addr_top(el: u8) -> u8 {
+    if effective_tbi(el) { 55 } else { 63 }
+}
+
+#[inline(always)]
+pub fn branch_addr(vaddress: u64, el: u8) -> u64 {
+    let msbit = addr_top(el);
+    if msbit == 63 { vaddress } else { msbit as u64 }
+}
+
+pub fn branch_to(cpu: &mut Cpu, target: u64, is_32bit: bool) {
+    if is_32bit {
+        cpu.pc = cpu.pc.wrapping_add(target.wrapping_mul(4));
+    } else {
+        let tgt = branch_addr(target, cpu.pstate.current_el as u8);
+        cpu.pc = tgt;
+    }
+}
+
+pub fn instruction_branch(cpu: &mut Cpu, cond: u8, offset: u64) {
+    if condition_holds(cpu, cond) {
+        branch_to(cpu, cpu.pc.wrapping_add(offset), false);
+    } else {
+        cpu.pc = cpu.pc.wrapping_add(4);
+    }
+}
+
+pub fn instruction_bl(cpu: &mut Cpu, offset: u64) {
+    cpu.x_write(30, cpu.pc.wrapping_add(4), false);
+    branch_to(cpu, cpu.pc.wrapping_add(offset), false);
+}
+
+pub fn instruction_ret(cpu: &mut Cpu, n: u64) {
+    let target = cpu.x_read(n as usize, 64);
+    branch_to(cpu, target, false);
+}
+
+pub fn instruction_eret(cpu: &mut Cpu) {
+    let _pac = false;
+    let _use_key_a = true;
+    //check_for_eret_trap(cpu, pac, use_key_a);
+    let target = cpu.get_elr_elx();
+    let spsr = cpu.get_spsr_elx();
+    cpu.aarch64_exception_return(target, spsr);
+}
+
+pub fn instruction_bunc(cpu: &mut Cpu, offset: u64) {
+    branch_to(cpu, cpu.pc.wrapping_add(offset), false);
+}
+
+pub fn instruction_msr_imm(
+    cpu: &mut Cpu,
+    operand: u8,
+    _op1: u8,
+    _crm: u8,
+    min_el: ExceptionLevel,
+    field: PstateField,
+) {
+    // TODO: Implement security features
+    if cpu.pstate.current_el < min_el {
+        panic!("\r\nCurrent exception level is below required");
+    }
+
+    match field {
+        PstateField::Sp => {
+            cpu.pstate.sp = get_bits_ct!(operand, 0, 1) as u8;
+        }
+        PstateField::Daifset => {
+            cpu.pstate.d |= get_bits_ct!(operand, 3, 1) != 0;
+            cpu.pstate.a |= get_bits_ct!(operand, 2, 1) != 0;
+            cpu.pstate.i |= get_bits_ct!(operand, 1, 1) != 0;
+            cpu.pstate.f |= get_bits_ct!(operand, 0, 1) != 0;
+        }
+        PstateField::Daifclr => {
+            cpu.pstate.d &= get_bits_ct!(operand, 3, 1) != 0;
+            cpu.pstate.a &= get_bits_ct!(operand, 2, 1) != 0;
+            cpu.pstate.i &= get_bits_ct!(operand, 1, 1) != 0;
+            cpu.pstate.f &= get_bits_ct!(operand, 0, 1) != 0;
+        }
+        _ => {}
+    }
+}
