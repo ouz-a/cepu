@@ -1,4 +1,4 @@
-use crate::get_bits_ct;
+use crate::{get_bits_ct, utils::align};
 
 const GPRS: usize = 32;
 
@@ -13,6 +13,30 @@ const HAVE_EL: bool = true;
 const HAVE_AARCH32: bool = false;
 const USING_AARCH32: bool = false;
 const IS_SECURE_EL2_ENABLED: bool = false;
+
+/// MMU enable
+pub const SCTLR_M: u64 = 1u64 << 0;
+
+/// Alignment check enable
+pub const SCTLR_A: u64 = 1u64 << 1;
+
+/// Data cache enable
+pub const SCTLR_C: u64 = 1u64 << 2;
+
+/// Stack-alignment check enable
+pub const SCTLR_SA: u64 = 1u64 << 3;
+
+/// Stack-alignment check enable for EL0
+pub const SCTLR_SA0: u64 = 1u64 << 4;
+
+/// Instruction cache enable
+pub const SCTLR_I: u64 = 1u64 << 12;
+
+/// Write-permission implies XN
+pub const SCTLR_WXN: u64 = 1u64 << 19;
+
+/// Exception endianness
+pub const SCTLR_EE: u64 = 1u64 << 25;
 
 #[derive(Default, Debug, Clone, Copy)]
 pub struct Cpu {
@@ -106,6 +130,20 @@ impl Cpu {
             ExceptionLevel::EL3 => self.sp_el3,
         }
     }
+
+    pub fn check_space_alignment(&self) {
+        let sp = self.sp_read();
+        let stack_align_check;
+        if self.pstate.current_el.is_el0() {
+            stack_align_check = (self.sctlr_el1 & SCTLR_SA0) != 0;
+        } else {
+            stack_align_check = (self.sctlr_el1 & SCTLR_A) != 0;
+        }
+        if stack_align_check && (sp != align(sp, 16)) {
+            panic!("Alignment fault");
+        }
+    }
+
     pub fn sp_write(&mut self, value: u64) {
         if self.pstate.sp == 0 {
             self.sp_el0 = value;
