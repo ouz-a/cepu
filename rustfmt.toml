@@ -13,3 +13,4 @@ group_imports = "StdExternalCrate"
 where_single_line = true
 use_small_heuristics = "Max"
 use_field_init_shorthand = true
+merge_derives = false

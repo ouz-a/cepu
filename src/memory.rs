@@ -5,12 +5,14 @@ pub const MEMORY_SIZE: usize = 16 << 20;
 pub static mut MEMORY: [u8; MEMORY_SIZE] = [0; MEMORY_SIZE];
 
 pub fn read_32(address: usize) -> u32 {
-    assert!(address < MEMORY_SIZE);
+    assert!(address + 3 < MEMORY_SIZE);
     let instruction: u32 = unsafe {
-        ((MEMORY[address] << 0)
-            | ((MEMORY[address + 1]) << 8)
-            | (MEMORY[address + 2] << 16)
-            | ((MEMORY[address + 3]) << 24)) as u32
+        u32::from_le_bytes([
+            MEMORY[address],
+            MEMORY[address + 1],
+            MEMORY[address + 2],
+            MEMORY[address + 3],
+        ])
     };
     instruction
 }

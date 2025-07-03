@@ -1,14 +1,15 @@
 use crate::cpu::{Cpu, SP_REGISTER};
 
+#[derive(Clone, Copy, Debug)]
 #[repr(u8)]
-enum ShiftTypes {
+pub enum ShiftTypes {
     StLsl = 0b00,
     StLsr = 0b01,
     StAsr = 0b10,
     StRor = 0b11,
 }
 
-fn decode_shift(bits: u8) -> ShiftTypes {
+pub const fn decode_shift(bits: u8) -> ShiftTypes {
     match bits & 0b11 {
         0b00 => ShiftTypes::StLsl,
         0b01 => ShiftTypes::StLsr,
@@ -42,7 +43,7 @@ pub fn add_with_carry(x: u64, y: u64, carry_in: u64) -> AddResult {
     AddResult { result, n, z, c, v }
 }
 
-fn instruction_addd_immediate(cpu: &mut Cpu, d: u64, n: u64, imm12: u16, is_32b: bool) {
+pub fn instruction_addd_immediate(cpu: &mut Cpu, d: u64, n: u64, imm12: u16, is_32b: bool) {
     let operand1 = if d == SP_REGISTER as u64 {
         cpu.sp_read()
     } else {
@@ -57,7 +58,7 @@ fn instruction_addd_immediate(cpu: &mut Cpu, d: u64, n: u64, imm12: u16, is_32b:
     }
 }
 
-fn instruction_imm_add(cpu: &mut Cpu, d: u64, n: u64, imm12: u16, datasize: u8) {
+pub fn instruction_imm_add(cpu: &mut Cpu, d: u64, n: u64, imm12: u16, datasize: u8) {
     let op1 = if n == 31 { cpu.sp_read() } else { cpu.x_read(n as usize, datasize) };
     let op2: u64 = imm12 as u64;
     let res = add_with_carry(op1, op2, 0);
@@ -73,7 +74,7 @@ fn instruction_imm_add(cpu: &mut Cpu, d: u64, n: u64, imm12: u16, datasize: u8) 
     }
 }
 
-fn instruction_imm_sub(cpu: &mut Cpu, d: u64, n: u64, imm24: u32, datasize: u8) {
+pub fn instruction_imm_sub(cpu: &mut Cpu, d: u64, n: u64, imm24: u32, datasize: u8) {
     let op1;
     if n == SP_REGISTER as u64 {
         op1 = cpu.sp_read();
@@ -90,7 +91,7 @@ fn instruction_imm_sub(cpu: &mut Cpu, d: u64, n: u64, imm24: u32, datasize: u8) 
     }
 }
 
-fn instruction_imm_subs(cpu: &mut Cpu, d: u64, n: u64, imm24: u32, datasize: u8) {
+pub fn instruction_imm_subs(cpu: &mut Cpu, d: u64, n: u64, imm24: u32, datasize: u8) {
     let mut op1 = 0;
     if n == SP_REGISTER as u64 {
         panic!("TODO: We haven't implemented this yet");
@@ -113,7 +114,7 @@ fn instruction_imm_subs(cpu: &mut Cpu, d: u64, n: u64, imm24: u32, datasize: u8)
     cpu.x_write(d as usize, res.result, is_32b);
 }
 
-fn instruction_multiply_add(cpu: &mut Cpu, d: u64, n: u64, m: u64, a: u64, datasize: u8) {
+pub fn instruction_multiply_add(cpu: &mut Cpu, d: u8, n: u8, m: u8, a: u8, datasize: u8) {
     let op1 = cpu.x_read(n as usize, datasize);
     let op2 = cpu.x_read(m as usize, datasize);
     let op3 = cpu.x_read(a as usize, datasize);
@@ -123,7 +124,7 @@ fn instruction_multiply_add(cpu: &mut Cpu, d: u64, n: u64, m: u64, a: u64, datas
     cpu.x_write(d as usize, res, is_32b);
 }
 
-fn instruction_udiv(cpu: &mut Cpu, d: u8, n: u8, m: u8, datasize: u8) {
+pub fn instruction_udiv(cpu: &mut Cpu, d: u8, n: u8, m: u8, datasize: u8) {
     let op1 = cpu.x_read(n as usize, datasize);
     let op2 = cpu.x_read(m as usize, datasize);
 
@@ -136,7 +137,7 @@ fn instruction_udiv(cpu: &mut Cpu, d: u8, n: u8, m: u8, datasize: u8) {
     }
 }
 
-fn instruction_add_shifted_register(
+pub fn instruction_add_shifted_register(
     cpu: &mut Cpu,
     n: u8,
     m: u8,
@@ -153,7 +154,7 @@ fn instruction_add_shifted_register(
     cpu.x_write(d as usize, res.result, is_32b);
 }
 
-fn instruction_sub_shifted_register(
+pub fn instruction_sub_shifted_register(
     cpu: &mut Cpu,
     n: u8,
     m: u8,
@@ -170,24 +171,24 @@ fn instruction_sub_shifted_register(
     cpu.x_write(d as usize, res.result, is_32b);
 }
 
-fn instruction_movz(cpu: &mut Cpu, d: u8, imm16: u16, shift: u8, is_32b: bool) {
+pub fn instruction_movz(cpu: &mut Cpu, d: u8, imm16: u16, shift: u8, is_32b: bool) {
     let result = (imm16 << shift) as u64;
     cpu.x_write(d as usize, result, is_32b);
 }
 
-fn instruction_mov(cpu: &mut Cpu, d: u64, n: u64, is_32b: bool) {
+pub fn instruction_mov(cpu: &mut Cpu, d: u64, n: u64, is_32b: bool) {
     let dat = cpu.x_read(n as usize, if is_32b { 32 } else { 64 });
     cpu.x_write(d as usize, dat, is_32b);
 }
 
-fn instruction_movn(cpu: &mut Cpu, reg_num: u64, imm16: u16, shift: u8, is_32b: bool) {
+pub fn instruction_movn(cpu: &mut Cpu, reg_num: u64, imm16: u16, shift: u8, is_32b: bool) {
     let mut result: u64 = 0;
     result = (imm16 as u64) << shift;
     result = !(result);
     cpu.x_write(reg_num as usize, result, is_32b);
 }
 
-fn instruction_movk(cpu: &mut Cpu, reg_num: u64, imm16: u16, shift: u8, is_32b: bool) {
+pub fn instruction_movk(cpu: &mut Cpu, reg_num: u64, imm16: u16, shift: u8, is_32b: bool) {
     let mut result;
     if !is_32b {
         result = cpu.x_read(reg_num as usize, 64);
@@ -223,7 +224,7 @@ pub fn shift_ror(x: u64, amount: u8) -> u64 {
     if amount == 0 { x } else { x.rotate_right(amount as u32) }
 }
 
-fn shift_reg(cpu: &Cpu, m: u8, s_type: ShiftTypes, shift_amount: u8, datasize: u8) -> u64 {
+pub fn shift_reg(cpu: &Cpu, m: u8, s_type: ShiftTypes, shift_amount: u8, datasize: u8) -> u64 {
     let val = cpu.x_read(m as usize, datasize);
     match s_type {
         ShiftTypes::StLsl => shift_lsl(val, shift_amount),
