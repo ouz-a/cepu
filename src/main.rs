@@ -1,10 +1,13 @@
 use crate::instruction::{DESCR, InstructionEntry, UNDEFINED};
 
 pub mod branch;
+pub mod branch_exc_sys_instr;
 pub mod cpu;
 pub mod data_processing;
+pub mod imm_instr;
 pub mod instruction;
 pub mod load_and_store;
+pub mod load_store_instr;
 pub mod memory;
 pub mod register_instr;
 pub mod utils;

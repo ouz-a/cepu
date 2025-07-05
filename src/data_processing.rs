@@ -43,15 +43,15 @@ pub fn add_with_carry(x: u64, y: u64, carry_in: u64) -> AddResult {
     AddResult { result, n, z, c, v }
 }
 
-pub fn instruction_addd_immediate(cpu: &mut Cpu, d: u64, n: u64, imm12: u16, is_32b: bool) {
-    let operand1 = if d == SP_REGISTER as u64 {
+pub fn instruction_addd_immediate(cpu: &mut Cpu, d: u8, n: u8, imm12: u32, is_32b: bool) {
+    let operand1 = if d == SP_REGISTER as u8 {
         cpu.sp_read()
     } else {
         cpu.x_read(n as usize, if is_32b { 32 } else { 64 })
     };
     let result = add_with_carry(operand1, imm12 as u64, 0);
 
-    if d == SP_REGISTER as u64 {
+    if d == SP_REGISTER as u8 {
         cpu.sp_write(result.result);
     } else {
         cpu.x_write(d as usize, result.result, is_32b);
@@ -74,9 +74,9 @@ pub fn instruction_imm_add(cpu: &mut Cpu, d: u64, n: u64, imm12: u16, datasize: 
     }
 }
 
-pub fn instruction_imm_sub(cpu: &mut Cpu, d: u64, n: u64, imm24: u32, datasize: u8) {
+pub fn instruction_imm_sub(cpu: &mut Cpu, d: u8, n: u8, imm24: u32, datasize: u8) {
     let op1;
-    if n == SP_REGISTER as u64 {
+    if n == SP_REGISTER as u8 {
         op1 = cpu.sp_read();
     } else {
         op1 = cpu.x_read(n as usize, datasize);
@@ -84,23 +84,23 @@ pub fn instruction_imm_sub(cpu: &mut Cpu, d: u64, n: u64, imm24: u32, datasize: 
     let op2 = imm24 as u64;
 
     let res = add_with_carry(op1, !op2, 1);
-    if d == SP_REGISTER as u64 {
+    if d == SP_REGISTER as u8 {
         cpu.sp_write(res.result);
     } else {
         cpu.x_write(d as usize, res.result, datasize == 32);
     }
 }
 
-pub fn instruction_imm_subs(cpu: &mut Cpu, d: u64, n: u64, imm24: u32, datasize: u8) {
-    let mut op1 = 0;
-    if n == SP_REGISTER as u64 {
+pub fn instruction_imm_subs(cpu: &mut Cpu, d: u8, n: u8, imm24: u32, datasize: u8) {
+    let op1;
+    if n == SP_REGISTER as u8 {
         panic!("TODO: We haven't implemented this yet");
     } else {
         op1 = cpu.x_read(n as usize, datasize);
     }
-    let op2 = imm24 as u64;
+    let op2 = imm24 as u8;
 
-    let res = add_with_carry(op1, op2, 1);
+    let res = add_with_carry(op1, op2.into(), 1);
     cpu.pstate.c = res.c;
     cpu.pstate.n = res.n;
     cpu.pstate.z = res.z;
@@ -108,7 +108,7 @@ pub fn instruction_imm_subs(cpu: &mut Cpu, d: u64, n: u64, imm24: u32, datasize:
 
     let is_32b = datasize == 32;
     // ITS COMP INSTRUCTION
-    if d == SP_REGISTER as u64 {
+    if d == SP_REGISTER as u8 {
         return;
     }
     cpu.x_write(d as usize, res.result, is_32b);

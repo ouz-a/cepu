@@ -1,0 +1,203 @@
+use crate::{
+    branch::{
+        instruction_bl, instruction_branch, instruction_bunc, instruction_msr_imm, instruction_ret,
+    },
+    cpu::{Cpu, ExceptionLevel, INSTRUCTION_SIZE, PstateField},
+    get_bits_ct,
+    instruction::{InstDesc, Instruction},
+};
+
+#[derive(Debug, Clone, Copy)]
+pub struct Ret {
+    pub rn: u8,
+}
+
+impl Ret {
+    pub fn execute(self, cpu: &mut Cpu) {
+        instruction_ret(cpu, self.rn);
+    }
+    pub const fn decode(word: u32) -> Instruction {
+        Instruction::Ret(Ret { rn: get_bits_ct!(word, 5, 5) as u8 })
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct Bcond {
+    pub imm19: u32,
+    pub cond: u8,
+}
+
+impl Bcond {
+    pub fn execute(self, cpu: &mut Cpu) {
+        instruction_branch(cpu, self.cond, (self.imm19 as u64) * INSTRUCTION_SIZE as u64);
+    }
+    pub fn decode(word: u32) -> Instruction {
+        let imm19 = get_bits_ct!(word, 5, 19);
+        let cond = get_bits_ct!(word, 0, 4) as u8;
+        Instruction::Bcond(Bcond { imm19, cond })
+    }
+}
+
+/// Branch with a link
+#[derive(Debug, Clone, Copy)]
+pub struct Bl {
+    pub imm26: u32,
+}
+
+impl Bl {
+    pub fn exceute(self, cpu: &mut Cpu) {
+        instruction_bl(cpu, (self.imm26 << 2).into());
+    }
+    pub const fn decode(word: u32) -> Instruction {
+        let imm26 = get_bits_ct!(word, 0, 26) as u32;
+        Instruction::Bl(Bl { imm26 })
+    }
+
+    pub const BL: InstDesc = InstDesc {
+        mask: 0b1111_1110_0000_0000_0000_0000_0000_0000,
+        value: 0b1001_0100_0000_0000_0000_0000_0000_0000,
+        decode: Self::decode,
+        exec: |c, d| d.exec(c),
+    };
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct Branch {
+    pub imm26: u32,
+}
+
+impl Branch {
+    pub fn execute(self, cpu: &mut Cpu) {
+        instruction_bunc(cpu, (self.imm26 as u64) * INSTRUCTION_SIZE as u64);
+    }
+    pub fn decode(word: u32) -> Instruction {
+        let imm26 = get_bits_ct!(word, 0, 26) as u32;
+        Instruction::Branch(Branch { imm26 })
+    }
+
+    pub const BRANCH: InstDesc = InstDesc {
+        mask: 0b1111_1100_0000_0000_0000_0000_0000_0000,
+        value: 0b0001_0100_0000_0000_0000_0000_0000_0000,
+        decode: Self::decode,
+        exec: |c, d| d.exec(c),
+    };
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct MsrImm {
+    pub op1: u8,
+    pub crm: u8,
+    pub op2: u8,
+}
+impl MsrImm {
+    pub fn execute(self, cpu: &mut Cpu) {
+        let min_el;
+        match self.op1 & 0b00000111 {
+            0b011 => {
+                min_el = ExceptionLevel::EL0;
+            }
+            0b110 => {
+                min_el = ExceptionLevel::EL3;
+            }
+            0b100 | 0b101 => {
+                min_el = ExceptionLevel::EL2;
+            }
+            0b000 | 0b001 => min_el = ExceptionLevel::EL1,
+            0b111 => {
+                min_el = ExceptionLevel::EL1;
+            }
+            _ => panic!("Value not convered {}", self.op1 & 0b00000111),
+        }
+        let op1_op2 = (self.op1 << 3) | self.op2;
+        let field;
+        match op1_op2 {
+            5 => {
+                field = PstateField::Sp;
+            }
+            30 => {
+                field = PstateField::Daifset;
+            }
+            31 => {
+                field = PstateField::Daifclr;
+            }
+            _ => panic!("Value not covered {}", op1_op2),
+        }
+        instruction_msr_imm(cpu, self.crm, self.op1, self.crm, min_el, field);
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let op1 = get_bits_ct!(word, 16, 3) as u8;
+        let crm = get_bits_ct!(word, 8, 4) as u8;
+        let op2 = get_bits_ct!(word, 5, 3) as u8;
+        Instruction::MsrImm(MsrImm { op1, crm, op2 })
+    }
+
+    pub const MRS_IMM: InstDesc = InstDesc {
+        mask: 0b1111_1111_1111_1000_1111_0000_0001_1111,
+        value: 0b1101_0101_0000_0000_0100_0000_0001_1111,
+        decode: Self::decode,
+        exec: |c, d| d.exec(c),
+    };
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct MsrReg {
+    pub op0: u8,
+    pub op1: u8,
+    pub crn: u8,
+    pub crm: u8,
+    pub op2: u8,
+    pub rt: u8,
+}
+
+impl MsrReg {
+    pub fn execute(self, cpu: &mut Cpu) {
+        cpu.sys_reg_write(self.op0, self.op1, self.crn, self.crm, self.op2, self.rt);
+    }
+    pub const fn decode(word: u32) -> Instruction {
+        let op0 = 2 + get_bits_ct!(word, 19, 1) as u8;
+        let op1 = get_bits_ct!(word, 16, 3) as u8;
+        let crn = get_bits_ct!(word, 12, 4) as u8;
+        let crm = get_bits_ct!(word, 8, 4) as u8;
+        let op2 = get_bits_ct!(word, 5, 3) as u8;
+        let rt = get_bits_ct!(word, 0, 4) as u8;
+        Instruction::MsrReg(MsrReg { op0, op1, crn, crm, op2, rt })
+    }
+    pub const MRS_REG: InstDesc = InstDesc {
+        mask: 0b1111_1111_1111_0000_0000_0000_0000_0000,
+        value: 0b1101_0101_0001_0000_0000_0000_0000_0000,
+        decode: Self::decode,
+        exec: |c, d| d.exec(c),
+    };
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct Mrs {
+    pub op0: u8,
+    pub op1: u8,
+    pub crn: u8,
+    pub crm: u8,
+    pub op2: u8,
+    pub rt: u8,
+}
+impl Mrs {
+    pub fn execute(self, cpu: &mut Cpu) {
+        cpu.sys_reg_write(self.op0, self.op1, self.crn, self.crm, self.op2, self.rt);
+    }
+    pub const fn decode(word: u32) -> Instruction {
+        let op0 = 2 + get_bits_ct!(word, 19, 1) as u8;
+        let op1 = get_bits_ct!(word, 16, 3) as u8;
+        let crn = get_bits_ct!(word, 12, 4) as u8;
+        let crm = get_bits_ct!(word, 8, 4) as u8;
+        let op2 = get_bits_ct!(word, 5, 3) as u8;
+        let rt = get_bits_ct!(word, 0, 4) as u8;
+        Instruction::Mrs(Mrs { op0, op1, crn, crm, op2, rt })
+    }
+
+    pub const MRS: InstDesc = InstDesc {
+        mask: 0b1111_1111_1111_0000_0000_0000_0000_0000,
+        value: 0b1101_0101_0011_0000_0000_0000_0000_0000,
+        decode: Self::decode,
+        exec: |c, d| d.exec(c),
+    };
+}

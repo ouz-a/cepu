@@ -1,5 +1,10 @@
 use crate::{
+    branch_exc_sys_instr::{Bcond, Bl, Branch, Mrs, MsrImm, MsrReg, Ret},
     cpu::Cpu,
+    imm_instr::{AddImmediate, Movz, SubImmediate, Subs},
+    load_store_instr::{
+        LdrImmPostIdx, LdrImmPreIdx, LdrImmUnOffset, LdrLit, LdrReg, StrImmUnOffset,
+    },
     register_instr::{AddShiftedReg, Madd, SubShiftedRegister, Udiv},
 };
 
@@ -12,6 +17,23 @@ pub enum Instruction {
     AddShiftedReg(AddShiftedReg),
     SubShiftedRegister(SubShiftedRegister),
     Udiv(Udiv),
+    AddImmediate(AddImmediate),
+    Movz(Movz),
+    Subs(Subs),
+    SubImmediate(SubImmediate),
+    Ret(Ret),
+    Bcond(Bcond),
+    Bl(Bl),
+    Branch(Branch),
+    MsrImm(MsrImm),
+    MsrReg(MsrReg),
+    Mrs(Mrs),
+    StrImmUnOffset(StrImmUnOffset),
+    LdrImmUnOffset(LdrImmUnOffset),
+    LdrImmPostIdx(LdrImmPostIdx),
+    LdrImmPreIdx(LdrImmPreIdx),
+    LdrReg(LdrReg),
+    LdrLit(LdrLit),
 }
 
 impl Instruction {
@@ -31,7 +53,12 @@ pub struct InstDesc {
     pub exec: ExecFn,
 }
 
-pub const DESCR: &[InstDesc] = &[Madd::MADD];
+pub const DESCR: &[InstDesc] = &[
+    Madd::MADD,
+    AddShiftedReg::ADD_SHIFTED_REG,
+    SubShiftedRegister::SUB_SHIFTED_REGISTER,
+    Udiv::UDIV,
+];
 
 #[derive(Clone, Copy)]
 pub struct InstructionEntry {

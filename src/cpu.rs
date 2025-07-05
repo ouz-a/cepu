@@ -1,5 +1,7 @@
 use crate::{get_bits_ct, utils::align};
 
+pub const INSTRUCTION_SIZE: usize = 4;
+
 const GPRS: usize = 32;
 
 const ZERO_REG: usize = 31;

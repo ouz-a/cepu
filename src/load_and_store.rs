@@ -18,7 +18,24 @@ pub enum ExtendType {
     SxTw = 0b110, // sign-extend word   (32 bits) → 64 bits
     SxTx = 0b111, // sign-extend double (64 bits) → 64 bits
 }
-fn instruction_ldr_imm_base(
+
+impl ExtendType {
+    #[inline]
+    pub const fn from_u8(bits: u8) -> Self {
+        match bits {
+            0b000 => Self::UxTb,
+            0b001 => Self::UxTh,
+            0b010 => Self::UxTw,
+            0b011 => Self::UxTx,
+            0b100 => Self::SxTb,
+            0b101 => Self::SxTh,
+            0b110 => Self::SxTw,
+            0b111 => Self::SxTx,
+            _ => panic!("invalid ExtendType bits"),
+        }
+    }
+}
+pub fn instruction_ldr_imm_base(
     cpu: &mut Cpu,
     n: u8,
     t: u8,
@@ -68,7 +85,7 @@ fn instruction_ldr_imm_base(
     cpu.pc += 4;
 }
 
-fn instruction_ldr_register(
+pub fn instruction_ldr_register(
     cpu: &mut Cpu,
     t: u8,
     n: u8,
@@ -105,7 +122,7 @@ fn instruction_ldr_register(
     cpu.pc += 4;
 }
 
-fn instruction_ldr_literal(cpu: &mut Cpu, t: u8, size: u8, offset: u64) {
+pub fn instruction_ldr_literal(cpu: &mut Cpu, t: u8, size: u8, offset: u64) {
     let address = cpu.pc + offset;
     let privileged = !cpu.pstate.current_el.is_el0();
     let access_descrip = AccessDescriptor::create_acc_descr_gpr(
@@ -121,7 +138,7 @@ fn instruction_ldr_literal(cpu: &mut Cpu, t: u8, size: u8, offset: u64) {
     cpu.pc += 4;
 }
 
-fn instruction_str_imm_un_off(
+pub fn instruction_str_imm_un_off(
     cpu: &mut Cpu,
     n: u8,
     t: u8,

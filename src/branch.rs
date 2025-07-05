@@ -61,7 +61,7 @@ pub fn instruction_bl(cpu: &mut Cpu, offset: u64) {
     branch_to(cpu, cpu.pc.wrapping_add(offset), false);
 }
 
-pub fn instruction_ret(cpu: &mut Cpu, n: u64) {
+pub fn instruction_ret(cpu: &mut Cpu, n: u8) {
     let target = cpu.x_read(n as usize, 64);
     branch_to(cpu, target, false);
 }
