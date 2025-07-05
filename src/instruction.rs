@@ -58,6 +58,23 @@ pub const DESCR: &[InstDesc] = &[
     AddShiftedReg::ADD_SHIFTED_REG,
     SubShiftedRegister::SUB_SHIFTED_REGISTER,
     Udiv::UDIV,
+    AddImmediate::ADD_IMMEDIATE,
+    Movz::MOVZ,
+    Subs::SUBS,
+    SubImmediate::SUB_IMMEDIATE,
+    Ret::RET,
+    Bcond::B_COND,
+    Bl::BL,
+    Branch::BRANCH,
+    MsrImm::MRS_IMM,
+    MsrReg::MRS_REG,
+    Mrs::MRS,
+    StrImmUnOffset::STR_IMM_UN_OFFSET,
+    LdrImmUnOffset::LDR_IMM_UN_OFFSET,
+    LdrImmPostIdx::LDR_IMM_POST_IDX,
+    LdrImmPreIdx::LDR_IMM_PRE_IDX,
+    LdrReg::LDR_REG,
+    LdrLit::LDR_LIT,
 ];
 
 #[derive(Clone, Copy)]

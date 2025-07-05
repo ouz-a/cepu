@@ -16,9 +16,17 @@ impl Ret {
     pub fn execute(self, cpu: &mut Cpu) {
         instruction_ret(cpu, self.rn);
     }
+
     pub const fn decode(word: u32) -> Instruction {
         Instruction::Ret(Ret { rn: get_bits_ct!(word, 5, 5) as u8 })
     }
+
+    pub const RET: InstDesc = InstDesc {
+        mask: 0b1111_1111_1111_1111_1111_1100_0001_1111,
+        value: 0b1101_0110_0101_1111_0000_0000_0000_0000,
+        decode: Self::decode,
+        exec: |c, d| d.exec(c),
+    };
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -31,11 +39,19 @@ impl Bcond {
     pub fn execute(self, cpu: &mut Cpu) {
         instruction_branch(cpu, self.cond, (self.imm19 as u64) * INSTRUCTION_SIZE as u64);
     }
-    pub fn decode(word: u32) -> Instruction {
+
+    pub const fn decode(word: u32) -> Instruction {
         let imm19 = get_bits_ct!(word, 5, 19);
         let cond = get_bits_ct!(word, 0, 4) as u8;
         Instruction::Bcond(Bcond { imm19, cond })
     }
+
+    pub const B_COND: InstDesc = InstDesc {
+        mask: 0b1111_1111_0000_0000_0000_0000_0001_0000,
+        value: 0b0101_0100_0000_0000_0000_0000_0000_0000,
+        decode: Self::decode,
+        exec: |c, d| d.exec(c),
+    };
 }
 
 /// Branch with a link
