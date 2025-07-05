@@ -125,7 +125,7 @@ pub fn instruction_ldr_register(
 pub fn instruction_ldr_literal(cpu: &mut Cpu, t: u8, size: u8, offset: u64) {
     let address = cpu.pc + offset;
     let privileged = !cpu.pstate.current_el.is_el0();
-    let access_descrip = AccessDescriptor::create_acc_descr_gpr(
+    let _access_descrip = AccessDescriptor::create_acc_descr_gpr(
         crate::memory::MemOp::Load,
         false,
         privileged,

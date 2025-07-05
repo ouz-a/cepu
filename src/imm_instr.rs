@@ -1,5 +1,5 @@
 use crate::{
-    cpu::{self, Cpu},
+    cpu::Cpu,
     data_processing::{
         instruction_addd_immediate, instruction_imm_sub, instruction_imm_subs, instruction_movz,
     },

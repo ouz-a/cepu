@@ -1,8 +1,5 @@
 use crate::{
-    branch::{
-        instruction_bl, instruction_branch, instruction_bunc, instruction_msr_imm, instruction_ret,
-    },
-    cpu::{Cpu, ExceptionLevel, INSTRUCTION_SIZE, PstateField},
+    cpu::Cpu,
     data_processing::shift_lsl,
     get_bits_ct,
     instruction::{InstDesc, Instruction},
