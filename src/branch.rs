@@ -94,7 +94,7 @@ pub fn instruction_msr_imm(
 
     match field {
         PstateField::Sp => {
-            cpu.pstate.sp = get_bits_ct!(operand, 0, 1) as u8;
+            cpu.pstate.sp = get_bits_ct!(operand, 0, 1);
         }
         PstateField::Daifset => {
             cpu.pstate.d |= get_bits_ct!(operand, 3, 1) != 0;

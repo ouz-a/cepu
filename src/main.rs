@@ -1,4 +1,7 @@
-use crate::instruction::{DESCR, InstructionEntry, UNDEFINED};
+use crate::{
+    cpu::Cpu,
+    instruction::{DESCR, InstructionEntry, UNDEFINED},
+};
 
 pub mod branch;
 pub mod branch_exc_sys_instr;
@@ -12,7 +15,7 @@ pub mod memory;
 pub mod register_instr;
 pub mod utils;
 
-pub const PRIMARY: [InstructionEntry; 2048] = build_primary();
+pub static PRIMARY: [InstructionEntry; 2048] = build_primary();
 
 const fn build_primary() -> [InstructionEntry; 2048] {
     let mut tbl = [UNDEFINED; 2048];
@@ -47,5 +50,5 @@ const fn build_primary() -> [InstructionEntry; 2048] {
 }
 
 fn main() {
-    println!("Hello, world!");
+    let _cpu = Cpu::init();
 }

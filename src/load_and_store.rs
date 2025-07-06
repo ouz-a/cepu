@@ -1,3 +1,5 @@
+#![allow(clippy::too_many_arguments)]
+
 use crate::{
     cpu::{Cpu, SP_REGISTER},
     memory::{AccessDescriptor, read_memory},
@@ -62,19 +64,18 @@ pub fn instruction_ldr_imm_base(
         address = cpu.x_read(n as usize, 64);
     }
     if !postindex {
-        address = address + offset;
+        address += offset;
     }
-    let data;
-    if wb_unknown {
+    let data = if wb_unknown {
         panic!("Unpredictable");
     } else {
-        data = read_memory(address as usize, (datasize / 8) as usize);
-    }
+        read_memory(address as usize, datasize / 8)
+    };
     cpu.x_write(t as usize, data.1, datasize == 32);
 
     if wback {
         if postindex {
-            address = address + offset;
+            address += offset;
         }
         if n == SP_REGISTER as u8 {
             cpu.sp_write(address);
@@ -114,7 +115,7 @@ pub fn instruction_ldr_register(
         address = cpu.x_read(n as usize, 64);
     }
 
-    address = address + offset;
+    address += offset;
 
     let (_, data) = read_memory(address as usize, (datasize / 8) as usize);
     let is_32b = reg_size == 32;
@@ -165,20 +166,16 @@ pub fn instruction_str_imm_un_off(
         address = cpu.x_read(n as usize, 64);
     }
     if !postindex {
-        address = address + offset;
+        address += offset;
     }
 
-    let data;
-    if rt_unknown {
-        panic!("Unpredictable");
-    } else {
-        data = cpu.x_read(t as usize, datasize as u8);
-    }
+    let data =
+        if rt_unknown { panic!("Unpredictable") } else { cpu.x_read(t as usize, datasize as u8) };
     cpu.x_write(t as usize, data, datasize == 32);
 
     if wback {
         if postindex {
-            address = address + offset;
+            address += offset;
         }
         if n == SP_REGISTER as u8 {
             cpu.sp_write(address);

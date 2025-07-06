@@ -13,7 +13,7 @@ const LOW_32_MASK: u64 = 0xFFFF_FFFFu64;
 const HAVE_AARCH64: bool = false;
 const HAVE_EL: bool = true;
 const HAVE_AARCH32: bool = false;
-const USING_AARCH32: bool = false;
+const _USING_AARCH32: bool = false;
 const IS_SECURE_EL2_ENABLED: bool = false;
 
 /// MMU enable
@@ -60,9 +60,9 @@ pub struct Cpu {
     /// System Control Register EL1
     sctlr_el1: u64,
     /// System Control Register EL2
-    sctlr_el2: u64,
+    _sctlr_el2: u64,
     /// System Control Register EL3
-    sctlr_el3: u64,
+    _sctlr_el3: u64,
 
     /// Secure Configuration Register EL3
     scr_el3: u64,
@@ -86,7 +86,7 @@ pub struct Cpu {
 }
 
 impl Cpu {
-    fn init() -> Self {
+    pub fn init() -> Self {
         let mut cpu = Cpu::default();
         cpu.pstate.sp = 1;
         cpu.sp_el0 = 1024;
@@ -104,20 +104,20 @@ impl Cpu {
 
     pub fn get_elr_elx(&self) -> u64 {
         if self.pstate.current_el.is_el0() || self.pstate.current_el.is_el1() {
-            return self.elr_el1;
+            self.elr_el1
         } else if self.pstate.current_el.is_el2() {
-            return self.elr_el2;
+            self.elr_el2
         } else {
-            return self.elr_el3;
+            self.elr_el3
         }
     }
     pub fn get_spsr_elx(&self) -> u64 {
         if self.pstate.current_el.is_el0() || self.pstate.current_el.is_el1() {
-            return self.spsr_el1;
+            self.spsr_el1
         } else if self.pstate.current_el.is_el2() {
-            return self.spsr_el2;
+            self.spsr_el2
         } else {
-            return self.spsr_el3;
+            self.spsr_el3
         }
     }
 
@@ -135,12 +135,11 @@ impl Cpu {
 
     pub fn check_space_alignment(&self) {
         let sp = self.sp_read();
-        let stack_align_check;
-        if self.pstate.current_el.is_el0() {
-            stack_align_check = (self.sctlr_el1 & SCTLR_SA0) != 0;
+        let stack_align_check = if self.pstate.current_el.is_el0() {
+            (self.sctlr_el1 & SCTLR_SA0) != 0
         } else {
-            stack_align_check = (self.sctlr_el1 & SCTLR_A) != 0;
-        }
+            (self.sctlr_el1 & SCTLR_A) != 0
+        };
         if stack_align_check && (sp != align(sp, 16)) {
             panic!("Alignment fault");
         }
@@ -244,7 +243,8 @@ impl Cpu {
                 self.sp_write(get_bits_ct!(spsr, 0, 1));
             }
         }
-        if self.pstate.il == true && self.pstate.nrw == true {
+
+        if self.pstate.il && self.pstate.nrw {
             panic!("We haven't implemented AArch32 support!");
         }
         self.pstate.nzcv_from_spsr(spsr);
@@ -255,6 +255,7 @@ impl Cpu {
         }
     }
 
+    #[allow(clippy::if_same_then_else)]
     fn el_from_spsr(&mut self, spsr: u64, valid: &mut bool, bits: &mut u8) {
         let spsr_4 = (spsr >> 4) & 1;
         if spsr_4 == 0 {
@@ -303,7 +304,7 @@ impl Cpu {
         if ExceptionLevel::from_bits(target) > self.pstate.current_el {
             return true;
         }
-        return false;
+        false
     }
 }
 

@@ -20,14 +20,13 @@ pub struct StrImmUnOffset {
 
 impl StrImmUnOffset {
     pub fn exec(self, cpu: &mut Cpu) {
-        let offset;
-        if (self.size & 1) == 1 {
-            offset = shift_lsl(self.imm12 as u64, self.size);
+        let offset = if (self.size & 1) == 1 {
+            shift_lsl(self.imm12 as u64, self.size)
         } else {
-            offset = self.imm12 as u64;
-        }
+            self.imm12 as u64
+        };
         let datasize = (8 << (self.size)) as u64;
-        let tag_checked = self.rn != 31 || true;
+        let tag_checked = self.rn != 31;
         if self.rn == self.rt && self.rn != 31 {
             panic!("Unpredictable");
         }
@@ -70,14 +69,13 @@ pub struct LdrImmUnOffset {
 
 impl LdrImmUnOffset {
     pub fn exec(self, cpu: &mut Cpu) {
-        let offset;
-        if (self.size & 1) == 1 {
-            offset = shift_lsl(self.imm12 as u64, self.size);
+        let offset = if (self.size & 1) == 1 {
+            shift_lsl(self.imm12 as u64, self.size)
         } else {
-            offset = self.imm12 as u64;
-        }
+            self.imm12 as u64
+        };
         let datasize = (8 << (self.size)) as u64;
-        let tag_checked = self.rn != 31 || true;
+        let tag_checked = self.rn != 31;
         if self.rn == self.rt && self.rn != 31 {
             panic!("Unpredictable");
         }
@@ -122,7 +120,7 @@ impl LdrImmPostIdx {
     pub fn exec(self, cpu: &mut Cpu) {
         let offset = sign_extend_xor(self.imm9 as u64, 9);
         let datasize = (8 << (self.size)) as u64;
-        let tagchecked = self.rn != 31 || true;
+        let tagchecked = self.rn != 31;
 
         if self.rn == self.rt && self.rn != 31 {
             panic!("Unpredictable");
@@ -168,7 +166,7 @@ impl LdrImmPreIdx {
     pub fn exec(self, cpu: &mut Cpu) {
         let offset = sign_extend_xor(self.imm9 as u64, 9);
         let datasize = (8 << (self.size)) as u64;
-        let tagchecked = self.rn != 31 || true;
+        let tagchecked = self.rn != 31;
 
         if self.rn == self.rt && self.rn != 31 {
             panic!("Unpredictable");
@@ -278,7 +276,7 @@ impl LdrLit {
     }
     pub const fn decode(word: u32) -> Instruction {
         let opc = get_bits_ct!(word, 30, 1) as u8;
-        let imm19 = get_bits_ct!(word, 5, 19) as u32;
+        let imm19 = get_bits_ct!(word, 5, 19);
         let rt = get_bits_ct!(word, 0, 5) as u8;
         Instruction::LdrLit(LdrLit { opc, imm19, rt })
     }

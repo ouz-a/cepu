@@ -1,3 +1,5 @@
+#![allow(clippy::too_many_arguments)]
+
 use crate::cpu::{Cpu, SP_REGISTER};
 
 #[derive(Clone, Copy, Debug)]
@@ -75,12 +77,7 @@ pub fn instruction_imm_add(cpu: &mut Cpu, d: u64, n: u64, imm12: u16, datasize: 
 }
 
 pub fn instruction_imm_sub(cpu: &mut Cpu, d: u8, n: u8, imm24: u32, datasize: u8) {
-    let op1;
-    if n == SP_REGISTER as u8 {
-        op1 = cpu.sp_read();
-    } else {
-        op1 = cpu.x_read(n as usize, datasize);
-    }
+    let op1 = if n == SP_REGISTER as u8 { cpu.sp_read() } else { cpu.x_read(n as usize, datasize) };
     let op2 = imm24 as u64;
 
     let res = add_with_carry(op1, !op2, 1);
@@ -92,12 +89,11 @@ pub fn instruction_imm_sub(cpu: &mut Cpu, d: u8, n: u8, imm24: u32, datasize: u8
 }
 
 pub fn instruction_imm_subs(cpu: &mut Cpu, d: u8, n: u8, imm24: u32, datasize: u8) {
-    let op1;
-    if n == SP_REGISTER as u8 {
-        panic!("TODO: We haven't implemented this yet");
+    let op1 = if n == SP_REGISTER as u8 {
+        panic!("TODO: We haven't implemented this yet")
     } else {
-        op1 = cpu.x_read(n as usize, datasize);
-    }
+        cpu.x_read(n as usize, datasize)
+    };
     let op2 = imm24 as u8;
 
     let res = add_with_carry(op1, op2.into(), 1);
@@ -182,7 +178,7 @@ pub fn instruction_mov(cpu: &mut Cpu, d: u64, n: u64, is_32b: bool) {
 }
 
 pub fn instruction_movn(cpu: &mut Cpu, reg_num: u64, imm16: u16, shift: u8, is_32b: bool) {
-    let mut result: u64 = 0;
+    let mut result: u64;
     result = (imm16 as u64) << shift;
     result = !(result);
     cpu.x_write(reg_num as usize, result, is_32b);
@@ -196,8 +192,8 @@ pub fn instruction_movk(cpu: &mut Cpu, reg_num: u64, imm16: u16, shift: u8, is_3
         result = cpu.x_read(reg_num as usize, 32);
     }
     let mask: u64 = !(0xFFFFu64 << shift);
-    result = result & mask;
-    result = result | ((imm16 as u64) << shift);
+    result &= mask;
+    result |= (imm16 as u64) << shift;
     cpu.x_write(reg_num as usize, result, is_32b);
 }
 

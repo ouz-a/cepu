@@ -232,9 +232,7 @@ pub struct AccessDescriptor {
 }
 impl AccessDescriptor {
     fn new(acc_type: AccessType) -> Self {
-        let mut acc = AccessDescriptor::default();
-        acc.acc_type = acc_type;
-        acc
+        AccessDescriptor { acc_type, ..Default::default() }
     }
     pub fn create_acc_descr_gpr(
         memop: MemOp,
@@ -261,14 +259,14 @@ pub struct PhyMemStatus {
 
 pub fn read_memory(address: usize, size: usize) -> (PhyMemStatus, u64) {
     assert!(matches!(size, 1 | 2 | 4 | 8));
-    assert!(address + size as usize <= MEMORY_SIZE);
+    assert!(address + size <= MEMORY_SIZE);
 
     let mut status = PhyMemStatus::default();
     let ret_val;
     unsafe {
         let src = (core::ptr::addr_of!(MEMORY) as *const u8).add(address);
         let mut value = [0u8; 8];
-        core::ptr::copy_nonoverlapping(src, value.as_mut_ptr(), size as usize);
+        core::ptr::copy_nonoverlapping(src, value.as_mut_ptr(), size);
         ret_val = u64::from_le_bytes(value);
     }
     status.fault_status = FaultStatus::None;

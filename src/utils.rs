@@ -15,10 +15,10 @@ pub const fn align(value: u64, align: u64) -> u64 {
 
 #[inline]
 pub const fn is_aligned(value: u64, align: u64) -> bool {
-    return (value & (align - 1)) == 0;
+    (value & (align - 1)) == 0
 }
 
 pub fn sign_extend_xor(val: u64, width: isize) -> u64 {
     let sign_bit = 1u64 << (width - 1);
-    return (val ^ sign_bit) - sign_bit;
+    (val ^ sign_bit) - sign_bit
 }

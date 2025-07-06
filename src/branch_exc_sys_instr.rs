@@ -65,7 +65,7 @@ impl Bl {
         instruction_bl(cpu, (self.imm26 << 2).into());
     }
     pub const fn decode(word: u32) -> Instruction {
-        let imm26 = get_bits_ct!(word, 0, 26) as u32;
+        let imm26 = get_bits_ct!(word, 0, 26);
         Instruction::Bl(Bl { imm26 })
     }
 
@@ -87,7 +87,7 @@ impl Branch {
         instruction_bunc(cpu, (self.imm26 as u64) * INSTRUCTION_SIZE as u64);
     }
     pub fn decode(word: u32) -> Instruction {
-        let imm26 = get_bits_ct!(word, 0, 26) as u32;
+        let imm26 = get_bits_ct!(word, 0, 26);
         Instruction::Branch(Branch { imm26 })
     }
 
@@ -107,37 +107,21 @@ pub struct MsrImm {
 }
 impl MsrImm {
     pub fn exec(self, cpu: &mut Cpu) {
-        let min_el;
-        match self.op1 & 0b00000111 {
-            0b011 => {
-                min_el = ExceptionLevel::EL0;
-            }
-            0b110 => {
-                min_el = ExceptionLevel::EL3;
-            }
-            0b100 | 0b101 => {
-                min_el = ExceptionLevel::EL2;
-            }
-            0b000 | 0b001 => min_el = ExceptionLevel::EL1,
-            0b111 => {
-                min_el = ExceptionLevel::EL1;
-            }
+        let min_el = match self.op1 & 0b00000111 {
+            0b011 => ExceptionLevel::EL0,
+            0b110 => ExceptionLevel::EL3,
+            0b100 | 0b101 => ExceptionLevel::EL2,
+            0b000 | 0b001 => ExceptionLevel::EL1,
+            0b111 => ExceptionLevel::EL1,
             _ => panic!("Value not convered {}", self.op1 & 0b00000111),
-        }
+        };
         let op1_op2 = (self.op1 << 3) | self.op2;
-        let field;
-        match op1_op2 {
-            5 => {
-                field = PstateField::Sp;
-            }
-            30 => {
-                field = PstateField::Daifset;
-            }
-            31 => {
-                field = PstateField::Daifclr;
-            }
-            _ => panic!("Value not covered {}", op1_op2),
-        }
+        let field = match op1_op2 {
+            5 => PstateField::Sp,
+            30 => PstateField::Daifset,
+            31 => PstateField::Daifclr,
+            _ => panic!("Value not covered {op1_op2}"),
+        };
         instruction_msr_imm(cpu, self.crm, self.op1, self.crm, min_el, field);
     }
 
