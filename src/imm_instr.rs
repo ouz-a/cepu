@@ -47,7 +47,7 @@ pub struct Movz {
 }
 
 impl Movz {
-    pub fn execute(self, cpu: &mut Cpu) {
+    pub fn exec(self, cpu: &mut Cpu) {
         if !self.sf && (self.hw & 1) == 1 {
             panic!("Undefined")
         }

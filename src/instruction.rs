@@ -39,8 +39,27 @@ pub enum Instruction {
 impl Instruction {
     pub fn exec(&self, cpu: &mut Cpu) {
         match self {
-            Instruction::Madd(madd) => madd.exec(cpu),
-            _ => (),
+            Instruction::Madd(instr) => instr.exec(cpu),
+            Instruction::AddShiftedReg(instr) => instr.exec(cpu),
+            Instruction::SubShiftedRegister(instr) => instr.exec(cpu),
+            Instruction::Udiv(instr) => instr.exec(cpu),
+            Instruction::AddImmediate(instr) => instr.exec(cpu),
+            Instruction::Movz(instr) => instr.exec(cpu),
+            Instruction::Subs(instr) => instr.exec(cpu),
+            Instruction::SubImmediate(instr) => instr.exec(cpu),
+            Instruction::Ret(instr) => instr.exec(cpu),
+            Instruction::Bcond(instr) => instr.exec(cpu),
+            Instruction::Bl(instr) => instr.exec(cpu),
+            Instruction::Branch(instr) => instr.exec(cpu),
+            Instruction::MsrImm(instr) => instr.exec(cpu),
+            Instruction::MsrReg(instr) => instr.exec(cpu),
+            Instruction::Mrs(instr) => instr.exec(cpu),
+            Instruction::StrImmUnOffset(instr) => instr.exec(cpu),
+            Instruction::LdrImmUnOffset(instr) => instr.exec(cpu),
+            Instruction::LdrImmPostIdx(instr) => instr.exec(cpu),
+            Instruction::LdrImmPreIdx(instr) => instr.exec(cpu),
+            Instruction::LdrReg(instr) => instr.exec(cpu),
+            Instruction::LdrLit(instr) => instr.exec(cpu),
         }
     }
 }

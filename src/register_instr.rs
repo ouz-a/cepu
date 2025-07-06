@@ -133,7 +133,7 @@ pub struct Udiv {
 }
 
 impl Udiv {
-    pub fn execute(self, cpu: &mut Cpu) {
+    pub fn exec(self, cpu: &mut Cpu) {
         instruction_udiv(cpu, self.rd, self.rn, self.rm, if self.sf { 64 } else { 32 });
     }
     pub const fn decode(word: u32) -> Instruction {

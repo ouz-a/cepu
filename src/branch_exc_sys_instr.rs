@@ -13,7 +13,7 @@ pub struct Ret {
 }
 
 impl Ret {
-    pub fn execute(self, cpu: &mut Cpu) {
+    pub fn exec(self, cpu: &mut Cpu) {
         instruction_ret(cpu, self.rn);
     }
 
@@ -36,7 +36,7 @@ pub struct Bcond {
 }
 
 impl Bcond {
-    pub fn execute(self, cpu: &mut Cpu) {
+    pub fn exec(self, cpu: &mut Cpu) {
         instruction_branch(cpu, self.cond, (self.imm19 as u64) * INSTRUCTION_SIZE as u64);
     }
 
@@ -61,7 +61,7 @@ pub struct Bl {
 }
 
 impl Bl {
-    pub fn exceute(self, cpu: &mut Cpu) {
+    pub fn exec(self, cpu: &mut Cpu) {
         instruction_bl(cpu, (self.imm26 << 2).into());
     }
     pub const fn decode(word: u32) -> Instruction {
@@ -83,7 +83,7 @@ pub struct Branch {
 }
 
 impl Branch {
-    pub fn execute(self, cpu: &mut Cpu) {
+    pub fn exec(self, cpu: &mut Cpu) {
         instruction_bunc(cpu, (self.imm26 as u64) * INSTRUCTION_SIZE as u64);
     }
     pub fn decode(word: u32) -> Instruction {
@@ -106,7 +106,7 @@ pub struct MsrImm {
     pub op2: u8,
 }
 impl MsrImm {
-    pub fn execute(self, cpu: &mut Cpu) {
+    pub fn exec(self, cpu: &mut Cpu) {
         let min_el;
         match self.op1 & 0b00000111 {
             0b011 => {
@@ -167,7 +167,7 @@ pub struct MsrReg {
 }
 
 impl MsrReg {
-    pub fn execute(self, cpu: &mut Cpu) {
+    pub fn exec(self, cpu: &mut Cpu) {
         cpu.sys_reg_write(self.op0, self.op1, self.crn, self.crm, self.op2, self.rt);
     }
     pub const fn decode(word: u32) -> Instruction {
@@ -197,7 +197,7 @@ pub struct Mrs {
     pub rt: u8,
 }
 impl Mrs {
-    pub fn execute(self, cpu: &mut Cpu) {
+    pub fn exec(self, cpu: &mut Cpu) {
         cpu.sys_reg_write(self.op0, self.op1, self.crn, self.crm, self.op2, self.rt);
     }
     pub const fn decode(word: u32) -> Instruction {
