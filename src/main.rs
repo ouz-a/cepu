@@ -1,6 +1,8 @@
 use crate::{
-    cpu::Cpu,
+    branch::branch_addr,
+    cpu::{Cpu, INSTRUCTION_SIZE},
     instruction::{DESCR, InstructionEntry, UNDEFINED},
+    memory::read_32,
 };
 
 pub mod branch;
@@ -47,6 +49,31 @@ const fn build_primary() -> [InstructionEntry; 2048] {
         i += 1;
     }
     tbl
+}
+
+pub fn run_block(cpu: &mut Cpu) {
+    let mut pc = cpu.pc;
+    let limit = 99999;
+
+    loop {
+        let old_pc = pc;
+        let word = read_32(old_pc as usize);
+        pc = pc.wrapping_add(INSTRUCTION_SIZE);
+        let idx = (word >> 21) as usize;
+        let ent = unsafe { PRIMARY.get_unchecked(idx) };
+        let dec = (ent.decode)(word);
+        dec.exec(cpu, old_pc);
+
+        if cpu.branch_taken {
+            pc = cpu.branch_target;
+            cpu.branch_taken = false;
+        }
+        if pc >= limit {
+            break;
+        }
+    }
+
+    cpu.pc = branch_addr(pc, cpu.pstate.current_el as u8) & 0x00FF_FFFF_FFFF_FFFF;
 }
 
 fn main() {

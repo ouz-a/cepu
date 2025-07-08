@@ -17,7 +17,7 @@ pub struct Madd {
     pub rm: u8,
 }
 impl Madd {
-    pub fn exec(self, cpu: &mut Cpu) {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
         instruction_multiply_add(
             cpu,
             self.rn,
@@ -40,7 +40,7 @@ impl Madd {
         mask: 0b0111_1111_1110_0000_1000_0000_0000_0000,
         value: 0b0001_1011_0000_0000_0000_0000_0000_0000,
         decode: Self::decode,
-        exec: |c, d| d.exec(c),
+        exec: |c, d, p| d.exec(c, p),
     };
 }
 
@@ -55,7 +55,7 @@ pub struct AddShiftedReg {
 }
 
 impl AddShiftedReg {
-    pub fn exec(self, cpu: &mut Cpu) {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
         instruction_add_shifted_register(
             cpu,
             self.rn,
@@ -81,7 +81,7 @@ impl AddShiftedReg {
         mask: 0b0111_1111_0010_0000_0000_0000_0000_0000,
         value: 0b0010_1011_0000_0000_0000_0000_0000_0000,
         decode: Self::decode,
-        exec: |c, d| d.exec(c),
+        exec: |c, d, p| d.exec(c, p),
     };
 }
 
@@ -95,7 +95,7 @@ pub struct SubShiftedRegister {
     pub rd: u8,
 }
 impl SubShiftedRegister {
-    pub fn exec(self, cpu: &mut Cpu) {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
         instruction_sub_shifted_register(
             cpu,
             self.rn,
@@ -120,7 +120,7 @@ impl SubShiftedRegister {
         mask: 0b0111_1111_0010_0000_0000_0000_0000_0000,
         value: 0b0110_1011_0000_0000_0000_0000_0000_0000,
         decode: Self::decode,
-        exec: |c, d| d.exec(c),
+        exec: |c, d, p| d.exec(c, p),
     };
 }
 
@@ -133,7 +133,7 @@ pub struct Udiv {
 }
 
 impl Udiv {
-    pub fn exec(self, cpu: &mut Cpu) {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
         instruction_udiv(cpu, self.rd, self.rn, self.rm, if self.sf { 64 } else { 32 });
     }
     pub const fn decode(word: u32) -> Instruction {
@@ -147,6 +147,6 @@ impl Udiv {
         mask: 0b0111_1111_1110_0000_1111_1100_0000_0000,
         value: 0b0001_1010_1100_0000_0000_1000_0000_0000,
         decode: Self::decode,
-        exec: |c, d| d.exec(c),
+        exec: |c, d, p| d.exec(c, p),
     };
 }

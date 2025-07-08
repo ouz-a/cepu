@@ -1,6 +1,6 @@
 use crate::{get_bits_ct, utils::align};
 
-pub const INSTRUCTION_SIZE: usize = 4;
+pub const INSTRUCTION_SIZE: u64 = 4;
 
 const GPRS: usize = 32;
 
@@ -47,6 +47,10 @@ pub struct Cpu {
 
     /// Program Counter
     pub pc: u64,
+
+    pub branch_taken: bool,
+    /// Old pc + offset
+    pub branch_target: u64,
 
     /// Stack Pointer EL0
     sp_el0: u64,
@@ -161,7 +165,7 @@ impl Cpu {
     /// When n == 31 we return 0
     pub fn x_read(&self, n: usize, width: u8) -> u64 {
         assert!(n < GPRS);
-        assert!(width <= 64 && width % 8 == 0);
+        assert!(width <= 64 && width.is_multiple_of(8));
         if n != ZERO_REG {
             let mask = if width == 64 { !0u64 } else { (1 << width) - 1 };
             return self.x[n] & mask;

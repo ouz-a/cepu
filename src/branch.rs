@@ -1,6 +1,7 @@
 use crate::{
     cpu::{Cpu, ExceptionLevel, PstateField},
     get_bits_ct,
+    utils::{bits_get, sign_extend, zero_extend},
 };
 
 pub fn condition_holds(cpu: &Cpu, cond: u8) -> bool {
@@ -22,12 +23,12 @@ pub fn condition_holds(cpu: &Cpu, cond: u8) -> bool {
     result
 }
 
+// TODO: Properly implement this
 #[inline(always)]
 pub fn effective_tbi(el: u8) -> bool {
     el == 0
 }
 
-// TODO: Properly implement this
 #[inline(always)]
 pub fn addr_top(el: u8) -> u8 {
     if effective_tbi(el) { 55 } else { 63 }
@@ -36,34 +37,43 @@ pub fn addr_top(el: u8) -> u8 {
 #[inline(always)]
 pub fn branch_addr(vaddress: u64, el: u8) -> u64 {
     let msbit = addr_top(el);
-    if msbit == 63 { vaddress } else { msbit as u64 }
+    if msbit == 63 {
+        return vaddress;
+    }
+
+    let load = bits_get(vaddress, 0, msbit + 1);
+    let sign_bit_set = bits_get(vaddress, msbit, 1) != 0;
+    if (el == 0 || el == 1) && sign_bit_set {
+        sign_extend(load, msbit)
+    } else {
+        zero_extend(load, msbit)
+    }
 }
 
-pub fn branch_to(cpu: &mut Cpu, target: u64, is_32bit: bool) {
+pub fn branch_to(cpu: &mut Cpu, target: u64, is_32bit: bool, old_pc: u64) {
+    cpu.branch_taken = true;
     if is_32bit {
-        cpu.pc = cpu.pc.wrapping_add(target.wrapping_mul(4));
+        cpu.branch_target = old_pc.wrapping_add(target.wrapping_mul(4))
     } else {
         let tgt = branch_addr(target, cpu.pstate.current_el as u8);
-        cpu.pc = tgt;
+        cpu.branch_target = tgt;
     }
 }
 
-pub fn instruction_branch(cpu: &mut Cpu, cond: u8, offset: u64) {
+pub fn instruction_branch(cpu: &mut Cpu, cond: u8, offset: u64, old_pc: u64) {
     if condition_holds(cpu, cond) {
-        branch_to(cpu, cpu.pc.wrapping_add(offset), false);
-    } else {
-        cpu.pc = cpu.pc.wrapping_add(4);
+        branch_to(cpu, old_pc.wrapping_add(offset), false, old_pc);
     }
 }
 
-pub fn instruction_bl(cpu: &mut Cpu, offset: u64) {
-    cpu.x_write(30, cpu.pc.wrapping_add(4), false);
-    branch_to(cpu, cpu.pc.wrapping_add(offset), false);
+pub fn instruction_bl(cpu: &mut Cpu, offset: u64, old_pc: u64) {
+    cpu.x_write(30, old_pc.wrapping_add(4), false);
+    branch_to(cpu, old_pc.wrapping_add(offset), false, old_pc);
 }
 
-pub fn instruction_ret(cpu: &mut Cpu, n: u8) {
+pub fn instruction_ret(cpu: &mut Cpu, n: u8, old_pc: u64) {
     let target = cpu.x_read(n as usize, 64);
-    branch_to(cpu, target, false);
+    branch_to(cpu, target, false, old_pc);
 }
 
 pub fn instruction_eret(cpu: &mut Cpu) {
@@ -75,8 +85,8 @@ pub fn instruction_eret(cpu: &mut Cpu) {
     cpu.aarch64_exception_return(target, spsr);
 }
 
-pub fn instruction_bunc(cpu: &mut Cpu, offset: u64) {
-    branch_to(cpu, cpu.pc.wrapping_add(offset), false);
+pub fn instruction_bunc(cpu: &mut Cpu, offset: u64, old_pc: u64) {
+    branch_to(cpu, old_pc.wrapping_add(offset), false, old_pc);
 }
 
 pub fn instruction_msr_imm(

@@ -8,7 +8,7 @@ use crate::{
     register_instr::{AddShiftedReg, Madd, SubShiftedRegister, Udiv},
 };
 
-type ExecFn = fn(&mut Cpu, Instruction);
+type ExecFn = fn(&mut Cpu, Instruction, u64);
 type DecodeFn = fn(u32) -> Instruction;
 
 #[derive(Debug, Clone, Copy)]
@@ -37,29 +37,29 @@ pub enum Instruction {
 }
 
 impl Instruction {
-    pub fn exec(&self, cpu: &mut Cpu) {
+    pub fn exec(&self, cpu: &mut Cpu, old_pc: u64) {
         match self {
-            Instruction::Madd(instr) => instr.exec(cpu),
-            Instruction::AddShiftedReg(instr) => instr.exec(cpu),
-            Instruction::SubShiftedRegister(instr) => instr.exec(cpu),
-            Instruction::Udiv(instr) => instr.exec(cpu),
-            Instruction::AddImmediate(instr) => instr.exec(cpu),
-            Instruction::Movz(instr) => instr.exec(cpu),
-            Instruction::Subs(instr) => instr.exec(cpu),
-            Instruction::SubImmediate(instr) => instr.exec(cpu),
-            Instruction::Ret(instr) => instr.exec(cpu),
-            Instruction::Bcond(instr) => instr.exec(cpu),
-            Instruction::Bl(instr) => instr.exec(cpu),
-            Instruction::Branch(instr) => instr.exec(cpu),
-            Instruction::MsrImm(instr) => instr.exec(cpu),
-            Instruction::MsrReg(instr) => instr.exec(cpu),
-            Instruction::Mrs(instr) => instr.exec(cpu),
-            Instruction::StrImmUnOffset(instr) => instr.exec(cpu),
-            Instruction::LdrImmUnOffset(instr) => instr.exec(cpu),
-            Instruction::LdrImmPostIdx(instr) => instr.exec(cpu),
-            Instruction::LdrImmPreIdx(instr) => instr.exec(cpu),
-            Instruction::LdrReg(instr) => instr.exec(cpu),
-            Instruction::LdrLit(instr) => instr.exec(cpu),
+            Instruction::Madd(instr) => instr.exec(cpu, old_pc),
+            Instruction::AddShiftedReg(instr) => instr.exec(cpu, old_pc),
+            Instruction::SubShiftedRegister(instr) => instr.exec(cpu, old_pc),
+            Instruction::Udiv(instr) => instr.exec(cpu, old_pc),
+            Instruction::AddImmediate(instr) => instr.exec(cpu, old_pc),
+            Instruction::Movz(instr) => instr.exec(cpu, old_pc),
+            Instruction::Subs(instr) => instr.exec(cpu, old_pc),
+            Instruction::SubImmediate(instr) => instr.exec(cpu, old_pc),
+            Instruction::Ret(instr) => instr.exec(cpu, old_pc),
+            Instruction::Bcond(instr) => instr.exec(cpu, old_pc),
+            Instruction::Bl(instr) => instr.exec(cpu, old_pc),
+            Instruction::Branch(instr) => instr.exec(cpu, old_pc),
+            Instruction::MsrImm(instr) => instr.exec(cpu, old_pc),
+            Instruction::MsrReg(instr) => instr.exec(cpu, old_pc),
+            Instruction::Mrs(instr) => instr.exec(cpu, old_pc),
+            Instruction::StrImmUnOffset(instr) => instr.exec(cpu, old_pc),
+            Instruction::LdrImmUnOffset(instr) => instr.exec(cpu, old_pc),
+            Instruction::LdrImmPostIdx(instr) => instr.exec(cpu, old_pc),
+            Instruction::LdrImmPreIdx(instr) => instr.exec(cpu, old_pc),
+            Instruction::LdrReg(instr) => instr.exec(cpu, old_pc),
+            Instruction::LdrLit(instr) => instr.exec(cpu, old_pc),
         }
     }
 }
@@ -103,7 +103,7 @@ pub struct InstructionEntry {
     pub specificity: u32,
 }
 
-pub fn exec_undef(_: &mut Cpu, _: Instruction) {
+pub fn exec_undef(_: &mut Cpu, _: Instruction, _: u64) {
     panic!("Undefined instruction!");
 }
 

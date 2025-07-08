@@ -13,8 +13,8 @@ pub struct Ret {
 }
 
 impl Ret {
-    pub fn exec(self, cpu: &mut Cpu) {
-        instruction_ret(cpu, self.rn);
+    pub fn exec(self, cpu: &mut Cpu, old_pc: u64) {
+        instruction_ret(cpu, self.rn, old_pc);
     }
 
     pub const fn decode(word: u32) -> Instruction {
@@ -25,7 +25,7 @@ impl Ret {
         mask: 0b1111_1111_1111_1111_1111_1100_0001_1111,
         value: 0b1101_0110_0101_1111_0000_0000_0000_0000,
         decode: Self::decode,
-        exec: |c, d| d.exec(c),
+        exec: |c, d, p| d.exec(c, p),
     };
 }
 
@@ -36,8 +36,8 @@ pub struct Bcond {
 }
 
 impl Bcond {
-    pub fn exec(self, cpu: &mut Cpu) {
-        instruction_branch(cpu, self.cond, (self.imm19 as u64) * INSTRUCTION_SIZE as u64);
+    pub fn exec(self, cpu: &mut Cpu, old_pc: u64) {
+        instruction_branch(cpu, self.cond, (self.imm19 as u64) * INSTRUCTION_SIZE, old_pc);
     }
 
     pub const fn decode(word: u32) -> Instruction {
@@ -50,7 +50,7 @@ impl Bcond {
         mask: 0b1111_1111_0000_0000_0000_0000_0001_0000,
         value: 0b0101_0100_0000_0000_0000_0000_0000_0000,
         decode: Self::decode,
-        exec: |c, d| d.exec(c),
+        exec: |c, d, p| d.exec(c, p),
     };
 }
 
@@ -61,8 +61,8 @@ pub struct Bl {
 }
 
 impl Bl {
-    pub fn exec(self, cpu: &mut Cpu) {
-        instruction_bl(cpu, (self.imm26 << 2).into());
+    pub fn exec(self, cpu: &mut Cpu, old_pc: u64) {
+        instruction_bl(cpu, (self.imm26 << 2).into(), old_pc);
     }
     pub const fn decode(word: u32) -> Instruction {
         let imm26 = get_bits_ct!(word, 0, 26);
@@ -73,7 +73,7 @@ impl Bl {
         mask: 0b1111_1110_0000_0000_0000_0000_0000_0000,
         value: 0b1001_0100_0000_0000_0000_0000_0000_0000,
         decode: Self::decode,
-        exec: |c, d| d.exec(c),
+        exec: |c, d, p| d.exec(c, p),
     };
 }
 
@@ -83,8 +83,8 @@ pub struct Branch {
 }
 
 impl Branch {
-    pub fn exec(self, cpu: &mut Cpu) {
-        instruction_bunc(cpu, (self.imm26 as u64) * INSTRUCTION_SIZE as u64);
+    pub fn exec(self, cpu: &mut Cpu, old_pc: u64) {
+        instruction_bunc(cpu, (self.imm26 as u64) * INSTRUCTION_SIZE, old_pc);
     }
     pub fn decode(word: u32) -> Instruction {
         let imm26 = get_bits_ct!(word, 0, 26);
@@ -95,7 +95,7 @@ impl Branch {
         mask: 0b1111_1100_0000_0000_0000_0000_0000_0000,
         value: 0b0001_0100_0000_0000_0000_0000_0000_0000,
         decode: Self::decode,
-        exec: |c, d| d.exec(c),
+        exec: |c, d, p| d.exec(c, p),
     };
 }
 
@@ -106,7 +106,7 @@ pub struct MsrImm {
     pub op2: u8,
 }
 impl MsrImm {
-    pub fn exec(self, cpu: &mut Cpu) {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
         let min_el = match self.op1 & 0b00000111 {
             0b011 => ExceptionLevel::EL0,
             0b110 => ExceptionLevel::EL3,
@@ -136,7 +136,7 @@ impl MsrImm {
         mask: 0b1111_1111_1111_1000_1111_0000_0001_1111,
         value: 0b1101_0101_0000_0000_0100_0000_0001_1111,
         decode: Self::decode,
-        exec: |c, d| d.exec(c),
+        exec: |c, d, p| d.exec(c, p),
     };
 }
 
@@ -151,7 +151,7 @@ pub struct MsrReg {
 }
 
 impl MsrReg {
-    pub fn exec(self, cpu: &mut Cpu) {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
         cpu.sys_reg_write(self.op0, self.op1, self.crn, self.crm, self.op2, self.rt);
     }
     pub const fn decode(word: u32) -> Instruction {
@@ -167,7 +167,7 @@ impl MsrReg {
         mask: 0b1111_1111_1111_0000_0000_0000_0000_0000,
         value: 0b1101_0101_0001_0000_0000_0000_0000_0000,
         decode: Self::decode,
-        exec: |c, d| d.exec(c),
+        exec: |c, d, p| d.exec(c, p),
     };
 }
 
@@ -181,7 +181,7 @@ pub struct Mrs {
     pub rt: u8,
 }
 impl Mrs {
-    pub fn exec(self, cpu: &mut Cpu) {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
         cpu.sys_reg_write(self.op0, self.op1, self.crn, self.crm, self.op2, self.rt);
     }
     pub const fn decode(word: u32) -> Instruction {
@@ -198,6 +198,6 @@ impl Mrs {
         mask: 0b1111_1111_1111_0000_0000_0000_0000_0000,
         value: 0b1101_0101_0011_0000_0000_0000_0000_0000,
         decode: Self::decode,
-        exec: |c, d| d.exec(c),
+        exec: |c, d, p| d.exec(c, p),
     };
 }

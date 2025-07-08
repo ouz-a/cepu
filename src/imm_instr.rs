@@ -17,7 +17,7 @@ pub struct AddImmediate {
 }
 
 impl AddImmediate {
-    pub fn exec(self, cpu: &mut Cpu) {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
         let imm: u32 = if self.sh { (self.imm12 as u32) << 12 } else { self.imm12 as u32 };
         instruction_addd_immediate(cpu, self.rd, self.rn, imm, !self.sf);
     }
@@ -34,7 +34,7 @@ impl AddImmediate {
         mask: 0b0111_1111_1100_0000_0000_0000_0000_0000,
         value: 0b0001_0001_0000_0000_0000_0000_0000_0000,
         decode: Self::decode,
-        exec: |c, d| d.exec(c),
+        exec: |c, d, p| d.exec(c, p),
     };
 }
 
@@ -47,7 +47,7 @@ pub struct Movz {
 }
 
 impl Movz {
-    pub fn exec(self, cpu: &mut Cpu) {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
         if !self.sf && (self.hw & 1) == 1 {
             panic!("Undefined")
         }
@@ -64,7 +64,7 @@ impl Movz {
         mask: 0b0111_1111_1000_0000_0000_0000_0000_0000,
         value: 0b0101_0010_1000_0000_0000_0000_0000_0000,
         decode: Self::decode,
-        exec: |c, d| d.exec(c),
+        exec: |c, d, p| d.exec(c, p),
     };
 }
 
@@ -78,7 +78,7 @@ pub struct Subs {
 }
 
 impl Subs {
-    pub fn exec(self, cpu: &mut Cpu) {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
         let imm = if self.sh { (self.imm12 as u32) << 12 } else { self.imm12 as u32 };
         instruction_imm_subs(cpu, self.rn, self.rd, imm, if self.sf { 64 } else { 32 });
     }
@@ -94,7 +94,7 @@ impl Subs {
         mask: 0b0111_1111_1000_0000_0000_0000_0000_0000,
         value: 0b0111_0001_0000_0000_0000_0000_0000_0000,
         decode: Self::decode,
-        exec: |c, d| d.exec(c),
+        exec: |c, d, p| d.exec(c, p),
     };
 }
 
@@ -108,7 +108,7 @@ pub struct SubImmediate {
 }
 
 impl SubImmediate {
-    pub fn exec(self, cpu: &mut Cpu) {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
         let imm = if self.sh { (self.imm12 as u32) << 12 } else { self.imm12 as u32 };
         instruction_imm_sub(cpu, self.rn, self.rd, imm, if self.sf { 64 } else { 32 });
     }
@@ -124,6 +124,6 @@ impl SubImmediate {
         mask: 0b0111_1111_1100_0000_0000_0000_0000_0000,
         value: 0b0101_0001_0000_0000_0000_0000_0000_0000,
         decode: Self::decode,
-        exec: |c, d| d.exec(c),
+        exec: |c, d, p| d.exec(c, p),
     };
 }

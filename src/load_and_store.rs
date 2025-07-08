@@ -83,7 +83,6 @@ pub fn instruction_ldr_imm_base(
             cpu.x_write(n as usize, address, true);
         }
     }
-    cpu.pc += 4;
 }
 
 pub fn instruction_ldr_register(
@@ -120,11 +119,10 @@ pub fn instruction_ldr_register(
     let (_, data) = read_memory(address as usize, (datasize / 8) as usize);
     let is_32b = reg_size == 32;
     cpu.x_write(t as usize, data, is_32b);
-    cpu.pc += 4;
 }
 
-pub fn instruction_ldr_literal(cpu: &mut Cpu, t: u8, size: u8, offset: u64) {
-    let address = cpu.pc + offset;
+pub fn instruction_ldr_literal(cpu: &mut Cpu, t: u8, size: u8, offset: u64, old_pc: u64) {
+    let address = old_pc + offset;
     let privileged = !cpu.pstate.current_el.is_el0();
     let _access_descrip = AccessDescriptor::create_acc_descr_gpr(
         crate::memory::MemOp::Load,
@@ -136,7 +134,6 @@ pub fn instruction_ldr_literal(cpu: &mut Cpu, t: u8, size: u8, offset: u64) {
     let is_32b = size * 8 >= 64;
     let (_, word) = read_memory(address as usize, size as usize);
     cpu.x_write(t as usize, word, is_32b);
-    cpu.pc += 4;
 }
 
 pub fn instruction_str_imm_un_off(
@@ -183,7 +180,6 @@ pub fn instruction_str_imm_un_off(
             cpu.x_write(n as usize, address, true);
         }
     }
-    cpu.pc += 4;
 }
 
 #[inline(always)]
