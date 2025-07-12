@@ -1,6 +1,9 @@
+use std::path::Path;
+
 use crate::{
     branch::branch_addr,
     cpu::{Cpu, INSTRUCTION_SIZE},
+    elf::create_and_validate_elf_header,
     instruction::{DESCR, InstructionEntry, UNDEFINED},
     memory::read_32,
 };
@@ -9,6 +12,7 @@ pub mod branch;
 pub mod branch_exc_sys_instr;
 pub mod cpu;
 pub mod data_processing;
+pub mod elf;
 pub mod imm_instr;
 pub mod instruction;
 pub mod load_and_store;
@@ -77,5 +81,6 @@ pub fn run_block(cpu: &mut Cpu) {
 }
 
 fn main() {
-    let _cpu = Cpu::init();
+    let mut cpu = Cpu::init();
+    create_and_validate_elf_header(&mut cpu, Path::new("boot.elf"));
 }
