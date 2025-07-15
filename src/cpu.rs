@@ -10,7 +10,7 @@ pub const SP_REGISTER: usize = 31;
 const HIGH_32_MASK: u64 = 0xFFFF_FFFF_0000_0000;
 const LOW_32_MASK: u64 = 0xFFFF_FFFFu64;
 
-const HAVE_AARCH64: bool = false;
+const HAVE_AARCH64: bool = true;
 const HAVE_EL: bool = true;
 const HAVE_AARCH32: bool = false;
 const _USING_AARCH32: bool = false;
@@ -264,7 +264,7 @@ impl Cpu {
     fn el_from_spsr(&mut self, spsr: u64, valid: &mut bool, bits: &mut u8) {
         let spsr_4 = (spsr >> 4) & 1;
         if spsr_4 == 0 {
-            let el = get_bits_ct!(spsr, 2, 1) as u8;
+            let el = get_bits_ct!(spsr, 2, 2) as u8;
             *bits = el;
             if !HAVE_AARCH64 {
                 *valid = false;
@@ -274,12 +274,11 @@ impl Cpu {
                 *valid = false;
             } else if (self.pstate.current_el == ExceptionLevel::EL0) && ((spsr & 1) == 1) {
                 *valid = false;
-            } else if (self.pstate.current_el == ExceptionLevel::EL2)
-                && HAVE_EL
-                && !IS_SECURE_EL2_ENABLED
-                && ((self.scr_el3 & 1) == 0)
-            {
-                *valid = false;
+            } else {
+                *valid = !((self.pstate.current_el == ExceptionLevel::EL2)
+                    && HAVE_EL
+                    && !IS_SECURE_EL2_ENABLED
+                    && ((self.scr_el3 & 1) == 0));
             }
         } else if HAVE_AARCH32 {
             panic!("We haven't implemented AArch32 support!");
@@ -296,7 +295,8 @@ impl Cpu {
         self.pstate_from_spsr(spsr, illegal_psr_state);
 
         self.event_register = true;
-        self.pc = new_pc_in;
+        self.branch_taken = true;
+        self.branch_target = new_pc_in;
     }
 
     fn illegal_exception_return(&mut self, spsr: u64) -> bool {
