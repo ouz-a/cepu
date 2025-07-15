@@ -213,8 +213,9 @@ impl Cpu {
             MsrRegisters::SpsrEl3 => {
                 if self.pstate.current_el.is_el3() {
                     self.spsr_el3 = self.x_read(t.into(), 64);
+                } else {
+                    panic!("Can't modify SPSR_EL3, at current exception level");
                 }
-                panic!("Can't modify SPSR_EL3, at current exception level");
             }
             MsrRegisters::ScrEl3 => {
                 if self.pstate.current_el.is_el3() {
