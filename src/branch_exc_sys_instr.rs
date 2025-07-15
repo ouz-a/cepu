@@ -1,6 +1,7 @@
 use crate::{
     branch::{
-        instruction_bl, instruction_branch, instruction_bunc, instruction_msr_imm, instruction_ret,
+        instruction_bl, instruction_branch, instruction_bunc, instruction_eret,
+        instruction_msr_imm, instruction_ret,
     },
     cpu::{Cpu, ExceptionLevel, INSTRUCTION_SIZE, PstateField},
     get_bits_ct,
@@ -24,6 +25,25 @@ impl Ret {
     pub const RET: InstDesc = InstDesc {
         mask: 0b1111_1111_1111_1111_1111_1100_0001_1111,
         value: 0b1101_0110_0101_1111_0000_0000_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct Eret {}
+
+impl Eret {
+    pub fn exec(self, cpu: &mut Cpu, _: u64) {
+        instruction_eret(cpu);
+    }
+
+    pub const fn decode(_: u32) -> Instruction {
+        Instruction::Eret(Eret {})
+    }
+
+    pub const ERET: InstDesc = InstDesc {
+        mask: 0b1101_0110_1001_1111_0000_0011_1110_0000,
+        value: 0b1101_0110_1001_1111_0000_0011_1110_0000,
         decode: Self::decode,
     };
 }
