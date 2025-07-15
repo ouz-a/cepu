@@ -40,7 +40,6 @@ impl Madd {
         mask: 0b0111_1111_1110_0000_1000_0000_0000_0000,
         value: 0b0001_1011_0000_0000_0000_0000_0000_0000,
         decode: Self::decode,
-        exec: |c, d, p| d.exec(c, p),
     };
 }
 
@@ -81,7 +80,6 @@ impl AddShiftedReg {
         mask: 0b0111_1111_0010_0000_0000_0000_0000_0000,
         value: 0b0010_1011_0000_0000_0000_0000_0000_0000,
         decode: Self::decode,
-        exec: |c, d, p| d.exec(c, p),
     };
 }
 
@@ -120,7 +118,6 @@ impl SubShiftedRegister {
         mask: 0b0111_1111_0010_0000_0000_0000_0000_0000,
         value: 0b0110_1011_0000_0000_0000_0000_0000_0000,
         decode: Self::decode,
-        exec: |c, d, p| d.exec(c, p),
     };
 }
 
@@ -147,6 +144,5 @@ impl Udiv {
         mask: 0b0111_1111_1110_0000_1111_1100_0000_0000,
         value: 0b0001_1010_1100_0000_0000_1000_0000_0000,
         decode: Self::decode,
-        exec: |c, d, p| d.exec(c, p),
     };
 }

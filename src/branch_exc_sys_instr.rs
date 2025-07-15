@@ -25,7 +25,6 @@ impl Ret {
         mask: 0b1111_1111_1111_1111_1111_1100_0001_1111,
         value: 0b1101_0110_0101_1111_0000_0000_0000_0000,
         decode: Self::decode,
-        exec: |c, d, p| d.exec(c, p),
     };
 }
 
@@ -50,7 +49,6 @@ impl Bcond {
         mask: 0b1111_1111_0000_0000_0000_0000_0001_0000,
         value: 0b0101_0100_0000_0000_0000_0000_0000_0000,
         decode: Self::decode,
-        exec: |c, d, p| d.exec(c, p),
     };
 }
 
@@ -73,7 +71,6 @@ impl Bl {
         mask: 0b1111_1110_0000_0000_0000_0000_0000_0000,
         value: 0b1001_0100_0000_0000_0000_0000_0000_0000,
         decode: Self::decode,
-        exec: |c, d, p| d.exec(c, p),
     };
 }
 
@@ -95,7 +92,6 @@ impl Branch {
         mask: 0b1111_1100_0000_0000_0000_0000_0000_0000,
         value: 0b0001_0100_0000_0000_0000_0000_0000_0000,
         decode: Self::decode,
-        exec: |c, d, p| d.exec(c, p),
     };
 }
 
@@ -132,11 +128,10 @@ impl MsrImm {
         Instruction::MsrImm(MsrImm { op1, crm, op2 })
     }
 
-    pub const MRS_IMM: InstDesc = InstDesc {
+    pub const MSR_IMM: InstDesc = InstDesc {
         mask: 0b1111_1111_1111_1000_1111_0000_0001_1111,
         value: 0b1101_0101_0000_0000_0100_0000_0001_1111,
         decode: Self::decode,
-        exec: |c, d, p| d.exec(c, p),
     };
 }
 
@@ -163,11 +158,10 @@ impl MsrReg {
         let rt = get_bits_ct!(word, 0, 4) as u8;
         Instruction::MsrReg(MsrReg { op0, op1, crn, crm, op2, rt })
     }
-    pub const MRS_REG: InstDesc = InstDesc {
+    pub const MSR_REG: InstDesc = InstDesc {
         mask: 0b1111_1111_1111_0000_0000_0000_0000_0000,
         value: 0b1101_0101_0001_0000_0000_0000_0000_0000,
         decode: Self::decode,
-        exec: |c, d, p| d.exec(c, p),
     };
 }
 
@@ -198,6 +192,5 @@ impl Mrs {
         mask: 0b1111_1111_1111_0000_0000_0000_0000_0000,
         value: 0b1101_0101_0011_0000_0000_0000_0000_0000,
         decode: Self::decode,
-        exec: |c, d, p| d.exec(c, p),
     };
 }

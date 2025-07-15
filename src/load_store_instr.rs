@@ -55,7 +55,6 @@ impl StrImmUnOffset {
         mask: 0b1011_1111_1100_0000_0000_0000_0000_0000,
         value: 0b1011_1001_0000_0000_0000_0000_0000_0000,
         decode: Self::decode,
-        exec: |c, d, p| d.exec(c, p),
     };
 }
 
@@ -104,7 +103,6 @@ impl LdrImmUnOffset {
         mask: 0b1011_1111_1100_0000_0000_0000_0000_0000,
         value: 0b1011_1001_0100_0000_0000_0000_0000_0000,
         decode: Self::decode,
-        exec: |c, d, p| d.exec(c, p),
     };
 }
 
@@ -150,7 +148,6 @@ impl LdrImmPostIdx {
         mask: 0b1011_1111_1110_0000_0000_1100_0000_0000,
         value: 0b1011_1000_0100_0000_0000_0100_0000_0000,
         decode: Self::decode,
-        exec: |c, d, p| d.exec(c, p),
     };
 }
 
@@ -196,7 +193,6 @@ impl LdrImmPreIdx {
         mask: 0b1011_1111_1110_0000_0000_1100_0000_0000,
         value: 0b1011_1000_0100_0000_0000_1100_0000_0000,
         decode: Self::decode,
-        exec: |c, d, p| d.exec(c, p),
     };
 }
 
@@ -259,7 +255,6 @@ impl LdrReg {
         mask: 0b1011_1111_1110_0000_0000_1100_0000_0000,
         value: 0b1011_1000_0110_0000_0000_1000_0000_0000,
         decode: Self::decode,
-        exec: |c, d, p| d.exec(c, p),
     };
 }
 
@@ -285,6 +280,5 @@ impl LdrLit {
         mask: 0b1011_1111_0000_0000_0000_0000_0000_0000,
         value: 0b0001_1000_0000_0000_0000_0000_0000_0000,
         decode: Self::decode,
-        exec: |c, d, p| d.exec(c, p),
     };
 }

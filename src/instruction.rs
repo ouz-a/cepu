@@ -1,3 +1,7 @@
+// src/instruction.rs
+
+use std::sync::OnceLock;
+
 use crate::{
     branch_exc_sys_instr::{Bcond, Bl, Branch, Mrs, MsrImm, MsrReg, Ret},
     cpu::Cpu,
@@ -8,7 +12,10 @@ use crate::{
     register_instr::{AddShiftedReg, Madd, SubShiftedRegister, Udiv},
 };
 
-type ExecFn = fn(&mut Cpu, Instruction, u64);
+const PRIME_SIZE: usize = 1 << 12;
+
+static TABLES: OnceLock<Tables> = OnceLock::new();
+
 type DecodeFn = fn(u32) -> Instruction;
 
 #[derive(Debug, Clone, Copy)]
@@ -39,27 +46,27 @@ pub enum Instruction {
 impl Instruction {
     pub fn exec(&self, cpu: &mut Cpu, old_pc: u64) {
         match self {
-            Instruction::Madd(instr) => instr.exec(cpu, old_pc),
-            Instruction::AddShiftedReg(instr) => instr.exec(cpu, old_pc),
-            Instruction::SubShiftedRegister(instr) => instr.exec(cpu, old_pc),
-            Instruction::Udiv(instr) => instr.exec(cpu, old_pc),
-            Instruction::AddImmediate(instr) => instr.exec(cpu, old_pc),
-            Instruction::Movz(instr) => instr.exec(cpu, old_pc),
-            Instruction::Subs(instr) => instr.exec(cpu, old_pc),
-            Instruction::SubImmediate(instr) => instr.exec(cpu, old_pc),
-            Instruction::Ret(instr) => instr.exec(cpu, old_pc),
-            Instruction::Bcond(instr) => instr.exec(cpu, old_pc),
-            Instruction::Bl(instr) => instr.exec(cpu, old_pc),
-            Instruction::Branch(instr) => instr.exec(cpu, old_pc),
-            Instruction::MsrImm(instr) => instr.exec(cpu, old_pc),
-            Instruction::MsrReg(instr) => instr.exec(cpu, old_pc),
-            Instruction::Mrs(instr) => instr.exec(cpu, old_pc),
-            Instruction::StrImmUnOffset(instr) => instr.exec(cpu, old_pc),
-            Instruction::LdrImmUnOffset(instr) => instr.exec(cpu, old_pc),
-            Instruction::LdrImmPostIdx(instr) => instr.exec(cpu, old_pc),
-            Instruction::LdrImmPreIdx(instr) => instr.exec(cpu, old_pc),
-            Instruction::LdrReg(instr) => instr.exec(cpu, old_pc),
-            Instruction::LdrLit(instr) => instr.exec(cpu, old_pc),
+            Instruction::Madd(i) => i.exec(cpu, old_pc),
+            Instruction::AddShiftedReg(i) => i.exec(cpu, old_pc),
+            Instruction::SubShiftedRegister(i) => i.exec(cpu, old_pc),
+            Instruction::Udiv(i) => i.exec(cpu, old_pc),
+            Instruction::AddImmediate(i) => i.exec(cpu, old_pc),
+            Instruction::Movz(i) => i.exec(cpu, old_pc),
+            Instruction::Subs(i) => i.exec(cpu, old_pc),
+            Instruction::SubImmediate(i) => i.exec(cpu, old_pc),
+            Instruction::Ret(i) => i.exec(cpu, old_pc),
+            Instruction::Bcond(i) => i.exec(cpu, old_pc),
+            Instruction::Bl(i) => i.exec(cpu, old_pc),
+            Instruction::Branch(i) => i.exec(cpu, old_pc),
+            Instruction::MsrImm(i) => i.exec(cpu, old_pc),
+            Instruction::MsrReg(i) => i.exec(cpu, old_pc),
+            Instruction::Mrs(i) => i.exec(cpu, old_pc),
+            Instruction::StrImmUnOffset(i) => i.exec(cpu, old_pc),
+            Instruction::LdrImmUnOffset(i) => i.exec(cpu, old_pc),
+            Instruction::LdrImmPostIdx(i) => i.exec(cpu, old_pc),
+            Instruction::LdrImmPreIdx(i) => i.exec(cpu, old_pc),
+            Instruction::LdrReg(i) => i.exec(cpu, old_pc),
+            Instruction::LdrLit(i) => i.exec(cpu, old_pc),
         }
     }
 }
@@ -69,10 +76,9 @@ pub struct InstDesc {
     pub mask: u32,
     pub value: u32,
     pub decode: DecodeFn,
-    pub exec: ExecFn,
 }
 
-pub const DESCR: &[InstDesc] = &[
+pub const DESCR: &[InstDesc] = &sort_by_specificity([
     Madd::MADD,
     AddShiftedReg::ADD_SHIFTED_REG,
     SubShiftedRegister::SUB_SHIFTED_REGISTER,
@@ -85,8 +91,8 @@ pub const DESCR: &[InstDesc] = &[
     Bcond::B_COND,
     Bl::BL,
     Branch::BRANCH,
-    MsrImm::MRS_IMM,
-    MsrReg::MRS_REG,
+    MsrImm::MSR_IMM,
+    MsrReg::MSR_REG,
     Mrs::MRS,
     StrImmUnOffset::STR_IMM_UN_OFFSET,
     LdrImmUnOffset::LDR_IMM_UN_OFFSET,
@@ -94,22 +100,76 @@ pub const DESCR: &[InstDesc] = &[
     LdrImmPreIdx::LDR_IMM_PRE_IDX,
     LdrReg::LDR_REG,
     LdrLit::LDR_LIT,
-];
+]);
+
+const fn sort_by_specificity<const N: usize>(mut arr: [InstDesc; N]) -> [InstDesc; N] {
+    let mut i = 1;
+    while i < N {
+        let key = arr[i];
+        let bits = key.mask.count_ones();
+        let mut j = i;
+        while j > 0 && arr[j - 1].mask.count_ones() < bits {
+            arr[j] = arr[j - 1];
+            j -= 1;
+        }
+        arr[j] = key;
+        i += 1;
+    }
+    arr
+}
 
 #[derive(Clone, Copy)]
-pub struct InstructionEntry {
-    pub exec: ExecFn,
-    pub decode: DecodeFn,
-    pub specificity: u32,
+struct Bucket {
+    first: u32,
+    count: u16,
 }
 
-pub fn exec_undef(_: &mut Cpu, _: Instruction, _: u64) {
-    panic!("Undefined instruction!");
+#[derive(Clone)]
+pub struct Tables {
+    primary: [Bucket; PRIME_SIZE],
+    dst: Vec<InstDesc>,
 }
 
-pub const fn decode_undef(_: u32) -> Instruction {
-    Instruction::Madd(Madd { sf: false, rd: 31, rn: 31, ra: 31, rm: 31 })
+fn build_tables_runtime() -> Tables {
+    let mut primary = [Bucket { first: 0, count: 0 }; PRIME_SIZE];
+    let mut dst = Vec::new();
+
+    for (key, item) in primary.iter_mut().enumerate().take(PRIME_SIZE) {
+        item.first = dst.len() as u32;
+        for &d in DESCR.iter() {
+            let v12 = (d.value >> 20) as u16;
+            let m12 = (d.mask >> 20) as u16;
+            if ((key as u16) & m12) == v12 {
+                dst.push(d);
+                item.count += 1;
+            }
+        }
+    }
+
+    Tables { primary, dst }
 }
 
-pub const UNDEFINED: InstructionEntry =
-    InstructionEntry { exec: exec_undef, decode: decode_undef, specificity: 0 };
+#[inline(always)]
+pub fn decode(word: u32) -> Instruction {
+    let tables = TABLES.get_or_init(build_tables_runtime);
+    let key = (word >> 20) as usize;
+    let b = tables.primary[key];
+    let mut i = b.first as usize;
+    let end = i + b.count as usize;
+
+    while i < end {
+        let d = tables.dst[i];
+        if (word & d.mask) == d.value {
+            return (d.decode)(word);
+        }
+        i += 1;
+    }
+
+    panic!("Undefined instruction: {:08X}", word.to_be());
+}
+
+pub fn decode_undef(_: u32) -> Instruction {
+    panic!("Undefined instruction")
+}
+
+pub const UNDEF_DESC: InstDesc = InstDesc { mask: 0, value: 0, decode: decode_undef };

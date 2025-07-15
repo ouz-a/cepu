@@ -154,7 +154,7 @@ fn create_program_headers<'a>(elf: &Elf64Ehdr, file: &[u8]) -> &'a [Elf64Phdr] {
     };
     let ptr = raw_bytes.as_ptr();
     if (ptr as *const Elf64Phdr).is_aligned() {
-        unsafe { slice::from_raw_parts(ptr.cast(), needed) }
+        unsafe { slice::from_raw_parts(ptr.cast(), count) }
     } else {
         panic!("Program headers are not aligned")
     }
@@ -178,13 +178,15 @@ fn load_elf_header(cpu: &mut Cpu, elf: &Elf64Ehdr, file: &[u8]) {
         };
         let start = p_header.p_vaddr as usize;
         let end = start + p_header.p_filesz as usize;
-        let dest = &mut unsafe { MEMORY }[start..end];
+
+        let dest = unsafe { &mut MEMORY[start..end] };
         dest.copy_from_slice(file_data);
         if p_header.p_memsz > p_header.p_filesz {
             let zero_end = start + p_header.p_memsz as usize;
-            let zeros = &mut unsafe { MEMORY }[end..zero_end];
+            let zeros = unsafe { &mut MEMORY[end..zero_end] };
             zeros.fill(0);
         }
     }
     cpu.pc = elf.e_entry;
+    println!("Starting pc is: {}", cpu.pc);
 }

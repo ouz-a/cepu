@@ -34,7 +34,6 @@ impl AddImmediate {
         mask: 0b0111_1111_1100_0000_0000_0000_0000_0000,
         value: 0b0001_0001_0000_0000_0000_0000_0000_0000,
         decode: Self::decode,
-        exec: |c, d, p| d.exec(c, p),
     };
 }
 
@@ -64,7 +63,6 @@ impl Movz {
         mask: 0b0111_1111_1000_0000_0000_0000_0000_0000,
         value: 0b0101_0010_1000_0000_0000_0000_0000_0000,
         decode: Self::decode,
-        exec: |c, d, p| d.exec(c, p),
     };
 }
 
@@ -94,7 +92,6 @@ impl Subs {
         mask: 0b0111_1111_1000_0000_0000_0000_0000_0000,
         value: 0b0111_0001_0000_0000_0000_0000_0000_0000,
         decode: Self::decode,
-        exec: |c, d, p| d.exec(c, p),
     };
 }
 
@@ -124,6 +121,5 @@ impl SubImmediate {
         mask: 0b0111_1111_1100_0000_0000_0000_0000_0000,
         value: 0b0101_0001_0000_0000_0000_0000_0000_0000,
         decode: Self::decode,
-        exec: |c, d, p| d.exec(c, p),
     };
 }
