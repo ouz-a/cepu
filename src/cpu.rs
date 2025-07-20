@@ -1,3 +1,12 @@
+use std::{
+    sync::{
+        Arc, Condvar, Mutex, OnceLock,
+        atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering},
+    },
+    thread::sleep,
+    time::{Duration, Instant},
+};
+
 use crate::{get_bits_ct, utils::align};
 
 pub const INSTRUCTION_SIZE: u64 = 4;
@@ -40,7 +49,23 @@ pub const SCTLR_WXN: u64 = 1u64 << 19;
 /// Exception endianness
 pub const SCTLR_EE: u64 = 1u64 << 25;
 
-#[derive(Default, Debug, Clone, Copy)]
+#[derive(Default, Debug)]
+pub struct Timer {
+    /// Physical Timer Compare Value (CNTP_CVAL_EL0)
+    pub cntp_cval_el0: u64,
+    /// Physical Timer Control (CNTP_CTL_EL0)
+    pub cntp_ctl_el0: u32,
+
+    /// Virtual Timer Compare Value (CNTV_CVAL_EL0)
+    pub ctnv_cval_el0: u64,
+    /// Virtual Timer Control (CNTV_CTL_EL0)
+    pub cntv_ctl_el0: u32,
+
+    /// Physical Timer Expiry Time (nanoseconds)
+    pub cntp_expiry_ns: AtomicU64,
+}
+
+#[derive(Default, Debug)]
 pub struct Cpu {
     /// 64-Bit General Purpose Register
     pub x: [u64; GPRS],
@@ -87,6 +112,11 @@ pub struct Cpu {
 
     event_register: bool,
     pub pstate: PState,
+
+    pub timer: Timer,
+    pub condvar: Arc<(Mutex<bool>, Condvar)>,
+    pub pending_irq: AtomicU32,
+    pub sleeping: AtomicBool,
 }
 
 impl Cpu {
@@ -104,6 +134,32 @@ impl Cpu {
         cpu.sctlr_el1 |= 1 << 2; // SCTLR_C
         cpu.sctlr_el1 |= 1 << 12; // SCTLR_I 
         cpu
+    }
+
+    pub fn post_interrupt(&mut self, line: u32) -> u32 {
+        self.pending_irq.fetch_or(1 << line, Ordering::Relaxed)
+    }
+
+    pub fn timer_device_tick(&mut self) {
+        let expire = self.timer.cntp_expiry_ns.load(Ordering::Relaxed);
+        if expire != 0 && monotonic_ns() >= expire {
+            self.post_interrupt(27);
+            self.timer.cntp_expiry_ns.store(0, Ordering::Relaxed);
+        }
+    }
+
+    pub fn timer_rearm(&mut self) {
+        if (self.timer.cntp_ctl_el0 & 1) == 0 {
+            self.timer.cntp_expiry_ns.store(0, Ordering::Relaxed);
+            return;
+        }
+        let delta_ticks = self.timer.cntp_cval_el0 - unsafe { SYS_COUNTER };
+        let host_expiry = monotonic_ns() + delta_ticks;
+        self.timer.cntp_expiry_ns.store(host_expiry, Ordering::Relaxed);
+    }
+
+    pub fn should_wake(&self) -> bool {
+        self.pending_irq.load(Ordering::Relaxed) != 0
     }
 
     pub fn get_elr_elx(&self) -> u64 {
@@ -449,4 +505,27 @@ msr_enum! {
     SpsrEl3 = 12985827328,
     ScrEl3  = 12985630976,
     SpEl1   = 12952273152,
+}
+
+static START: OnceLock<Instant> = OnceLock::new();
+pub const MAX_SLEEP_NS: u64 = 80 * 1000 * 1000;
+pub const CNTFRQ: u64 = 1_000_000_000;
+pub const DRIFT_LIMIT: u64 = 100000;
+pub const BATCH: u32 = 1;
+pub const NS_PER_CYCLE: f32 = 1e9 / CNTFRQ as f32;
+
+pub static mut SYS_COUNTER: u64 = 0;
+
+pub fn sleep_ns(ns: u64) {
+    if ns > 0 {
+        let ns = ns.min(MAX_SLEEP_NS);
+        sleep(Duration::from_nanos(ns));
+    }
+}
+
+pub fn monotonic_ns() -> u64 {
+    let epoch = *START.get_or_init(Instant::now);
+    let dur = epoch.elapsed();
+
+    dur.as_nanos().try_into().expect("duration exceeded u64 max")
 }
