@@ -1,12 +1,4 @@
-use crate::{
-    cpu::Cpu,
-    data_processing::{
-        ShiftTypes, decode_shift, instruction_add_shifted_register, instruction_multiply_add,
-        instruction_sub_shifted_register, instruction_udiv,
-    },
-    get_bits_ct,
-    instruction::*,
-};
+use crate::{cpu::Cpu, data_processing::*, get_bits_ct, instruction::*};
 
 #[derive(Clone, Copy, Debug)]
 pub struct Madd {
@@ -44,7 +36,7 @@ impl Madd {
 }
 
 #[derive(Clone, Copy, Debug)]
-pub struct AddShiftedReg {
+pub struct AddsShiftedReg {
     pub sf: bool,
     pub shift: ShiftTypes,
     pub rm: u8,
@@ -53,9 +45,9 @@ pub struct AddShiftedReg {
     pub rd: u8,
 }
 
-impl AddShiftedReg {
+impl AddsShiftedReg {
     pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
-        instruction_add_shifted_register(
+        instruction_adds_shifted_register(
             cpu,
             self.rn,
             self.rm,
@@ -73,12 +65,58 @@ impl AddShiftedReg {
         let imm6 = get_bits_ct!(word, 10, 6) as u8;
         let rn = get_bits_ct!(word, 5, 5) as u8;
         let rd = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::AddsShiftedReg(AddsShiftedReg { sf, shift, rm, imm6, rn, rd })
+    }
+
+    pub const ADDS_SHIFTED_REG: InstDesc = InstDesc {
+        mask: 0b0111_1111_0010_0000_0000_0000_0000_0000,
+        value: 0b0010_1011_0000_0000_0000_0000_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct AddShiftedReg {
+    pub sf: bool,
+    pub shift: ShiftTypes,
+    pub rm: u8,
+    pub imm6: u8,
+    pub rn: u8,
+    pub rd: u8,
+}
+
+impl AddShiftedReg {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        instruction_adds_shifted_register(
+            cpu,
+            self.rn,
+            self.rm,
+            self.rd,
+            self.imm6,
+            self.shift,
+            if self.sf { 64 } else { 32 },
+            !self.sf,
+        );
+    }
+    pub const fn decode(word: u32) -> Instruction {
+        let sf = get_bits_ct!(word, 31, 1) == 1;
+        let shift = decode_shift(get_bits_ct!(word, 22, 2) as u8);
+        let rm = get_bits_ct!(word, 16, 5) as u8;
+        let imm6 = get_bits_ct!(word, 10, 6) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rd = get_bits_ct!(word, 0, 5) as u8;
+        if let ShiftTypes::StRor = shift {
+            panic!("Undefined");
+        }
+        if !sf && get_bits_ct!(imm6, 5, 1) == 1 {
+            panic!("Undefined")
+        }
         Instruction::AddShiftedReg(AddShiftedReg { sf, shift, rm, imm6, rn, rd })
     }
 
     pub const ADD_SHIFTED_REG: InstDesc = InstDesc {
         mask: 0b0111_1111_0010_0000_0000_0000_0000_0000,
-        value: 0b0010_1011_0000_0000_0000_0000_0000_0000,
+        value: 0b0000_1011_0000_0000_0000_0000_0000_0000,
         decode: Self::decode,
     };
 }

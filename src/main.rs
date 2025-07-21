@@ -37,7 +37,7 @@ pub fn run_block(cpu: &mut Cpu) {
             let word = read_32(old_pc as usize);
             pc = pc.wrapping_add(INSTRUCTION_SIZE);
             let dec = decode(word);
-            println!("Instruction is {dec:?}");
+            println!("Instruction is {dec:?} raw: {:08X}", word.to_be());
             vtime += 1;
             dec.exec(cpu, old_pc);
 

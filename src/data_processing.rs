@@ -2,7 +2,7 @@
 
 use crate::cpu::{Cpu, SP_REGISTER};
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(u8)]
 pub enum ShiftTypes {
     StLsl = 0b00,
@@ -133,7 +133,7 @@ pub fn instruction_udiv(cpu: &mut Cpu, d: u8, n: u8, m: u8, datasize: u8) {
     }
 }
 
-pub fn instruction_add_shifted_register(
+pub fn instruction_adds_shifted_register(
     cpu: &mut Cpu,
     n: u8,
     m: u8,
@@ -147,6 +147,22 @@ pub fn instruction_add_shifted_register(
     let op2 = shift_reg(cpu, m, s_type, shift_amount, datasize);
     let res = add_with_carry(op1, op2, 0);
     cpu.pstate.c = res.c;
+    cpu.x_write(d as usize, res.result, is_32b);
+}
+
+pub fn instruction_add_shifted_register(
+    cpu: &mut Cpu,
+    n: u8,
+    m: u8,
+    d: u8,
+    shift_amount: u8,
+    s_type: ShiftTypes,
+    datasize: u8,
+    is_32b: bool,
+) {
+    let op1 = cpu.x_read(n as usize, datasize);
+    let op2 = shift_reg(cpu, m, s_type, shift_amount, datasize);
+    let res = add_with_carry(op1, op2, 0);
     cpu.x_write(d as usize, res.result, is_32b);
 }
 

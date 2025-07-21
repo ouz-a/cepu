@@ -9,7 +9,7 @@ use crate::{
     load_store_instr::{
         LdrImmPostIdx, LdrImmPreIdx, LdrImmUnOffset, LdrLit, LdrReg, StrImmUnOffset,
     },
-    register_instr::{AddShiftedReg, Madd, SubShiftedRegister, Udiv},
+    register_instr::{AddShiftedReg, AddsShiftedReg, Madd, SubShiftedRegister, Udiv},
 };
 
 const PRIME_SIZE: usize = 1 << 12;
@@ -21,6 +21,7 @@ type DecodeFn = fn(u32) -> Instruction;
 #[derive(Debug, Clone, Copy)]
 pub enum Instruction {
     Madd(Madd),
+    AddsShiftedReg(AddsShiftedReg),
     AddShiftedReg(AddShiftedReg),
     SubShiftedRegister(SubShiftedRegister),
     Udiv(Udiv),
@@ -48,6 +49,7 @@ impl Instruction {
     pub fn exec(&self, cpu: &mut Cpu, old_pc: u64) {
         match self {
             Instruction::Madd(i) => i.exec(cpu, old_pc),
+            Instruction::AddsShiftedReg(i) => i.exec(cpu, old_pc),
             Instruction::AddShiftedReg(i) => i.exec(cpu, old_pc),
             Instruction::SubShiftedRegister(i) => i.exec(cpu, old_pc),
             Instruction::Udiv(i) => i.exec(cpu, old_pc),
@@ -82,6 +84,7 @@ pub struct InstDesc {
 
 pub const DESCR: &[InstDesc] = &sort_by_specificity([
     Madd::MADD,
+    AddsShiftedReg::ADDS_SHIFTED_REG,
     AddShiftedReg::ADD_SHIFTED_REG,
     SubShiftedRegister::SUB_SHIFTED_REGISTER,
     Udiv::UDIV,
@@ -167,8 +170,13 @@ pub fn decode(word: u32) -> Instruction {
         }
         i += 1;
     }
-
-    panic!("Undefined instruction: {:08X}", word.to_be());
+    let formatted = format!(
+        "Undefined instruction: {:08X}
+Binary form: {:b}",
+        word.to_be(),
+        word
+    );
+    panic!("{formatted}");
 }
 
 pub fn decode_undef(_: u32) -> Instruction {

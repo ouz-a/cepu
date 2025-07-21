@@ -9,6 +9,15 @@ use std::{
 
 use crate::{get_bits_ct, utils::align};
 
+static START: OnceLock<Instant> = OnceLock::new();
+pub const MAX_SLEEP_NS: u64 = 80 * 1000 * 1000;
+pub const CNTFRQ: u64 = 1_000_000_000;
+pub const DRIFT_LIMIT: u64 = 100000;
+pub const BATCH: u32 = 1;
+pub const NS_PER_CYCLE: f32 = 1e9 / CNTFRQ as f32;
+
+pub static mut SYS_COUNTER: u64 = 0;
+
 pub const INSTRUCTION_SIZE: u64 = 4;
 
 const GPRS: usize = 32;
@@ -60,6 +69,9 @@ pub struct Timer {
     pub ctnv_cval_el0: u64,
     /// Virtual Timer Control (CNTV_CTL_EL0)
     pub cntv_ctl_el0: u32,
+
+    /// Physical Counter (CNTPCT_EL0)
+    pub cntp_ct_el0: u64,
 
     /// Physical Timer Expiry Time (nanoseconds)
     pub cntp_expiry_ns: AtomicU64,
@@ -287,6 +299,20 @@ impl Cpu {
                     panic!("Can't modify SP_EL1, at current exception level");
                 }
             }
+            MsrRegisters::CntfrqEl0 => {
+                if !self.pstate.current_el.is_el0() {
+                    self.x_read(t.into(), 64);
+                } else {
+                    panic!("Please implement CntfrqEl0 access for EL0")
+                }
+            }
+            MsrRegisters::CntpctEl0 => {
+                if !self.pstate.current_el.is_el0() {
+                    self.x_read(t.into(), 64);
+                } else {
+                    panic!("Please implement CntpctEl0 access for EL0");
+                }
+            }
         }
     }
 
@@ -505,16 +531,9 @@ msr_enum! {
     SpsrEl3 = 12985827328,
     ScrEl3  = 12985630976,
     SpEl1   = 12952273152,
+    CntfrqEl0 = 12936151040,
+    CntpctEl0 = 12936151041,
 }
-
-static START: OnceLock<Instant> = OnceLock::new();
-pub const MAX_SLEEP_NS: u64 = 80 * 1000 * 1000;
-pub const CNTFRQ: u64 = 1_000_000_000;
-pub const DRIFT_LIMIT: u64 = 100000;
-pub const BATCH: u32 = 1;
-pub const NS_PER_CYCLE: f32 = 1e9 / CNTFRQ as f32;
-
-pub static mut SYS_COUNTER: u64 = 0;
 
 pub fn sleep_ns(ns: u64) {
     if ns > 0 {
