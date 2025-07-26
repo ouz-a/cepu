@@ -299,16 +299,49 @@ impl Cpu {
                     panic!("Can't modify SP_EL1, at current exception level");
                 }
             }
-            MsrRegisters::CntfrqEl0 => {
+            MsrRegisters::CntpCvalEl0 => {
+                if !self.pstate.current_el.is_el2() {
+                    self.timer.cntp_cval_el0 = self.x_read(t.into(), 64)
+                }
+            }
+            MsrRegisters::CntpCtlEl0 => {
+                if !self.pstate.current_el.is_el2() {
+                    self.timer.cntp_ctl_el0 = self.x_read(t.into(), 32) as u32;
+                }
+            }
+        }
+    }
+
+    pub fn sys_reg_read(
+        &mut self,
+        sys_op0: u8,
+        sys_op1: u8,
+        sys_crn: u8,
+        sys_crm: u8,
+        sys_op2: u8,
+        t: u8,
+    ) {
+        let comp: u64 = ((sys_op0 as u64) << 32)
+            | ((sys_op1 as u64) << 24)
+            | ((sys_crn as u64) << 16)
+            | ((sys_crm as u64) << 8)
+            | (sys_op2 as u64);
+
+        let register: MrsRegisters = comp.into();
+        match register {
+            MrsRegisters::Unknown => {
+                panic!("Value {comp} not convered, please check the ARM docs!")
+            }
+            MrsRegisters::CntfrqEl0 => {
                 if !self.pstate.current_el.is_el0() {
-                    self.x_read(t.into(), 64);
+                    self.x_write(t.into(), CNTFRQ, false);
                 } else {
                     panic!("Please implement CntfrqEl0 access for EL0")
                 }
             }
-            MsrRegisters::CntpctEl0 => {
-                if !self.pstate.current_el.is_el0() {
-                    self.x_read(t.into(), 64);
+            MrsRegisters::CntpctEl0 => {
+                if !self.pstate.current_el.is_el0() || !self.pstate.current_el.is_el2() {
+                    self.x_write(t.into(), unsafe { SYS_COUNTER.into() }, false);
                 } else {
                     panic!("Please implement CntpctEl0 access for EL0");
                 }
@@ -531,6 +564,37 @@ msr_enum! {
     SpsrEl3 = 12985827328,
     ScrEl3  = 12985630976,
     SpEl1   = 12952273152,
+    CntpCvalEl0 = 12936151554,
+    CntpCtlEl0 =  12936151553,
+}
+
+macro_rules! mrs_enum {
+    ($($variant:ident = $value:expr),* $(,)?) => {
+        #[repr(u64)]
+        #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+        pub enum MrsRegisters {
+            $($variant = $value,)*
+            Unknown = 99999999999,
+        }
+
+        impl From<u64> for MrsRegisters {
+            #[inline(always)]
+            fn from(v: u64) -> Self {
+                match v {
+                    $($value => Self::$variant,)*
+                    _ => Self::Unknown,
+                }
+            }
+        }
+
+        impl From<MrsRegisters> for u64 {
+            #[inline(always)]
+            fn from(r: MrsRegisters) -> u64 { r as u64 }
+        }
+    };
+}
+
+mrs_enum! {
     CntfrqEl0 = 12936151040,
     CntpctEl0 = 12936151041,
 }

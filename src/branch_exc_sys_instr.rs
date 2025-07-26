@@ -196,7 +196,7 @@ pub struct Mrs {
 }
 impl Mrs {
     pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
-        cpu.sys_reg_write(self.op0, self.op1, self.crn, self.crm, self.op2, self.rt);
+        cpu.sys_reg_read(self.op0, self.op1, self.crn, self.crm, self.op2, self.rt);
     }
     pub const fn decode(word: u32) -> Instruction {
         let op0 = 2 + get_bits_ct!(word, 19, 1) as u8;
