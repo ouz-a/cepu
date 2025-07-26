@@ -341,7 +341,7 @@ impl Cpu {
             }
             MrsRegisters::CntpctEl0 => {
                 if !self.pstate.current_el.is_el0() || !self.pstate.current_el.is_el2() {
-                    self.x_write(t.into(), unsafe { SYS_COUNTER.into() }, false);
+                    self.x_write(t.into(), unsafe { SYS_COUNTER }, false);
                 } else {
                     panic!("Please implement CntpctEl0 access for EL0");
                 }
