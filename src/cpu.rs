@@ -166,12 +166,13 @@ impl Cpu {
             return;
         }
         let delta_ticks = self.timer.cntp_cval_el0 - unsafe { SYS_COUNTER };
-        let host_expiry = monotonic_ns() + delta_ticks;
+        let delta_ns = (delta_ticks as u128 * NS_PER_CYCLE as u128) as u64;
+        let host_expiry = monotonic_ns() + delta_ns;
         self.timer.cntp_expiry_ns.store(host_expiry, Ordering::Relaxed);
     }
 
     pub fn should_wake(&self) -> bool {
-        self.pending_irq.load(Ordering::Relaxed) != 0
+        self.pending_irq.load(Ordering::Relaxed) != 0 || !self.sleeping.load(Ordering::Relaxed)
     }
 
     pub fn get_elr_elx(&self) -> u64 {
@@ -301,12 +302,14 @@ impl Cpu {
             }
             MsrRegisters::CntpCvalEl0 => {
                 if !self.pstate.current_el.is_el2() {
-                    self.timer.cntp_cval_el0 = self.x_read(t.into(), 64)
+                    self.timer.cntp_cval_el0 = self.x_read(t.into(), 64);
+                    self.timer_rearm();
                 }
             }
             MsrRegisters::CntpCtlEl0 => {
                 if !self.pstate.current_el.is_el2() {
                     self.timer.cntp_ctl_el0 = self.x_read(t.into(), 32) as u32;
+                    self.timer_rearm();
                 }
             }
         }

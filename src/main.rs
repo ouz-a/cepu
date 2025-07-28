@@ -57,6 +57,7 @@ pub fn run_block(cpu: &mut Cpu) {
                 let ideal_ns = vtime as f32 * NS_PER_CYCLE;
                 let real_ns = monotonic_ns() - wall_start;
                 let drift_ns = ideal_ns - real_ns as f32;
+                cpu.timer_device_tick();
 
                 if drift_ns > DRIFT_LIMIT as f32 {
                     sleep_ns(drift_ns as u64);
@@ -68,8 +69,10 @@ pub fn run_block(cpu: &mut Cpu) {
             let mut guard = lock.lock().unwrap();
 
             while !cpu.should_wake() {
+                cpu.timer_device_tick();
+                let now = monotonic_ns();
                 let deadline = &cpu.timer.cntp_expiry_ns;
-                let deadline = deadline.load(Ordering::Relaxed);
+                let deadline = deadline.load(Ordering::Relaxed).saturating_sub(now);
                 let duration = Duration::from_nanos(deadline);
                 if deadline > 0 {
                     let g = cvar
@@ -79,8 +82,8 @@ pub fn run_block(cpu: &mut Cpu) {
                 } else {
                     guard = cvar.wait(guard).expect("Condvar failed to wait");
                 }
+                cpu.sleeping.store(false, Ordering::Relaxed);
             }
-            cpu.sleeping.store(false, Ordering::Relaxed);
         }
     }
     cpu.pc = branch_addr(pc, cpu.pstate.current_el as u8) & 0x00FF_FFFF_FFFF_FFFF;

@@ -214,3 +214,20 @@ impl Mrs {
         decode: Self::decode,
     };
 }
+
+#[derive(Debug, Clone, Copy)]
+pub struct Wfi;
+
+impl Wfi {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        cpu.sleeping.store(true, std::sync::atomic::Ordering::SeqCst);
+    }
+    pub const fn decode(_word: u32) -> Instruction {
+        Instruction::Wfi(Wfi)
+    }
+    pub const WFI: InstDesc = InstDesc {
+        mask: 0b1111_1111_1111_1111_1111_1111_1111_1111,
+        value: 0b1101_0101_0000_0011_0010_0000_0111_1111,
+        decode: Self::decode,
+    };
+}

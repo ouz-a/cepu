@@ -3,7 +3,7 @@
 use std::sync::OnceLock;
 
 use crate::{
-    branch_exc_sys_instr::{Bcond, Bl, Branch, Eret, Mrs, MsrImm, MsrReg, Ret},
+    branch_exc_sys_instr::{Bcond, Bl, Branch, Eret, Mrs, MsrImm, MsrReg, Ret, Wfi},
     cpu::Cpu,
     imm_instr::{AddImmediate, Movz, SubImmediate, Subs},
     load_store_instr::{
@@ -43,6 +43,7 @@ pub enum Instruction {
     LdrImmPreIdx(LdrImmPreIdx),
     LdrReg(LdrReg),
     LdrLit(LdrLit),
+    Wfi(Wfi),
 }
 
 impl Instruction {
@@ -71,6 +72,7 @@ impl Instruction {
             Instruction::LdrImmPreIdx(i) => i.exec(cpu, old_pc),
             Instruction::LdrReg(i) => i.exec(cpu, old_pc),
             Instruction::LdrLit(i) => i.exec(cpu, old_pc),
+            Instruction::Wfi(i) => i.exec(cpu, old_pc),
         }
     }
 }
@@ -106,6 +108,7 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     LdrImmPreIdx::LDR_IMM_PRE_IDX,
     LdrReg::LDR_REG,
     LdrLit::LDR_LIT,
+    Wfi::WFI,
 ]);
 
 const fn sort_by_specificity<const N: usize>(mut arr: [InstDesc; N]) -> [InstDesc; N] {
