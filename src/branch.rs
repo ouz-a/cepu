@@ -107,16 +107,16 @@ pub fn instruction_msr_imm(
             cpu.pstate.sp = get_bits_ct!(operand, 0, 1);
         }
         PstateField::Daifset => {
-            cpu.pstate.d |= get_bits_ct!(operand, 3, 1) != 0;
-            cpu.pstate.a |= get_bits_ct!(operand, 2, 1) != 0;
-            cpu.pstate.i |= get_bits_ct!(operand, 1, 1) != 0;
-            cpu.pstate.f |= get_bits_ct!(operand, 0, 1) != 0;
+            cpu.pstate.masked_d |= get_bits_ct!(operand, 3, 1) != 0;
+            cpu.pstate.masked_a |= get_bits_ct!(operand, 2, 1) != 0;
+            cpu.pstate.masked_i |= get_bits_ct!(operand, 1, 1) != 0;
+            cpu.pstate.masked_f |= get_bits_ct!(operand, 0, 1) != 0;
         }
         PstateField::Daifclr => {
-            cpu.pstate.d &= get_bits_ct!(operand, 3, 1) != 0;
-            cpu.pstate.a &= get_bits_ct!(operand, 2, 1) != 0;
-            cpu.pstate.i &= get_bits_ct!(operand, 1, 1) != 0;
-            cpu.pstate.f &= get_bits_ct!(operand, 0, 1) != 0;
+            cpu.pstate.masked_d = get_bits_ct!(operand, 3, 1) != 0;
+            cpu.pstate.masked_a = get_bits_ct!(operand, 2, 1) != 0;
+            cpu.pstate.masked_i = get_bits_ct!(operand, 1, 1) != 0;
+            cpu.pstate.masked_f = get_bits_ct!(operand, 0, 1) != 0;
         }
         _ => {}
     }

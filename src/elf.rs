@@ -130,7 +130,7 @@ fn read_elf64_header(buf: &[u8]) -> Option<Elf64Ehdr> {
     }
 }
 
-pub fn create_and_validate_elf_header(cpu: &mut Cpu, path: &Path) {
+pub fn validate_and_load_elf_header(cpu: &mut Cpu, path: &Path) {
     let buf = match fs::read(path) {
         Ok(dat) => dat,
         Err(err) => panic!("Failed to read ELF path {path:?} because {err}"),

@@ -11,12 +11,8 @@ use crate::{get_bits_ct, utils::align};
 
 static START: OnceLock<Instant> = OnceLock::new();
 pub const MAX_SLEEP_NS: u64 = 80 * 1000 * 1000;
-pub const CNTFRQ: u64 = 1_000_000_000;
-pub const DRIFT_LIMIT: u64 = 100000;
+pub const CNTFRQ: u64 = 24_000_000;
 pub const BATCH: u32 = 1;
-pub const NS_PER_CYCLE: f32 = 1e9 / CNTFRQ as f32;
-
-pub static mut SYS_COUNTER: u64 = 0;
 
 pub const INSTRUCTION_SIZE: u64 = 4;
 
@@ -122,6 +118,9 @@ pub struct Cpu {
     /// Exception Link Register 1
     elr_el1: u64,
 
+    /// Holds the vector base address for any exception that is taken to EL1.
+    vbar_el1: u64,
+
     event_register: bool,
     pub pstate: PState,
 
@@ -152,6 +151,37 @@ impl Cpu {
         self.pending_irq.fetch_or(1 << line, Ordering::Relaxed)
     }
 
+    pub fn handle_interrupts(&mut self, next_pc: u64) {
+        if self.pending_irq.load(Ordering::Relaxed) == 0 {
+            return;
+        }
+        if self.pstate.irq_masked() {
+            return;
+        }
+        // We return to current exception level
+        let _cur_el = self.pstate.current_el;
+        // We are only handling IRQ now
+        let target_el = ExceptionLevel::EL1;
+        match target_el {
+            ExceptionLevel::EL0 | ExceptionLevel::EL1 => {
+                self.elr_el1 = next_pc;
+                self.spsr_el1 = self.spsr_from_pstate();
+            }
+            ExceptionLevel::EL3 => {
+                self.elr_el3 = next_pc;
+                self.spsr_el3 = self.spsr_from_pstate();
+            }
+            ExceptionLevel::EL2 => panic!("EL2 Is not implemented!"),
+        }
+
+        self.pstate.il = false;
+        self.pstate.current_el = target_el;
+        self.pstate.set_to_exception();
+
+        // TODO: Fix the magic number
+        self.pc = 0x480;
+    }
+
     pub fn timer_device_tick(&mut self) {
         let expire = self.timer.cntp_expiry_ns.load(Ordering::Relaxed);
         if expire != 0 && monotonic_ns() >= expire {
@@ -165,14 +195,22 @@ impl Cpu {
             self.timer.cntp_expiry_ns.store(0, Ordering::Relaxed);
             return;
         }
-        let delta_ticks = self.timer.cntp_cval_el0 - unsafe { SYS_COUNTER };
-        let delta_ns = (delta_ticks as u128 * NS_PER_CYCLE as u128) as u64;
-        let host_expiry = monotonic_ns() + delta_ns;
+        let now = cntpct_now();
+        let cval = self.timer.cntp_cval_el0;
+
+        if now >= cval {
+            self.timer.cntp_expiry_ns.store(monotonic_ns(), Ordering::Relaxed);
+            return;
+        }
+
+        let delta_ticks = cval.saturating_sub(now);
+        let delta_ns = ((delta_ticks as u128 * 1_000_000_000u128) / CNTFRQ as u128) as u64;
+        let host_expiry = monotonic_ns().saturating_add(delta_ns);
         self.timer.cntp_expiry_ns.store(host_expiry, Ordering::Relaxed);
     }
 
     pub fn should_wake(&self) -> bool {
-        self.pending_irq.load(Ordering::Relaxed) != 0 || !self.sleeping.load(Ordering::Relaxed)
+        self.pending_irq.load(Ordering::Relaxed) != 0
     }
 
     pub fn get_elr_elx(&self) -> u64 {
@@ -312,6 +350,11 @@ impl Cpu {
                     self.timer_rearm();
                 }
             }
+            MsrRegisters::VbarEl1 => {
+                if !self.pstate.current_el.is_el2() {
+                    self.vbar_el1 = self.x_read(t.into(), 64);
+                }
+            }
         }
     }
 
@@ -343,8 +386,8 @@ impl Cpu {
                 }
             }
             MrsRegisters::CntpctEl0 => {
-                if !self.pstate.current_el.is_el0() || !self.pstate.current_el.is_el2() {
-                    self.x_write(t.into(), unsafe { SYS_COUNTER }, false);
+                if !self.pstate.current_el.is_el0() && !self.pstate.current_el.is_el2() {
+                    self.x_write(t.into(), cntpct_now(), false);
                 } else {
                     panic!("Please implement CntpctEl0 access for EL0");
                 }
@@ -376,6 +419,44 @@ impl Cpu {
         } else {
             self.pstate.daif_from_spsr(spsr);
         }
+    }
+
+    pub fn spsr_from_pstate(&mut self) -> u64 {
+        let mut spsr = 0;
+        if self.pstate.n {
+            spsr |= 1 << 31
+        };
+        if self.pstate.z {
+            spsr |= 1 << 30;
+        }
+        if self.pstate.c {
+            spsr |= 1 << 29;
+        }
+        if self.pstate.v {
+            spsr |= 1 << 28;
+        }
+        if self.pstate.masked_d {
+            spsr |= 1 << 9;
+        }
+        if self.pstate.masked_a {
+            spsr |= 1 << 8;
+        }
+        if self.pstate.masked_i {
+            spsr |= 1 << 7;
+        }
+        if self.pstate.masked_f {
+            spsr |= 1 << 6;
+        }
+
+        let m = match (self.pstate.current_el, self.pstate.sp) {
+            (ExceptionLevel::EL0, 1) => 0b0000,
+            (ExceptionLevel::EL1, 0) => 0b0100,
+            (ExceptionLevel::EL1, 1) => 0b0101,
+            _ => panic!("Pstate not covered"),
+        };
+        spsr |= m;
+
+        spsr
     }
 
     #[allow(clippy::if_same_then_else)]
@@ -463,13 +544,13 @@ pub struct PState {
     pub current_el: ExceptionLevel,
 
     /// Debug
-    pub d: bool,
+    pub masked_d: bool,
     /// Async
-    pub a: bool,
+    pub masked_a: bool,
     /// IRQ
-    pub i: bool,
+    pub masked_i: bool,
     /// FIQ
-    pub f: bool,
+    pub masked_f: bool,
 
     /// Execution state
     /// 0 === AArch64
@@ -492,10 +573,27 @@ impl PState {
         self.v = get_bits_ct!(spsr, 28, 1) != 0;
     }
     fn daif_from_spsr(&mut self, spsr: u64) {
-        self.d = get_bits_ct!(spsr, 9, 1) != 0;
-        self.a = get_bits_ct!(spsr, 8, 1) != 0;
-        self.i = get_bits_ct!(spsr, 7, 1) != 0;
-        self.f = get_bits_ct!(spsr, 6, 1) != 0;
+        self.masked_d = get_bits_ct!(spsr, 9, 1) != 0;
+        self.masked_a = get_bits_ct!(spsr, 8, 1) != 0;
+        self.masked_i = get_bits_ct!(spsr, 7, 1) != 0;
+        self.masked_f = get_bits_ct!(spsr, 6, 1) != 0;
+    }
+
+    #[inline]
+    fn irq_masked(&self) -> bool {
+        self.masked_i
+    }
+
+    fn daif_disable(&mut self) {
+        self.masked_d = true;
+        self.masked_a = true;
+        self.masked_i = true;
+        self.masked_f = true;
+    }
+
+    fn set_to_exception(&mut self) {
+        self.daif_disable();
+        self.il = false;
     }
 }
 
@@ -569,6 +667,7 @@ msr_enum! {
     SpEl1   = 12952273152,
     CntpCvalEl0 = 12936151554,
     CntpCtlEl0 =  12936151553,
+    VbarEl1 = 12885688320,
 }
 
 macro_rules! mrs_enum {
@@ -614,4 +713,8 @@ pub fn monotonic_ns() -> u64 {
     let dur = epoch.elapsed();
 
     dur.as_nanos().try_into().expect("duration exceeded u64 max")
+}
+
+fn cntpct_now() -> u64 {
+    ((monotonic_ns() as u128 * CNTFRQ as u128) / 1_000_000_000u128) as u64
 }
