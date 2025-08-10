@@ -5,7 +5,7 @@ use std::sync::OnceLock;
 use crate::{
     branch_exc_sys_instr::{Bcond, Bl, Branch, Eret, Mrs, MsrImm, MsrReg, Ret, Wfi},
     cpu::Cpu,
-    imm_instr::{AddImmediate, Movz, SubImmediate, Subs},
+    imm_instr::{AddImmediate, Movk, Movz, SubImmediate, Subs},
     load_store_instr::{
         LdrImmPostIdx, LdrImmPreIdx, LdrImmUnOffset, LdrLit, LdrReg, StrImmUnOffset,
     },
@@ -27,6 +27,7 @@ pub enum Instruction {
     Udiv(Udiv),
     AddImmediate(AddImmediate),
     Movz(Movz),
+    Movk(Movk),
     Subs(Subs),
     SubImmediate(SubImmediate),
     Ret(Ret),
@@ -56,6 +57,7 @@ impl Instruction {
             Instruction::Udiv(i) => i.exec(cpu, old_pc),
             Instruction::AddImmediate(i) => i.exec(cpu, old_pc),
             Instruction::Movz(i) => i.exec(cpu, old_pc),
+            Instruction::Movk(i) => i.exec(cpu, old_pc),
             Instruction::Subs(i) => i.exec(cpu, old_pc),
             Instruction::SubImmediate(i) => i.exec(cpu, old_pc),
             Instruction::Ret(i) => i.exec(cpu, old_pc),
@@ -92,6 +94,7 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     Udiv::UDIV,
     AddImmediate::ADD_IMMEDIATE,
     Movz::MOVZ,
+    Movk::MOVK,
     Subs::SUBS,
     SubImmediate::SUB_IMMEDIATE,
     Ret::RET,
