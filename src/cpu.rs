@@ -151,24 +151,25 @@ impl Cpu {
         self.pending_irq.fetch_or(1 << line, Ordering::Relaxed)
     }
 
-    pub fn handle_interrupts(&mut self, next_pc: u64) {
-        if self.pending_irq.load(Ordering::Relaxed) == 0 {
+    pub fn handle_interrupts(&mut self, next_pc: &mut u64) {
+        let pending = self.pending_irq.load(Ordering::Acquire);
+        if pending == 0 || self.pstate.irq_masked() {
             return;
         }
-        if self.pstate.irq_masked() {
-            return;
-        }
+
+        let line = pending.trailing_zeros();
+        self.pending_irq.fetch_and(!(1u32 << line), Ordering::AcqRel);
         // We return to current exception level
         let _cur_el = self.pstate.current_el;
         // We are only handling IRQ now
         let target_el = ExceptionLevel::EL1;
         match target_el {
             ExceptionLevel::EL0 | ExceptionLevel::EL1 => {
-                self.elr_el1 = next_pc;
+                self.elr_el1 = *next_pc;
                 self.spsr_el1 = self.spsr_from_pstate();
             }
             ExceptionLevel::EL3 => {
-                self.elr_el3 = next_pc;
+                self.elr_el3 = *next_pc;
                 self.spsr_el3 = self.spsr_from_pstate();
             }
             ExceptionLevel::EL2 => panic!("EL2 Is not implemented!"),
@@ -179,7 +180,7 @@ impl Cpu {
         self.pstate.set_to_exception();
 
         // TODO: Fix the magic number
-        self.pc = 0x480;
+        *next_pc = 0x280;
     }
 
     pub fn timer_device_tick(&mut self) {
@@ -406,7 +407,7 @@ impl Cpu {
             } else {
                 self.pstate.nrw = false;
                 self.pstate.current_el = ExceptionLevel::from_bits(get_bits_ct!(spsr, 2, 2) as u8);
-                self.sp_write(get_bits_ct!(spsr, 0, 1));
+                self.pstate.sp = get_bits_ct!(spsr, 0, 1) as u8;
             }
         }
 

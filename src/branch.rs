@@ -107,16 +107,34 @@ pub fn instruction_msr_imm(
             cpu.pstate.sp = get_bits_ct!(operand, 0, 1);
         }
         PstateField::Daifset => {
-            cpu.pstate.masked_d |= get_bits_ct!(operand, 3, 1) != 0;
-            cpu.pstate.masked_a |= get_bits_ct!(operand, 2, 1) != 0;
-            cpu.pstate.masked_i |= get_bits_ct!(operand, 1, 1) != 0;
-            cpu.pstate.masked_f |= get_bits_ct!(operand, 0, 1) != 0;
+            let m = (operand & 0xF) as u8;
+            if (m & 0b1000) != 0 {
+                cpu.pstate.masked_d = true;
+            }
+            if (m & 0b0100) != 0 {
+                cpu.pstate.masked_a = true;
+            }
+            if (m & 0b0010) != 0 {
+                cpu.pstate.masked_i = true;
+            }
+            if (m & 0b0001) != 0 {
+                cpu.pstate.masked_f = true;
+            }
         }
         PstateField::Daifclr => {
-            cpu.pstate.masked_d = get_bits_ct!(operand, 3, 1) != 0;
-            cpu.pstate.masked_a = get_bits_ct!(operand, 2, 1) != 0;
-            cpu.pstate.masked_i = get_bits_ct!(operand, 1, 1) != 0;
-            cpu.pstate.masked_f = get_bits_ct!(operand, 0, 1) != 0;
+            let m = (operand & 0xF) as u8;
+            if (m & 0b1000) != 0 {
+                cpu.pstate.masked_d = false;
+            }
+            if (m & 0b0100) != 0 {
+                cpu.pstate.masked_a = false;
+            }
+            if (m & 0b0010) != 0 {
+                cpu.pstate.masked_i = false;
+            }
+            if (m & 0b0001) != 0 {
+                cpu.pstate.masked_f = false;
+            }
         }
         _ => {}
     }

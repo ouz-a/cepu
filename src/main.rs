@@ -28,7 +28,7 @@ pub fn run_block(cpu: &mut Cpu) {
     let limit = MEMORY_SIZE;
     loop {
         if !cpu.sleeping.load(Ordering::Relaxed) {
-            cpu.handle_interrupts(pc);
+            cpu.handle_interrupts(&mut pc);
             let old_pc = pc;
             let word = read_32(old_pc as usize);
             pc = pc.wrapping_add(INSTRUCTION_SIZE);
