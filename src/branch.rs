@@ -107,7 +107,7 @@ pub fn instruction_msr_imm(
             cpu.pstate.sp = get_bits_ct!(operand, 0, 1);
         }
         PstateField::Daifset => {
-            let m = (operand & 0xF) as u8;
+            let m = operand & 0xF;
             if (m & 0b1000) != 0 {
                 cpu.pstate.masked_d = true;
             }
@@ -122,7 +122,7 @@ pub fn instruction_msr_imm(
             }
         }
         PstateField::Daifclr => {
-            let m = (operand & 0xF) as u8;
+            let m = operand & 0xF;
             if (m & 0b1000) != 0 {
                 cpu.pstate.masked_d = false;
             }

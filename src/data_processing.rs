@@ -179,7 +179,10 @@ pub fn instruction_sub_shifted_register(
     let op1 = cpu.x_read(n as usize, datasize);
     let op2 = !shift_reg(cpu, m, s_type, shift_amount, datasize);
     let res = add_with_carry(op1, op2, 1);
+    cpu.pstate.n = res.n;
+    cpu.pstate.z = res.z;
     cpu.pstate.c = res.c;
+    cpu.pstate.v = res.v;
     cpu.x_write(d as usize, res.result, is_32b);
 }
 
@@ -200,17 +203,21 @@ pub fn instruction_movn(cpu: &mut Cpu, reg_num: u64, imm16: u16, shift: u8, is_3
     cpu.x_write(reg_num as usize, result, is_32b);
 }
 
-pub fn instruction_movk(cpu: &mut Cpu, reg_num: u64, imm16: u16, shift: u8, is_32b: bool) {
-    let mut result;
-    if !is_32b {
-        result = cpu.x_read(reg_num as usize, 64);
-    } else {
-        result = cpu.x_read(reg_num as usize, 32);
+pub fn instruction_movk(cpu: &mut Cpu, reg_num: usize, imm16: u16, shift: u8, is_32b: bool) {
+    let datasize = if is_32b { 32 } else { 64 };
+
+    assert!(shift.is_multiple_of(16) && shift < datasize, "invalid MOVK shift");
+
+    let mut result: u64 = cpu.x_read(reg_num, datasize);
+
+    let field_mask: u64 = 0xFFFFu64.checked_shl(shift.into()).unwrap();
+    result = (result & !field_mask) | (((imm16 as u64) << shift) & field_mask);
+
+    if is_32b {
+        result &= 0xFFFF_FFFF;
     }
-    let mask: u64 = !(0xFFFFu64 << shift);
-    result &= mask;
-    result |= (imm16 as u64) << shift;
-    cpu.x_write(reg_num as usize, result, is_32b);
+
+    cpu.x_write(reg_num, result, is_32b);
 }
 
 #[inline]
@@ -238,6 +245,7 @@ pub fn shift_ror(x: u64, amount: u8) -> u64 {
 
 pub fn shift_reg(cpu: &Cpu, m: u8, s_type: ShiftTypes, shift_amount: u8, datasize: u8) -> u64 {
     let val = cpu.x_read(m as usize, datasize);
+    println!("val is {val} shift amount {shift_amount} {datasize}");
     match s_type {
         ShiftTypes::StLsl => shift_lsl(val, shift_amount),
         ShiftTypes::StLsr => shift_lsr(val, shift_amount),

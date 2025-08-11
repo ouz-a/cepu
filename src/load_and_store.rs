@@ -2,7 +2,7 @@
 
 use crate::{
     cpu::{Cpu, SP_REGISTER},
-    memory::{AccessDescriptor, read_memory},
+    memory::{AccessDescriptor, read_memory, write_memory},
 };
 
 #[repr(u8)]
@@ -150,7 +150,7 @@ pub fn instruction_str_imm_un_off(
 ) {
     let privileged = !cpu.pstate.current_el.is_el0();
     let _acc_descr = AccessDescriptor::create_acc_descr_gpr(
-        crate::memory::MemOp::Load,
+        crate::memory::MemOp::Store,
         non_temporal,
         privileged,
         tag_checked,
@@ -168,16 +168,15 @@ pub fn instruction_str_imm_un_off(
 
     let data =
         if rt_unknown { panic!("Unpredictable") } else { cpu.x_read(t as usize, datasize as u8) };
-    cpu.x_write(t as usize, data, datasize == 32);
-
+    write_memory(address as usize, (datasize / 8) as u32, data);
     if wback {
         if postindex {
-            address += offset;
+            address = address.wrapping_add(offset);
         }
         if n == SP_REGISTER as u8 {
             cpu.sp_write(address);
         } else {
-            cpu.x_write(n as usize, address, true);
+            cpu.x_write(n as usize, address, false);
         }
     }
 }

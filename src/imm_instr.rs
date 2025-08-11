@@ -80,7 +80,7 @@ impl Movk {
         if !self.sf && (self.hw & 1) == 1 {
             panic!("Undefined")
         }
-        instruction_movk(cpu, self.rd.into(), self.imm16, 0, !self.sf);
+        instruction_movk(cpu, self.rd.into(), self.imm16, self.hw << 4, !self.sf);
     }
     pub const fn decode(word: u32) -> Instruction {
         let sf = get_bits_ct!(word, 31, 1) == 1;
