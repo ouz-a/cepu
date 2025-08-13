@@ -95,7 +95,7 @@ pub fn instruction_imm_subs(cpu: &mut Cpu, d: u8, n: u8, imm24: u32, datasize: u
     let op1 = if n == SP_REGISTER as u8 { cpu.sp_read() } else { cpu.x_read(n as usize, datasize) };
     let op2 = zero_extend(imm24 as u64, datasize);
 
-    let res = add_with_carry(op1, (!op2).into(), 1);
+    let res = add_with_carry(op1, !op2, 1);
     cpu.pstate.c = res.c;
     cpu.pstate.n = res.n;
     cpu.pstate.z = res.z;

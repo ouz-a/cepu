@@ -9,7 +9,9 @@ use crate::{
     load_store_instr::{
         LdrImmPostIdx, LdrImmPreIdx, LdrImmUnOffset, LdrLit, LdrReg, StrImmUnOffset,
     },
-    register_instr::{AddShiftedReg, AddsShiftedReg, Madd, SubShiftedRegister, Udiv},
+    register_instr::{
+        AddShiftedReg, AddsShiftedReg, AndShiftedRegister, Madd, SubShiftedRegister, Udiv,
+    },
 };
 
 const PRIME_SIZE: usize = 1 << 12;
@@ -24,6 +26,7 @@ pub enum Instruction {
     AddsShiftedReg(AddsShiftedReg),
     AddShiftedReg(AddShiftedReg),
     SubShiftedRegister(SubShiftedRegister),
+    AndShiftedRegister(AndShiftedRegister),
     Udiv(Udiv),
     AddImmediate(AddImmediate),
     Movz(Movz),
@@ -55,6 +58,7 @@ impl Instruction {
             Instruction::AddsShiftedReg(i) => i.exec(cpu, old_pc),
             Instruction::AddShiftedReg(i) => i.exec(cpu, old_pc),
             Instruction::SubShiftedRegister(i) => i.exec(cpu, old_pc),
+            Instruction::AndShiftedRegister(i) => i.exec(cpu, old_pc),
             Instruction::Udiv(i) => i.exec(cpu, old_pc),
             Instruction::AddImmediate(i) => i.exec(cpu, old_pc),
             Instruction::Movz(i) => i.exec(cpu, old_pc),
@@ -93,6 +97,7 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     AddsShiftedReg::ADDS_SHIFTED_REG,
     AddShiftedReg::ADD_SHIFTED_REG,
     SubShiftedRegister::SUB_SHIFTED_REGISTER,
+    AndShiftedRegister::AND_SHIFTED_REGISTER,
     Udiv::UDIV,
     AddImmediate::ADD_IMMEDIATE,
     Movz::MOVZ,
