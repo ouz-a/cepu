@@ -29,11 +29,15 @@ pub fn sign_extend_xor(val: u64, width: isize) -> u64 {
     (val ^ sign_bit) - sign_bit
 }
 
-pub fn sign_extend(val: u64, index: u8) -> u64 {
-    let shift = 63 - index;
+pub fn sign_extend(val: u64, width: u8) -> u64 {
+    if width == 64 {
+        return val;
+    }
+    let shift = 64 - width;
     ((val << shift) as i64 >> shift) as u64
 }
 
-pub fn zero_extend(val: u64, index: u8) -> u64 {
-    if index == 63 { val } else { val & ((1u64 << (index + 1)) - 1) }
+pub fn zero_extend(val: u64, width: u8) -> u64 {
+    let mask = if width >= 63 { u64::MAX } else { u64::MAX >> (63 - width as u32) };
+    val & mask
 }

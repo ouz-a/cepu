@@ -1,6 +1,9 @@
 #![allow(clippy::too_many_arguments)]
 
-use crate::cpu::{Cpu, SP_REGISTER};
+use crate::{
+    cpu::{Cpu, SP_REGISTER},
+    utils::zero_extend,
+};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(u8)]
@@ -89,14 +92,10 @@ pub fn instruction_imm_sub(cpu: &mut Cpu, d: u8, n: u8, imm24: u32, datasize: u8
 }
 
 pub fn instruction_imm_subs(cpu: &mut Cpu, d: u8, n: u8, imm24: u32, datasize: u8) {
-    let op1 = if n == SP_REGISTER as u8 {
-        panic!("TODO: We haven't implemented this yet")
-    } else {
-        cpu.x_read(n as usize, datasize)
-    };
-    let op2 = imm24 as u8;
+    let op1 = if n == SP_REGISTER as u8 { cpu.sp_read() } else { cpu.x_read(n as usize, datasize) };
+    let op2 = zero_extend(imm24 as u64, datasize);
 
-    let res = add_with_carry(op1, op2.into(), 1);
+    let res = add_with_carry(op1, (!op2).into(), 1);
     cpu.pstate.c = res.c;
     cpu.pstate.n = res.n;
     cpu.pstate.z = res.z;
@@ -126,7 +125,7 @@ pub fn instruction_udiv(cpu: &mut Cpu, d: u8, n: u8, m: u8, datasize: u8) {
 
     let is_32b = datasize == 32;
     if op2 == 0 {
-        cpu.x_write(n as usize, 0, is_32b);
+        cpu.x_write(d as usize, 0, is_32b);
     } else {
         let result: u64 = op1 / op2;
         cpu.x_write(d as usize, result, is_32b);
@@ -245,7 +244,6 @@ pub fn shift_ror(x: u64, amount: u8) -> u64 {
 
 pub fn shift_reg(cpu: &Cpu, m: u8, s_type: ShiftTypes, shift_amount: u8, datasize: u8) -> u64 {
     let val = cpu.x_read(m as usize, datasize);
-    println!("val is {val} shift amount {shift_amount} {datasize}");
     match s_type {
         ShiftTypes::StLsl => shift_lsl(val, shift_amount),
         ShiftTypes::StLsr => shift_lsr(val, shift_amount),

@@ -108,7 +108,7 @@ pub struct Subs {
 impl Subs {
     pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
         let imm = if self.sh { (self.imm12 as u32) << 12 } else { self.imm12 as u32 };
-        instruction_imm_subs(cpu, self.rn, self.rd, imm, if self.sf { 64 } else { 32 });
+        instruction_imm_subs(cpu, self.rd, self.rn, imm, if self.sf { 64 } else { 32 });
     }
     pub const fn decode(word: u32) -> Instruction {
         let sf = get_bits_ct!(word, 31, 1) == 1;

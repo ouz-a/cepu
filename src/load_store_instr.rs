@@ -228,19 +228,20 @@ impl LdrReg {
                 false,
                 true,
             );
+        } else {
+            instruction_ldr_register(
+                cpu,
+                self.rt,
+                self.rn,
+                self.rm,
+                datasize,
+                if datasize == 64 { 64 } else { 32 },
+                0,
+                ExtendType::UxTx,
+                false,
+                true,
+            );
         }
-        instruction_ldr_register(
-            cpu,
-            self.rt,
-            self.rn,
-            self.rm,
-            datasize,
-            if datasize == 64 { 64 } else { 32 },
-            0,
-            ExtendType::UxTx,
-            false,
-            true,
-        );
     }
     pub const fn decode(word: u32) -> Instruction {
         let size = get_bits_ct!(word, 30, 2) as u8;

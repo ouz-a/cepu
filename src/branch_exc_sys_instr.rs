@@ -56,7 +56,8 @@ pub struct Bcond {
 
 impl Bcond {
     pub fn exec(self, cpu: &mut Cpu, old_pc: u64) {
-        instruction_branch(cpu, self.cond, (self.imm19 as u64) * INSTRUCTION_SIZE, old_pc);
+        let off = crate::utils::sign_extend(self.imm19 as u64, 19) << 2;
+        instruction_branch(cpu, self.cond, off, old_pc);
     }
 
     pub const fn decode(word: u32) -> Instruction {
@@ -68,6 +69,34 @@ impl Bcond {
     pub const B_COND: InstDesc = InstDesc {
         mask: 0b1111_1111_0000_0000_0000_0000_0001_0000,
         value: 0b0101_0100_0000_0000_0000_0000_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+/// Compare and branch on nonzero
+#[derive(Debug, Clone, Copy)]
+pub struct Cbnz {
+    pub sf: u8,
+    pub imm19: u32,
+    pub rt: u8,
+}
+
+impl Cbnz {
+    pub fn exec(self, cpu: &mut Cpu, old_pc: u64) {
+        let off = crate::utils::sign_extend(self.imm19 as u64, 19) << 2;
+        instruction_branch(cpu, self.rt, off, old_pc);
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let sf = get_bits_ct!(word, 31, 1) as u8;
+        let imm19 = get_bits_ct!(word, 5, 19);
+        let rt = get_bits_ct!(word, 0, 4) as u8;
+        Instruction::Cbnz(Cbnz { sf, imm19, rt })
+    }
+
+    pub const CBNZ: InstDesc = InstDesc {
+        mask: 0b0111_1111_0000_0000_0000_0000_0000_0000,
+        value: 0b0011_0101_0000_0000_0000_0000_0000_0000,
         decode: Self::decode,
     };
 }
