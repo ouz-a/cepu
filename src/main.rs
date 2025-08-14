@@ -83,6 +83,6 @@ pub fn run_block(cpu: &mut Cpu) {
 
 fn main() {
     let mut cpu = Cpu::init();
-    validate_and_load_elf_header(&mut cpu, Path::new("boot.elf"));
+    validate_and_load_elf_header(&mut cpu, Path::new("./.executables/boot.elf"));
     run_block(&mut cpu);
 }
