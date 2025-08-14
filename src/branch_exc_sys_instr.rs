@@ -1,7 +1,7 @@
 use crate::{
     branch::{
-        instruction_bl, instruction_branch, instruction_bunc, instruction_eret,
-        instruction_msr_imm, instruction_ret,
+        instruction_bl, instruction_branch, instruction_bunc, instruction_cbnz, instruction_cbz,
+        instruction_eret, instruction_msr_imm, instruction_ret,
     },
     cpu::{Cpu, ExceptionLevel, INSTRUCTION_SIZE, PstateField},
     get_bits_ct,
@@ -84,7 +84,7 @@ pub struct Cbnz {
 impl Cbnz {
     pub fn exec(self, cpu: &mut Cpu, old_pc: u64) {
         let off = crate::utils::sign_extend(self.imm19 as u64, 19) << 2;
-        instruction_branch(cpu, self.rt, off, old_pc);
+        instruction_cbnz(cpu, self.sf, self.rt, off, old_pc);
     }
 
     pub const fn decode(word: u32) -> Instruction {
@@ -97,6 +97,34 @@ impl Cbnz {
     pub const CBNZ: InstDesc = InstDesc {
         mask: 0b0111_1111_0000_0000_0000_0000_0000_0000,
         value: 0b0011_0101_0000_0000_0000_0000_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+/// Compare and branch on zero
+#[derive(Debug, Clone, Copy)]
+pub struct Cbz {
+    pub sf: u8,
+    pub imm19: u32,
+    pub rt: u8,
+}
+
+impl Cbz {
+    pub fn exec(self, cpu: &mut Cpu, old_pc: u64) {
+        let off = crate::utils::sign_extend(self.imm19 as u64, 19) << 2;
+        instruction_cbz(cpu, self.sf, self.rt, off, old_pc);
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let sf = get_bits_ct!(word, 31, 1) as u8;
+        let imm19 = get_bits_ct!(word, 5, 19);
+        let rt = get_bits_ct!(word, 0, 4) as u8;
+        Instruction::Cbz(Cbz { sf, imm19, rt })
+    }
+
+    pub const CBZ: InstDesc = InstDesc {
+        mask: 0b0111_1111_0000_0000_0000_0000_0000_0000,
+        value: 0b0011_0100_0000_0000_0000_0000_0000_0000,
         decode: Self::decode,
     };
 }
