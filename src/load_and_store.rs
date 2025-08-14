@@ -131,9 +131,9 @@ pub fn instruction_ldr_literal(cpu: &mut Cpu, t: u8, size: u8, offset: u64, old_
         false,
     );
 
-    let is_32b = size * 8 >= 64;
+    let is_64b = size * 8 >= 64;
     let (_, word) = read_memory(address as usize, size as usize);
-    cpu.x_write(t as usize, word, is_32b);
+    cpu.x_write(t as usize, word, !is_64b);
 }
 
 pub fn instruction_str_imm_un_off(

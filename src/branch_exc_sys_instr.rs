@@ -76,7 +76,7 @@ impl Bcond {
 /// Compare and branch on nonzero
 #[derive(Debug, Clone, Copy)]
 pub struct Cbnz {
-    pub sf: u8,
+    pub sf: bool,
     pub imm19: u32,
     pub rt: u8,
 }
@@ -84,11 +84,12 @@ pub struct Cbnz {
 impl Cbnz {
     pub fn exec(self, cpu: &mut Cpu, old_pc: u64) {
         let off = crate::utils::sign_extend(self.imm19 as u64, 19) << 2;
-        instruction_cbnz(cpu, self.sf, self.rt, off, old_pc);
+        let datasize = if self.sf { 64 } else { 32 };
+        instruction_cbnz(cpu, datasize, self.rt, off, old_pc);
     }
 
     pub const fn decode(word: u32) -> Instruction {
-        let sf = get_bits_ct!(word, 31, 1) as u8;
+        let sf = get_bits_ct!(word, 31, 1) as u8 == 1;
         let imm19 = get_bits_ct!(word, 5, 19);
         let rt = get_bits_ct!(word, 0, 4) as u8;
         Instruction::Cbnz(Cbnz { sf, imm19, rt })
@@ -104,7 +105,7 @@ impl Cbnz {
 /// Compare and branch on zero
 #[derive(Debug, Clone, Copy)]
 pub struct Cbz {
-    pub sf: u8,
+    pub sf: bool,
     pub imm19: u32,
     pub rt: u8,
 }
@@ -112,11 +113,12 @@ pub struct Cbz {
 impl Cbz {
     pub fn exec(self, cpu: &mut Cpu, old_pc: u64) {
         let off = crate::utils::sign_extend(self.imm19 as u64, 19) << 2;
-        instruction_cbz(cpu, self.sf, self.rt, off, old_pc);
+        let datasize = if self.sf { 64 } else { 32 };
+        instruction_cbz(cpu, datasize, self.rt, off, old_pc);
     }
 
     pub const fn decode(word: u32) -> Instruction {
-        let sf = get_bits_ct!(word, 31, 1) as u8;
+        let sf = get_bits_ct!(word, 31, 1) as u8 == 1;
         let imm19 = get_bits_ct!(word, 5, 19);
         let rt = get_bits_ct!(word, 0, 4) as u8;
         Instruction::Cbz(Cbz { sf, imm19, rt })
