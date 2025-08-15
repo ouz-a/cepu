@@ -268,13 +268,8 @@ pub struct LdrLit {
 
 impl LdrLit {
     pub fn exec(self, cpu: &mut Cpu, old_pc: u64) {
-        instruction_ldr_literal(
-            cpu,
-            self.rt,
-            4 << self.opc,
-            crate::utils::sign_extend(self.imm19 as u64, 19) << 2,
-            old_pc,
-        )
+        let offset = old_pc.wrapping_add(crate::utils::sign_extend(self.imm19 as u64, 19) << 2);
+        instruction_ldr_literal(cpu, self.rt, 4 << self.opc, offset, old_pc)
     }
     pub const fn decode(word: u32) -> Instruction {
         let opc = get_bits_ct!(word, 30, 1) as u8;

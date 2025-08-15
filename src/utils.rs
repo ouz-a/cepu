@@ -42,3 +42,15 @@ pub fn zero_extend(val: u64, width: u8) -> u64 {
     let mask = if width >= 63 { u64::MAX } else { u64::MAX >> (63 - width as u32) };
     val & mask
 }
+
+pub fn insert_16bit_field(mut target: u64, value: u16, start_bit: u32) -> u64 {
+    let sixteen_bit_mask = 0xFFFF_u64 << start_bit;
+
+    target &= !sixteen_bit_mask;
+
+    let value_at_position = (value as u64) << start_bit;
+
+    target |= value_at_position;
+
+    target
+}

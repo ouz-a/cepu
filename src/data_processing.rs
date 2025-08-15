@@ -2,7 +2,7 @@
 
 use crate::{
     cpu::{Cpu, SP_REGISTER},
-    utils::zero_extend,
+    utils::{insert_16bit_field, zero_extend},
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -185,8 +185,8 @@ pub fn instruction_sub_shifted_register(
     cpu.x_write(d as usize, res.result, is_32b);
 }
 
-pub fn instruction_movz(cpu: &mut Cpu, d: u8, imm16: u16, shift: u8, is_32b: bool) {
-    let result = (imm16 << shift) as u64;
+pub fn instruction_movz(cpu: &mut Cpu, d: u8, imm16: u16, position: u8, is_32b: bool) {
+    let result = insert_16bit_field(0, imm16, position as u32);
     cpu.x_write(d as usize, result, is_32b);
 }
 

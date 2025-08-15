@@ -121,8 +121,8 @@ pub fn instruction_ldr_register(
     cpu.x_write(t as usize, data, is_32b);
 }
 
-pub fn instruction_ldr_literal(cpu: &mut Cpu, t: u8, size: u8, offset: u64, old_pc: u64) {
-    let address = old_pc + offset;
+pub fn instruction_ldr_literal(cpu: &mut Cpu, t: u8, size: u8, offset: u64, _old_pc: u64) {
+    let address = offset;
     let privileged = !cpu.pstate.current_el.is_el0();
     let _access_descrip = AccessDescriptor::create_acc_descr_gpr(
         crate::memory::MemOp::Load,
