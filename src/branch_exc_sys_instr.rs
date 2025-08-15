@@ -91,7 +91,7 @@ impl Cbnz {
     pub const fn decode(word: u32) -> Instruction {
         let sf = get_bits_ct!(word, 31, 1) as u8 == 1;
         let imm19 = get_bits_ct!(word, 5, 19);
-        let rt = get_bits_ct!(word, 0, 4) as u8;
+        let rt = get_bits_ct!(word, 0, 5) as u8;
         Instruction::Cbnz(Cbnz { sf, imm19, rt })
     }
 
@@ -120,7 +120,7 @@ impl Cbz {
     pub const fn decode(word: u32) -> Instruction {
         let sf = get_bits_ct!(word, 31, 1) as u8 == 1;
         let imm19 = get_bits_ct!(word, 5, 19);
-        let rt = get_bits_ct!(word, 0, 4) as u8;
+        let rt = get_bits_ct!(word, 0, 5) as u8;
         Instruction::Cbz(Cbz { sf, imm19, rt })
     }
 
@@ -234,7 +234,7 @@ impl MsrReg {
         let crn = get_bits_ct!(word, 12, 4) as u8;
         let crm = get_bits_ct!(word, 8, 4) as u8;
         let op2 = get_bits_ct!(word, 5, 3) as u8;
-        let rt = get_bits_ct!(word, 0, 4) as u8;
+        let rt = get_bits_ct!(word, 0, 5) as u8;
         Instruction::MsrReg(MsrReg { op0, op1, crn, crm, op2, rt })
     }
     pub const MSR_REG: InstDesc = InstDesc {
@@ -263,7 +263,7 @@ impl Mrs {
         let crn = get_bits_ct!(word, 12, 4) as u8;
         let crm = get_bits_ct!(word, 8, 4) as u8;
         let op2 = get_bits_ct!(word, 5, 3) as u8;
-        let rt = get_bits_ct!(word, 0, 4) as u8;
+        let rt = get_bits_ct!(word, 0, 5) as u8;
         Instruction::Mrs(Mrs { op0, op1, crn, crm, op2, rt })
     }
 

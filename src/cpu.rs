@@ -393,6 +393,13 @@ impl Cpu {
                     panic!("Please implement CntpctEl0 access for EL0");
                 }
             }
+            MrsRegisters::CntpCtlEl0 => {
+                if !self.pstate.current_el.is_el0() && !self.pstate.current_el.is_el2() {
+                    self.x_write(t.into(), self.timer.cntp_ctl_el0.into(), false);
+                } else {
+                    panic!("Please implement CntpctEl0 access for EL0");
+                }
+            }
         }
     }
 
@@ -700,6 +707,7 @@ macro_rules! mrs_enum {
 mrs_enum! {
     CntfrqEl0 = 12936151040,
     CntpctEl0 = 12936151041,
+    CntpCtlEl0 = 12936151553,
 }
 
 pub fn sleep_ns(ns: u64) {

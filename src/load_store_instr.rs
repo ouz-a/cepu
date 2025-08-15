@@ -7,7 +7,7 @@ use crate::{
         ExtendType, instruction_ldr_imm_base, instruction_ldr_literal, instruction_ldr_register,
         instruction_str_imm_un_off,
     },
-    utils::sign_extend_xor,
+    utils::{sign_extend_xor, zero_extend},
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -68,11 +68,7 @@ pub struct LdrImmUnOffset {
 
 impl LdrImmUnOffset {
     pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
-        let offset = if (self.size & 1) == 1 {
-            shift_lsl(self.imm12 as u64, self.size)
-        } else {
-            self.imm12 as u64
-        };
+        let offset = shift_lsl(zero_extend(self.imm12 as u64, 64), self.size);
         let datasize = (8 << (self.size)) as u64;
         let tag_checked = self.rn != 31;
         if self.rn == self.rt && self.rn != 31 {
