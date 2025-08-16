@@ -48,7 +48,7 @@ pub struct Movz {
 
 impl Movz {
     pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
-        if !self.sf && (self.hw & 0b10) == 1 {
+        if !self.sf && get_bits_ct!(self.hw, 1, 1) == 1 {
             panic!("Undefined")
         }
         instruction_movz(cpu, self.rd, self.imm16, self.hw << 4, !self.sf);
