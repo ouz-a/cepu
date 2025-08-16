@@ -19,7 +19,7 @@ impl Ret {
     }
 
     pub const fn decode(word: u32) -> Instruction {
-        Instruction::Ret(Ret { rn: get_bits_ct!(word, 5, 5) as u8 })
+        Instruction::Ret(Self { rn: get_bits_ct!(word, 5, 5) as u8 })
     }
 
     pub const RET: InstDesc = InstDesc {
@@ -38,7 +38,7 @@ impl Eret {
     }
 
     pub const fn decode(_: u32) -> Instruction {
-        Instruction::Eret(Eret {})
+        Instruction::Eret(Self {})
     }
 
     pub const ERET: InstDesc = InstDesc {
@@ -63,7 +63,7 @@ impl Bcond {
     pub const fn decode(word: u32) -> Instruction {
         let imm19 = get_bits_ct!(word, 5, 19);
         let cond = get_bits_ct!(word, 0, 4) as u8;
-        Instruction::Bcond(Bcond { imm19, cond })
+        Instruction::Bcond(Self { imm19, cond })
     }
 
     pub const B_COND: InstDesc = InstDesc {
@@ -92,7 +92,7 @@ impl Cbnz {
         let sf = get_bits_ct!(word, 31, 1) as u8 == 1;
         let imm19 = get_bits_ct!(word, 5, 19);
         let rt = get_bits_ct!(word, 0, 5) as u8;
-        Instruction::Cbnz(Cbnz { sf, imm19, rt })
+        Instruction::Cbnz(Self { sf, imm19, rt })
     }
 
     pub const CBNZ: InstDesc = InstDesc {
@@ -121,7 +121,7 @@ impl Cbz {
         let sf = get_bits_ct!(word, 31, 1) as u8 == 1;
         let imm19 = get_bits_ct!(word, 5, 19);
         let rt = get_bits_ct!(word, 0, 5) as u8;
-        Instruction::Cbz(Cbz { sf, imm19, rt })
+        Instruction::Cbz(Self { sf, imm19, rt })
     }
 
     pub const CBZ: InstDesc = InstDesc {
@@ -143,7 +143,7 @@ impl Bl {
     }
     pub const fn decode(word: u32) -> Instruction {
         let imm26 = get_bits_ct!(word, 0, 26);
-        Instruction::Bl(Bl { imm26 })
+        Instruction::Bl(Self { imm26 })
     }
 
     pub const BL: InstDesc = InstDesc {
@@ -164,7 +164,7 @@ impl Branch {
     }
     pub fn decode(word: u32) -> Instruction {
         let imm26 = get_bits_ct!(word, 0, 26);
-        Instruction::Branch(Branch { imm26 })
+        Instruction::Branch(Self { imm26 })
     }
 
     pub const BRANCH: InstDesc = InstDesc {
@@ -204,7 +204,7 @@ impl MsrImm {
         let op1 = get_bits_ct!(word, 16, 3) as u8;
         let crm = get_bits_ct!(word, 8, 4) as u8;
         let op2 = get_bits_ct!(word, 5, 3) as u8;
-        Instruction::MsrImm(MsrImm { op1, crm, op2 })
+        Instruction::MsrImm(Self { op1, crm, op2 })
     }
 
     pub const MSR_IMM: InstDesc = InstDesc {
@@ -235,7 +235,7 @@ impl MsrReg {
         let crm = get_bits_ct!(word, 8, 4) as u8;
         let op2 = get_bits_ct!(word, 5, 3) as u8;
         let rt = get_bits_ct!(word, 0, 5) as u8;
-        Instruction::MsrReg(MsrReg { op0, op1, crn, crm, op2, rt })
+        Instruction::MsrReg(Self { op0, op1, crn, crm, op2, rt })
     }
     pub const MSR_REG: InstDesc = InstDesc {
         mask: 0b1111_1111_1111_0000_0000_0000_0000_0000,
@@ -264,7 +264,7 @@ impl Mrs {
         let crm = get_bits_ct!(word, 8, 4) as u8;
         let op2 = get_bits_ct!(word, 5, 3) as u8;
         let rt = get_bits_ct!(word, 0, 5) as u8;
-        Instruction::Mrs(Mrs { op0, op1, crn, crm, op2, rt })
+        Instruction::Mrs(Self { op0, op1, crn, crm, op2, rt })
     }
 
     pub const MRS: InstDesc = InstDesc {
@@ -282,7 +282,7 @@ impl Wfi {
         cpu.sleeping.store(true, std::sync::atomic::Ordering::SeqCst);
     }
     pub const fn decode(_word: u32) -> Instruction {
-        Instruction::Wfi(Wfi)
+        Instruction::Wfi(Self)
     }
     pub const WFI: InstDesc = InstDesc {
         mask: 0b1111_1111_1111_1111_1111_1111_1111_1111,

@@ -65,7 +65,7 @@ impl AddsShiftedReg {
         let imm6 = get_bits_ct!(word, 10, 6) as u8;
         let rn = get_bits_ct!(word, 5, 5) as u8;
         let rd = get_bits_ct!(word, 0, 5) as u8;
-        Instruction::AddsShiftedReg(AddsShiftedReg { sf, shift, rm, imm6, rn, rd })
+        Instruction::AddsShiftedReg(Self { sf, shift, rm, imm6, rn, rd })
     }
 
     pub const ADDS_SHIFTED_REG: InstDesc = InstDesc {
@@ -111,7 +111,7 @@ impl AddShiftedReg {
         if !sf && get_bits_ct!(imm6, 5, 1) == 1 {
             panic!("Undefined")
         }
-        Instruction::AddShiftedReg(AddShiftedReg { sf, shift, rm, imm6, rn, rd })
+        Instruction::AddShiftedReg(Self { sf, shift, rm, imm6, rn, rd })
     }
 
     pub const ADD_SHIFTED_REG: InstDesc = InstDesc {
@@ -150,7 +150,7 @@ impl SubShiftedRegister {
         let imm6 = get_bits_ct!(word, 10, 6) as u8;
         let rn = get_bits_ct!(word, 5, 5) as u8;
         let rd = get_bits_ct!(word, 0, 5) as u8;
-        Instruction::SubShiftedRegister(SubShiftedRegister { sf, shift, rm, imm6, rn, rd })
+        Instruction::SubShiftedRegister(Self { sf, shift, rm, imm6, rn, rd })
     }
     pub const SUB_SHIFTED_REGISTER: InstDesc = InstDesc {
         mask: 0b0111_1111_0010_0000_0000_0000_0000_0000,
@@ -176,7 +176,7 @@ impl Udiv {
         let rm = get_bits_ct!(word, 16, 5) as u8;
         let rn = get_bits_ct!(word, 5, 5) as u8;
         let rd = get_bits_ct!(word, 0, 5) as u8;
-        Instruction::Udiv(Udiv { sf, rm, rn, rd })
+        Instruction::Udiv(Self { sf, rm, rn, rd })
     }
     pub const UDIV: InstDesc = InstDesc {
         mask: 0b0111_1111_1110_0000_1111_1100_0000_0000,
@@ -215,7 +215,7 @@ impl AndShiftedRegister {
         if !sf && get_bits_ct!(imm6, 4, 1) == 1 {
             panic!("Undefined, end of decode");
         }
-        Instruction::AndShiftedRegister(AndShiftedRegister { sf, shift, rm, imm6, rn, rd })
+        Instruction::AndShiftedRegister(Self { sf, shift, rm, imm6, rn, rd })
     }
 
     pub const AND_SHIFTED_REGISTER: InstDesc = InstDesc {
@@ -256,7 +256,7 @@ impl OrShiftedRegister {
             panic!("Undefined, end of decode");
         }
 
-        Instruction::OrShiftedRegister(OrShiftedRegister { sf, shift, rm, imm6, rn, rd })
+        Instruction::OrShiftedRegister(Self { sf, shift, rm, imm6, rn, rd })
     }
 
     pub const OR_SHIFTED_REGISTER: InstDesc = InstDesc {

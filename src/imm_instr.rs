@@ -28,7 +28,7 @@ impl AddImmediate {
         let imm12 = get_bits_ct!(word, 10, 12) as u16;
         let rn = get_bits_ct!(word, 5, 5) as u8;
         let rd = get_bits_ct!(word, 0, 5) as u8;
-        Instruction::AddImmediate(AddImmediate { sf, sh, imm12, rn, rd })
+        Instruction::AddImmediate(Self { sf, sh, imm12, rn, rd })
     }
 
     pub const ADD_IMMEDIATE: InstDesc = InstDesc {
@@ -58,7 +58,7 @@ impl Movz {
         let hw = get_bits_ct!(word, 21, 2) as u8;
         let imm16 = get_bits_ct!(word, 5, 16) as u16;
         let rd = get_bits_ct!(word, 0, 5) as u8;
-        Instruction::Movz(Movz { sf, hw, imm16, rd })
+        Instruction::Movz(Self { sf, hw, imm16, rd })
     }
     pub const MOVZ: InstDesc = InstDesc {
         mask: 0b0111_1111_1000_0000_0000_0000_0000_0000,
@@ -87,7 +87,7 @@ impl Movk {
         let hw = get_bits_ct!(word, 21, 2) as u8;
         let imm16 = get_bits_ct!(word, 5, 16) as u16;
         let rd = get_bits_ct!(word, 0, 5) as u8;
-        Instruction::Movk(Movk { sf, hw, imm16, rd })
+        Instruction::Movk(Self { sf, hw, imm16, rd })
     }
     pub const MOVK: InstDesc = InstDesc {
         mask: 0b0111_1111_1000_0000_0000_0000_0000_0000,
@@ -116,7 +116,7 @@ impl Subs {
         let imm12 = get_bits_ct!(word, 10, 12) as u16;
         let rn = get_bits_ct!(word, 5, 5) as u8;
         let rd = get_bits_ct!(word, 0, 5) as u8;
-        Instruction::Subs(Subs { sf, sh, imm12, rn, rd })
+        Instruction::Subs(Self { sf, sh, imm12, rn, rd })
     }
     pub const SUBS: InstDesc = InstDesc {
         mask: 0b0111_1111_1000_0000_0000_0000_0000_0000,
@@ -145,7 +145,7 @@ impl SubImmediate {
         let imm12 = get_bits_ct!(word, 10, 12) as u16;
         let rn = get_bits_ct!(word, 5, 5) as u8;
         let rd = get_bits_ct!(word, 0, 5) as u8;
-        Instruction::SubImmediate(SubImmediate { sf, sh, imm12, rn, rd })
+        Instruction::SubImmediate(Self { sf, sh, imm12, rn, rd })
     }
     pub const SUB_IMMEDIATE: InstDesc = InstDesc {
         mask: 0b0111_1111_1100_0000_0000_0000_0000_0000,

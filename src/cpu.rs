@@ -132,7 +132,7 @@ pub struct Cpu {
 
 impl Cpu {
     pub fn init() -> Self {
-        let mut cpu = Cpu::default();
+        let mut cpu = Self::default();
         cpu.pstate.sp = 1;
         cpu.sp_el0 = 1024;
         cpu.sp_el1 = 1024 * 2;

@@ -232,7 +232,7 @@ pub struct AccessDescriptor {
 }
 impl AccessDescriptor {
     fn new(acc_type: AccessType) -> Self {
-        AccessDescriptor { acc_type, ..Default::default() }
+        Self { acc_type, ..Default::default() }
     }
     pub fn create_acc_descr_gpr(
         memop: MemOp,
@@ -240,7 +240,7 @@ impl AccessDescriptor {
         priveleged: bool,
         tag_checked: bool,
     ) -> Self {
-        let mut acc_descr = AccessDescriptor::new(AccessType::Gpr);
+        let mut acc_descr = Self::new(AccessType::Gpr);
         acc_descr.el = if priveleged { 3 } else { 0 };
         acc_descr.non_temporal = non_temporal;
         acc_descr.read = memop == MemOp::Load;

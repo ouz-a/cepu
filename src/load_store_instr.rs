@@ -49,7 +49,7 @@ impl StrImmUnOffset {
         let imm12 = get_bits_ct!(word, 10, 12) as u16;
         let rn = get_bits_ct!(word, 5, 5) as u8;
         let rt = get_bits_ct!(word, 0, 5) as u8;
-        Instruction::StrImmUnOffset(StrImmUnOffset { size, imm12, rn, rt })
+        Instruction::StrImmUnOffset(Self { size, imm12, rn, rt })
     }
     pub const STR_IMM_UN_OFFSET: InstDesc = InstDesc {
         mask: 0b1011_1111_1100_0000_0000_0000_0000_0000,
@@ -93,7 +93,7 @@ impl LdrImmUnOffset {
         let imm12 = get_bits_ct!(word, 10, 12) as u16;
         let rn = get_bits_ct!(word, 5, 5) as u8;
         let rt = get_bits_ct!(word, 0, 5) as u8;
-        Instruction::LdrImmUnOffset(LdrImmUnOffset { size, imm12, rn, rt })
+        Instruction::LdrImmUnOffset(Self { size, imm12, rn, rt })
     }
     pub const LDR_IMM_UN_OFFSET: InstDesc = InstDesc {
         mask: 0b1011_1111_1100_0000_0000_0000_0000_0000,
@@ -138,7 +138,7 @@ impl LdrImmPostIdx {
         let imm9 = get_bits_ct!(word, 12, 9) as u16;
         let rn = get_bits_ct!(word, 5, 5) as u8;
         let rt = get_bits_ct!(word, 0, 5) as u8;
-        Instruction::LdrImmPostIdx(LdrImmPostIdx { size, imm9, rn, rt })
+        Instruction::LdrImmPostIdx(Self { size, imm9, rn, rt })
     }
     pub const LDR_IMM_POST_IDX: InstDesc = InstDesc {
         mask: 0b1011_1111_1110_0000_0000_1100_0000_0000,
@@ -183,7 +183,7 @@ impl LdrImmPreIdx {
         let imm9 = get_bits_ct!(word, 12, 9) as u16;
         let rn = get_bits_ct!(word, 5, 5) as u8;
         let rt = get_bits_ct!(word, 0, 5) as u8;
-        Instruction::LdrImmPreIdx(LdrImmPreIdx { size, imm9, rn, rt })
+        Instruction::LdrImmPreIdx(Self { size, imm9, rn, rt })
     }
     pub const LDR_IMM_PRE_IDX: InstDesc = InstDesc {
         mask: 0b1011_1111_1110_0000_0000_1100_0000_0000,
@@ -246,7 +246,7 @@ impl LdrReg {
         let s = get_bits_ct!(word, 12, 1) as u8;
         let rn = get_bits_ct!(word, 5, 5) as u8;
         let rt = get_bits_ct!(word, 0, 5) as u8;
-        Instruction::LdrReg(LdrReg { size, rm, option, s, rn, rt })
+        Instruction::LdrReg(Self { size, rm, option, s, rn, rt })
     }
     pub const LDR_REG: InstDesc = InstDesc {
         mask: 0b1011_1111_1110_0000_0000_1100_0000_0000,
@@ -271,7 +271,7 @@ impl LdrLit {
         let opc = get_bits_ct!(word, 30, 1) as u8;
         let imm19 = get_bits_ct!(word, 5, 19);
         let rt = get_bits_ct!(word, 0, 5) as u8;
-        Instruction::LdrLit(LdrLit { opc, imm19, rt })
+        Instruction::LdrLit(Self { opc, imm19, rt })
     }
 
     pub const LDR_LIT: InstDesc = InstDesc {
