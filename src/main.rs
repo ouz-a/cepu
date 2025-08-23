@@ -10,6 +10,7 @@ use crate::{
 
 pub mod branch;
 pub mod branch_exc_sys_instr;
+pub mod bus;
 pub mod cpu;
 pub mod data_processing;
 pub mod elf;

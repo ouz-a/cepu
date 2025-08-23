@@ -3,6 +3,12 @@ use core::ffi::c_void;
 pub const MEMORY_SIZE: usize = 16 << 20;
 
 pub static mut MEMORY: [u8; MEMORY_SIZE] = [0; MEMORY_SIZE];
+/*
+MEMORY {
+  ROM (rx)  : ORIGIN = 0x00000000, LENGTH = 0x8000
+  RAM (rwx) : ORIGIN = 0x00008000, LENGTH = 0x100000
+}
+*/
 
 pub fn read_32(address: usize) -> u32 {
     assert!(address + 3 < MEMORY_SIZE);
@@ -253,38 +259,6 @@ impl AccessDescriptor {
 
 #[derive(Default, Debug, Clone, Copy)]
 pub struct PhyMemStatus {
-    fault_status: FaultStatus,
-    _error_state: ErrorState,
-}
-
-pub fn read_memory(address: usize, size: usize) -> (PhyMemStatus, u64) {
-    assert!(matches!(size, 1 | 2 | 4 | 8));
-    assert!(address + size <= MEMORY_SIZE);
-
-    let mut status = PhyMemStatus::default();
-    let ret_val;
-    unsafe {
-        let src = (core::ptr::addr_of!(MEMORY) as *const u8).add(address);
-        let mut value = [0u8; 8];
-        core::ptr::copy_nonoverlapping(src, value.as_mut_ptr(), size);
-        ret_val = u64::from_le_bytes(value);
-    }
-    status.fault_status = FaultStatus::None;
-    (status, ret_val)
-}
-
-pub fn write_memory(address: usize, size: u32, value: u64) -> PhyMemStatus {
-    assert!(matches!(size, 1 | 2 | 4 | 8));
-    assert!(address + size as usize <= MEMORY_SIZE);
-
-    let mut status = PhyMemStatus::default();
-    unsafe {
-        let dst = (core::ptr::addr_of_mut!(MEMORY) as *mut u8).add(address);
-        let bytes = value.to_le_bytes();
-        let src = bytes.as_ptr();
-
-        core::ptr::copy_nonoverlapping(src, dst, size as usize);
-    }
-    status.fault_status = FaultStatus::None;
-    status
+    pub fault_status: FaultStatus,
+    pub _error_state: ErrorState,
 }

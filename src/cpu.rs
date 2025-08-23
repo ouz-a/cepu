@@ -7,7 +7,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use crate::{get_bits_ct, utils::align};
+use crate::{bus::Bus, get_bits_ct, utils::align};
 
 static START: OnceLock<Instant> = OnceLock::new();
 pub const MAX_SLEEP_NS: u64 = 80 * 1000 * 1000;
@@ -128,6 +128,8 @@ pub struct Cpu {
     pub condvar: Arc<(Mutex<bool>, Condvar)>,
     pub pending_irq: AtomicU32,
     pub sleeping: AtomicBool,
+
+    pub bus: Bus,
 }
 
 impl Cpu {

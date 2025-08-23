@@ -2,7 +2,7 @@
 
 use crate::{
     cpu::{Cpu, SP_REGISTER},
-    memory::{AccessDescriptor, read_memory, write_memory},
+    memory::AccessDescriptor,
 };
 
 #[repr(u8)]
@@ -69,7 +69,7 @@ pub fn instruction_ldr_imm_base(
     let data = if wb_unknown {
         panic!("Unpredictable");
     } else {
-        read_memory(address as usize, datasize / 8)
+        cpu.bus.read_memory(address as usize, datasize / 8)
     };
     cpu.x_write(t as usize, data.1, datasize == 32);
 
@@ -116,7 +116,7 @@ pub fn instruction_ldr_register(
 
     address += offset;
 
-    let (_, data) = read_memory(address as usize, (datasize / 8) as usize);
+    let (_, data) = cpu.bus.read_memory(address as usize, (datasize / 8) as usize);
     let is_32b = reg_size == 32;
     cpu.x_write(t as usize, data, is_32b);
 }
@@ -132,7 +132,7 @@ pub fn instruction_ldr_literal(cpu: &mut Cpu, t: u8, size: u8, offset: u64, _old
     );
 
     let is_64b = size * 8 >= 64;
-    let (_, word) = read_memory(address as usize, size as usize);
+    let (_, word) = cpu.bus.read_memory(address as usize, size as usize);
     cpu.x_write(t as usize, word, !is_64b);
 }
 
@@ -168,7 +168,7 @@ pub fn instruction_str_imm_un_off(
 
     let data =
         if rt_unknown { panic!("Unpredictable") } else { cpu.x_read(t as usize, datasize as u8) };
-    write_memory(address as usize, (datasize / 8) as u32, data);
+    cpu.bus.write_memory(address as usize, datasize / 8, data);
     if wback {
         if postindex {
             address = address.wrapping_add(offset);
