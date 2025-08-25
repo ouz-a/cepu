@@ -1,4 +1,4 @@
-use crate::memory::*;
+use crate::{devices::Uart, memory::*};
 
 pub const ROM_RANGE_BEG: usize = 0x0000;
 pub const ROM_RANGE_END: usize = 0x7FFF;
@@ -7,21 +7,27 @@ pub const RAM_RANGE_BEG: usize = ROM_RANGE_END + 1;
 pub const RAM_SIZE: usize = 0x100000;
 pub const RAM_RANGE_END: usize = RAM_RANGE_BEG + RAM_SIZE - 1;
 
+pub const UART_RANGE_BEG: usize = 0x900_0000;
+pub const UART_RANGE_END: usize = UART_RANGE_BEG + 4096;
+
 #[derive(Default, Clone, Debug)]
-pub struct Bus {}
+pub struct Bus {
+    pub uart: Uart,
+}
 
 impl Bus {
-    pub fn read_memory(&self, address: usize, size: usize) -> (PhyMemStatus, u64) {
+    pub fn read_memory(&mut self, address: usize, size: usize) -> (PhyMemStatus, u64) {
         let address_range = address + size;
         match address_range {
             ROM_RANGE_BEG..=ROM_RANGE_END => Bus::read_memory_impl(address, size),
             RAM_RANGE_BEG..=RAM_RANGE_END => Bus::read_memory_impl(address, size),
+            UART_RANGE_BEG..=UART_RANGE_END => self.uart.read((address - UART_RANGE_BEG) as u8),
             _ => {
-                panic!("Out of bounds memory access!")
+                panic!("Out of bounds memory access! Range {address_range:x}")
             }
         }
     }
-    pub fn write_memory(&self, address: usize, size: usize, value: u64) -> PhyMemStatus {
+    pub fn write_memory(&mut self, address: usize, size: usize, value: u64) -> PhyMemStatus {
         let address_range = address + size;
         match address_range {
             ROM_RANGE_BEG..=ROM_RANGE_END => {
@@ -29,7 +35,7 @@ impl Bus {
             }
             RAM_RANGE_BEG..=RAM_RANGE_END => Bus::write_memory_impl(address, size, value),
             _ => {
-                panic!("Out of bounds memory access!")
+                panic!("Out of bounds memory access! Range {address_range:x}")
             }
         }
     }

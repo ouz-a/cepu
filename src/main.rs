@@ -13,6 +13,7 @@ pub mod branch_exc_sys_instr;
 pub mod bus;
 pub mod cpu;
 pub mod data_processing;
+pub mod devices;
 pub mod elf;
 pub mod imm_instr;
 pub mod instruction;
