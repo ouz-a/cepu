@@ -3,7 +3,9 @@
 use std::sync::OnceLock;
 
 use crate::{
-    branch_exc_sys_instr::{Bcond, Bl, Branch, Cbnz, Cbz, Eret, Mrs, MsrImm, MsrReg, Ret, Wfi},
+    branch_exc_sys_instr::{
+        Bcond, Bl, Branch, Cbnz, Cbz, Eret, Mrs, MsrImm, MsrReg, Ret, Tbnz, Wfi,
+    },
     cpu::Cpu,
     imm_instr::{AddImmediate, Movk, Movz, SubImmediate, Subs},
     load_store_instr::{
@@ -38,6 +40,7 @@ pub enum Instruction {
     Ret(Ret),
     Eret(Eret),
     Bcond(Bcond),
+    Tbnz(Tbnz),
     Cbnz(Cbnz),
     Cbz(Cbz),
     Bl(Bl),
@@ -73,6 +76,7 @@ impl Instruction {
             Self::Eret(i) => i.exec(cpu, old_pc),
             Self::Bcond(i) => i.exec(cpu, old_pc),
             Self::Cbnz(i) => i.exec(cpu, old_pc),
+            Self::Tbnz(i) => i.exec(cpu, old_pc),
             Self::Cbz(i) => i.exec(cpu, old_pc),
             Self::Bl(i) => i.exec(cpu, old_pc),
             Self::Branch(i) => i.exec(cpu, old_pc),
@@ -113,6 +117,7 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     Ret::RET,
     Eret::ERET,
     Bcond::B_COND,
+    Tbnz::TBNZ,
     Cbnz::CBNZ,
     Cbz::CBZ,
     Bl::BL,

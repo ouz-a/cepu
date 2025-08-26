@@ -66,6 +66,21 @@ pub fn instruction_branch(cpu: &mut Cpu, cond: u8, offset: u64, old_pc: u64) {
     }
 }
 
+pub fn instruction_tbnz(
+    cpu: &mut Cpu,
+    datasize: u8,
+    rt: u8,
+    bit_pos: u8,
+    offset: u64,
+    old_pc: u64,
+) {
+    let op1 = cpu.x_read(rt as usize, datasize);
+    if bits_get(op1, bit_pos, 1) != 0 {
+        let is_32 = datasize == 32;
+        branch_to(cpu, old_pc.wrapping_add(offset), is_32, old_pc);
+    }
+}
+
 pub fn instruction_cbnz(cpu: &mut Cpu, datasize: u8, rt: u8, offset: u64, old_pc: u64) {
     let op1 = cpu.x_read(rt as usize, datasize);
     if op1 != 0 {

@@ -1,11 +1,12 @@
 use crate::{
     branch::{
         instruction_bl, instruction_branch, instruction_bunc, instruction_cbnz, instruction_cbz,
-        instruction_eret, instruction_msr_imm, instruction_ret,
+        instruction_eret, instruction_msr_imm, instruction_ret, instruction_tbnz,
     },
     cpu::{Cpu, ExceptionLevel, INSTRUCTION_SIZE, PstateField},
     get_bits_ct,
     instruction::{InstDesc, Instruction},
+    utils::sign_extend,
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -73,6 +74,37 @@ impl Bcond {
     };
 }
 
+/// Test bit and branch if nonzero
+#[derive(Debug, Clone, Copy)]
+pub struct Tbnz {
+    pub b5: bool,
+    pub b40: u8,
+    pub imm14: u16,
+    pub rt: u8,
+}
+
+impl Tbnz {
+    pub fn exec(self, cpu: &mut Cpu, old_pc: u64) {
+        let datasize = if self.b5 { 64 } else { 32 };
+        let bit_pos = ((self.b5 as u8) << 5) | self.b40;
+        let offset = sign_extend(self.imm14 as u64, 14) << 2;
+        instruction_tbnz(cpu, datasize, self.rt, bit_pos, offset, old_pc);
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let b5 = get_bits_ct!(word, 31, 1) as u8 == 1;
+        let b40 = get_bits_ct!(word, 19, 4) as u8;
+        let imm14 = get_bits_ct!(word, 5, 14) as u16;
+        let rt = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::Tbnz(Self { b5, b40, imm14, rt })
+    }
+    pub const TBNZ: InstDesc = InstDesc {
+        mask: 0b0111_1111_0000_0000_0000_0000_0000_0000,
+        value: 0b0011_0111_0000_0000_0000_0000_0000_0000,
+        decode: Self::decode,
+    };
+}
+
 /// Compare and branch on nonzero
 #[derive(Debug, Clone, Copy)]
 pub struct Cbnz {
@@ -83,7 +115,7 @@ pub struct Cbnz {
 
 impl Cbnz {
     pub fn exec(self, cpu: &mut Cpu, old_pc: u64) {
-        let off = crate::utils::sign_extend(self.imm19 as u64, 19) << 2;
+        let off = sign_extend(self.imm19 as u64, 19) << 2;
         let datasize = if self.sf { 64 } else { 32 };
         instruction_cbnz(cpu, datasize, self.rt, off, old_pc);
     }
