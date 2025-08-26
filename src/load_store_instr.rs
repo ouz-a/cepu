@@ -5,7 +5,7 @@ use crate::{
     instruction::{InstDesc, Instruction},
     load_and_store::{
         ExtendType, instruction_ldr_imm_base, instruction_ldr_literal, instruction_ldr_register,
-        instruction_str_imm_un_off,
+        instruction_str_imm_un_off, instruction_strb_imm_un_off,
     },
     utils::{sign_extend_xor, zero_extend},
 };
@@ -54,6 +54,50 @@ impl StrImmUnOffset {
     pub const STR_IMM_UN_OFFSET: InstDesc = InstDesc {
         mask: 0b1011_1111_1100_0000_0000_0000_0000_0000,
         value: 0b1011_1001_0000_0000_0000_0000_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+/// Store register byte (immediate)
+#[derive(Debug, Clone, Copy)]
+pub struct StrbImmUnOffset {
+    pub imm12: u16,
+    pub rn: u8,
+    pub rt: u8,
+}
+
+impl StrbImmUnOffset {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        // Not sure about this ?
+        // TODO: Re-read the spec
+        let offset = shift_lsl(self.imm12 as u64, 0);
+        let tag_checked = self.rn != 31;
+        if self.rn == self.rt && self.rn != 31 {
+            panic!("Unpredictable");
+        }
+        instruction_strb_imm_un_off(
+            cpu,
+            self.rn,
+            self.rt,
+            offset,
+            false,
+            false,
+            false,
+            tag_checked,
+            false,
+        );
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let imm12 = get_bits_ct!(word, 10, 12) as u16;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rt = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::StrbImmUnOffset(Self { imm12, rn, rt })
+    }
+
+    pub const STRB_IMM_UN_OFFSET: InstDesc = InstDesc {
+        mask: 0b1111_1111_1100_0000_0000_0000_0000_0000,
+        value: 0b0011_1001_0000_0000_0000_0000_0000_0000,
         decode: Self::decode,
     };
 }

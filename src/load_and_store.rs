@@ -180,6 +180,48 @@ pub fn instruction_str_imm_un_off(
         }
     }
 }
+pub fn instruction_strb_imm_un_off(
+    cpu: &mut Cpu,
+    n: u8,
+    t: u8,
+    offset: u64,
+    postindex: bool,
+    wback: bool,
+    non_temporal: bool,
+    tag_checked: bool,
+    rt_unknown: bool,
+) {
+    let privileged = !cpu.pstate.current_el.is_el0();
+    let _acc_descr = AccessDescriptor::create_acc_descr_gpr(
+        crate::memory::MemOp::Store,
+        non_temporal,
+        privileged,
+        tag_checked,
+    );
+    let mut address;
+    if n == SP_REGISTER as u8 {
+        cpu.check_space_alignment();
+        address = cpu.sp_read();
+    } else {
+        address = cpu.x_read(n as usize, 64);
+    }
+    if !postindex {
+        address += offset;
+    }
+
+    let data = if rt_unknown { panic!("Unpredictable") } else { cpu.x_read(t as usize, 8) };
+    cpu.bus.write_memory(address as usize, 1, data);
+    if wback {
+        if postindex {
+            address = address.wrapping_add(offset);
+        }
+        if n == SP_REGISTER as u8 {
+            cpu.sp_write(address);
+        } else {
+            cpu.x_write(n as usize, address, false);
+        }
+    }
+}
 
 #[inline(always)]
 pub fn extend_register(cpu: &Cpu, reg: u8, exttype: ExtendType, shift: u8, n: u8) -> u64 {

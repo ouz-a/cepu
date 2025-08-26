@@ -10,6 +10,7 @@ use crate::{
     imm_instr::{AddImmediate, Movk, Movz, SubImmediate, Subs},
     load_store_instr::{
         LdrImmPostIdx, LdrImmPreIdx, LdrImmUnOffset, LdrLit, LdrReg, StrImmUnOffset,
+        StrbImmUnOffset,
     },
     register_instr::{
         AddShiftedReg, AddsShiftedReg, AndShiftedRegister, Madd, OrShiftedRegister,
@@ -50,6 +51,7 @@ pub enum Instruction {
     MsrReg(MsrReg),
     Mrs(Mrs),
     StrImmUnOffset(StrImmUnOffset),
+    StrbImmUnOffset(StrbImmUnOffset),
     LdrImmUnOffset(LdrImmUnOffset),
     LdrImmPostIdx(LdrImmPostIdx),
     LdrImmPreIdx(LdrImmPreIdx),
@@ -86,6 +88,7 @@ impl Instruction {
             Self::MsrReg(i) => i.exec(cpu, old_pc),
             Self::Mrs(i) => i.exec(cpu, old_pc),
             Self::StrImmUnOffset(i) => i.exec(cpu, old_pc),
+            Self::StrbImmUnOffset(i) => i.exec(cpu, old_pc),
             Self::LdrImmUnOffset(i) => i.exec(cpu, old_pc),
             Self::LdrImmPostIdx(i) => i.exec(cpu, old_pc),
             Self::LdrImmPreIdx(i) => i.exec(cpu, old_pc),
@@ -129,6 +132,7 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     MsrReg::MSR_REG,
     Mrs::MRS,
     StrImmUnOffset::STR_IMM_UN_OFFSET,
+    StrbImmUnOffset::STRB_IMM_UN_OFFSET,
     LdrImmUnOffset::LDR_IMM_UN_OFFSET,
     LdrImmPostIdx::LDR_IMM_POST_IDX,
     LdrImmPreIdx::LDR_IMM_PRE_IDX,
@@ -201,7 +205,7 @@ pub fn decode(word: u32) -> Instruction {
     }
     let formatted = format!(
         "Undefined instruction: {:08X}
-Binary form: {:b}",
+Binary form: {:032b}",
         word.to_be(),
         word
     );
