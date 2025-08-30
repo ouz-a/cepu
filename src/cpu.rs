@@ -1,4 +1,5 @@
 use std::{
+    io::{Write, stdout},
     sync::{
         Arc, Condvar, Mutex, OnceLock,
         atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering},
@@ -147,6 +148,14 @@ impl Cpu {
         cpu.sctlr_el1 |= 1 << 2; // SCTLR_C
         cpu.sctlr_el1 |= 1 << 12; // SCTLR_I 
         cpu
+    }
+
+    pub fn handle_devices(&mut self) {
+        if self.bus.uart.dr != 0 {
+            stdout().write_all(&[self.bus.uart.dr]).unwrap();
+            stdout().flush().unwrap();
+            self.bus.uart.dr = 0;
+        }
     }
 
     pub fn post_interrupt(&mut self, line: u32) -> u32 {

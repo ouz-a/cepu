@@ -1,6 +1,6 @@
 use core::ffi::c_void;
 
-pub const MEMORY_SIZE: usize = 16 << 20;
+pub const MEMORY_SIZE: usize = 64 << 22;
 
 pub static mut MEMORY: [u8; MEMORY_SIZE] = [0; MEMORY_SIZE];
 /*

@@ -4,10 +4,10 @@ pub const ROM_RANGE_BEG: usize = 0x0000;
 pub const ROM_RANGE_END: usize = 0x7FFF;
 
 pub const RAM_RANGE_BEG: usize = ROM_RANGE_END + 1;
-pub const RAM_SIZE: usize = 0x100000;
+pub const RAM_SIZE: usize = 0x10000000;
 pub const RAM_RANGE_END: usize = RAM_RANGE_BEG + RAM_SIZE - 1;
 
-pub const UART_RANGE_BEG: usize = 0x900_0000;
+pub const UART_RANGE_BEG: usize = 0x9000_0000;
 pub const UART_RANGE_END: usize = UART_RANGE_BEG + 4096;
 
 #[derive(Default, Clone, Debug)]
@@ -27,6 +27,8 @@ impl Bus {
             }
         }
     }
+
+    /// Size as in bytes not bits     
     pub fn write_memory(&mut self, address: usize, size: usize, value: u64) -> PhyMemStatus {
         let address_range = address + size;
         match address_range {
@@ -34,6 +36,9 @@ impl Bus {
                 panic!("Trying to write to ROM!")
             }
             RAM_RANGE_BEG..=RAM_RANGE_END => Bus::write_memory_impl(address, size, value),
+            UART_RANGE_BEG..=UART_RANGE_END => {
+                self.uart.write((address - UART_RANGE_BEG) as u8, value, size)
+            }
             _ => {
                 panic!("Out of bounds memory access! Range {address_range:x}")
             }

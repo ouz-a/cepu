@@ -114,7 +114,22 @@ impl Uart {
         match address {
             // DR
             0..=0x08 => self.read_dr(),
+            // FR
             0x18..=0x24 => self.read_fr(),
+            _ => panic!("TODO!"),
+        }
+    }
+
+    pub fn write(&mut self, address: u8, value: u64, _size: usize) -> PhyMemStatus {
+        let value: u8 = value.try_into().expect("");
+        match address {
+            // DR
+            0..=0x08 => {
+                self.dr = value;
+                PhyMemStatus::default()
+            }
+            // FR
+            0x18..=0x24 => panic!("UART FlatRegister can't be written"),
             _ => panic!("TODO!"),
         }
     }
@@ -125,6 +140,7 @@ impl Uart {
     pub fn read_dr(&self) -> (PhyMemStatus, u64) {
         (PhyMemStatus::default(), self.dr as u64)
     }
+
     pub fn print(&mut self) {
         let mut stdio = io::stdout();
         stdio.write_all(&[self.dr]).expect("Failed to write to stdout.");
