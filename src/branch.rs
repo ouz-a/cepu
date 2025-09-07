@@ -1,5 +1,8 @@
+use std::ops::Not;
+
 use crate::{
     cpu::{Cpu, ExceptionLevel, PstateField},
+    data_processing::add_with_carry,
     get_bits_ct,
     utils::{bits_get, sign_extend, zero_extend},
 };
@@ -103,6 +106,17 @@ pub fn instruction_cbz(cpu: &mut Cpu, datasize: u8, rt: u8, offset: u64, old_pc:
         let is_32 = datasize == 32;
         branch_to(cpu, old_pc.wrapping_add(offset), is_32, old_pc);
     }
+}
+
+pub fn instruction_ccmpi(cpu: &mut Cpu, datasize: u8, rn: u8, imm: u64, cond: u8, flags: u8) {
+    let mut flags = flags;
+    if condition_holds(cpu, cond) {
+        let op1 = cpu.x_read(rn.into(), datasize);
+        let op2 = imm;
+        let res = add_with_carry(op1, op2.not(), 1);
+        flags = res.flag_to_bits();
+    }
+    cpu.pstate.set_flags_from_bits(flags);
 }
 
 pub fn instruction_bl(cpu: &mut Cpu, offset: u64, old_pc: u64) {

@@ -3,6 +3,7 @@ use core::ffi::c_void;
 pub const MEMORY_SIZE: usize = 64 << 22;
 
 pub static mut MEMORY: [u8; MEMORY_SIZE] = [0; MEMORY_SIZE];
+
 /*
 MEMORY {
   ROM (rx)  : ORIGIN = 0x00000000, LENGTH = 0x8000

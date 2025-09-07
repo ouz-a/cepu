@@ -2,7 +2,7 @@
 
 use crate::{
     cpu::{Cpu, SP_REGISTER},
-    utils::{insert_16bit_field, zero_extend},
+    utils::{bits_get, insert_16bit_field, zero_extend},
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -30,6 +30,34 @@ pub struct AddResult {
     pub z: bool,
     pub c: bool,
     pub v: bool,
+}
+
+impl AddResult {
+    #[inline]
+    pub fn flag_to_bits(&self) -> u8 {
+        let mut bits: u8 = 0;
+        if self.n {
+            bits |= 1 << 3;
+        }
+        if self.z {
+            bits |= 1 << 2;
+        }
+        if self.c {
+            bits |= 1 << 1;
+        }
+        if self.v {
+            bits |= 1;
+        }
+        bits
+    }
+
+    #[inline]
+    pub fn set_flags_from_bits(&mut self, bits: u8) {
+        self.n = (bits & (1 << 3)) != 0;
+        self.z = (bits & (1 << 2)) != 0;
+        self.c = (bits & (1 << 1)) != 0;
+        self.v = (bits & 1) != 0;
+    }
 }
 
 pub fn add_with_carry(x: u64, y: u64, carry_in: u64) -> AddResult {
@@ -130,6 +158,20 @@ pub fn instruction_udiv(cpu: &mut Cpu, d: u8, n: u8, m: u8, datasize: u8) {
         let result: u64 = op1 / op2;
         cpu.x_write(d as usize, result, is_32b);
     }
+}
+
+pub fn instruction_ands_imm(cpu: &mut Cpu, rn: u8, rd: u8, datasize: u8, imm: u64) {
+    let op1 = cpu.x_read(rn.into(), datasize);
+    let op2 = imm;
+
+    let result = op1 & op2;
+    let is_32b = datasize == 32;
+
+    cpu.x_write(rd.into(), result, is_32b);
+
+    let is_zero = if result == 0 { 1 } else { 0 };
+    let state = (bits_get(result, datasize - 1, 1) << 3) | (is_zero << 2);
+    cpu.pstate.set_flags_from_bits(state.try_into().unwrap());
 }
 
 pub fn instruction_adds_shifted_register(

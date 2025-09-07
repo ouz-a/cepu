@@ -1,9 +1,11 @@
-use std::{path::Path, sync::atomic::Ordering, time::Duration};
+#![feature(int_lowest_highest_one)]
+
+use std::{path::PathBuf, str::FromStr, sync::atomic::Ordering, time::Duration};
 
 use crate::{
     branch::branch_addr,
     cpu::{BATCH, Cpu, INSTRUCTION_SIZE, monotonic_ns},
-    elf::validate_and_load_elf_header,
+    image::{load_device_blob, load_kernel_image},
     instruction::decode,
     memory::{MEMORY_SIZE, read_32},
 };
@@ -15,6 +17,7 @@ pub mod cpu;
 pub mod data_processing;
 pub mod devices;
 pub mod elf;
+pub mod image;
 pub mod imm_instr;
 pub mod instruction;
 pub mod load_and_store;
@@ -36,7 +39,7 @@ pub fn run_block(cpu: &mut Cpu) {
             let word = read_32(old_pc as usize);
             pc = pc.wrapping_add(INSTRUCTION_SIZE);
             let dec = decode(word);
-            //println!("Instruction is {dec:?} raw: {:08X}", word.to_be());
+            println!("Instruction is {dec:?} raw: {:08X}", word.to_be());
             dec.exec(cpu, old_pc);
 
             if cpu.branch_taken {
@@ -86,6 +89,9 @@ pub fn run_block(cpu: &mut Cpu) {
 
 fn main() {
     let mut cpu = Cpu::init();
-    validate_and_load_elf_header(&mut cpu, Path::new("./.executables/boot.elf"));
+    // FIX don't use not() that's fucking wrong
+    //validate_and_load_elf_header(&mut cpu, Path::new("./.executables/boot.elf"));
+    load_device_blob(&mut cpu, &PathBuf::from_str("/Users/ouz/code/cepu_now/cepu.dtb").unwrap());
+    load_kernel_image(&mut cpu, &PathBuf::from_str("/Users/ouz/code/cepu_now/Image").unwrap());
     run_block(&mut cpu);
 }

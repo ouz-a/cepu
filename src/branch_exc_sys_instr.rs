@@ -1,12 +1,13 @@
 use crate::{
     branch::{
         instruction_bl, instruction_branch, instruction_bunc, instruction_cbnz, instruction_cbz,
-        instruction_eret, instruction_msr_imm, instruction_ret, instruction_tbnz,
+        instruction_ccmpi, instruction_eret, instruction_msr_imm, instruction_ret,
+        instruction_tbnz,
     },
     cpu::{Cpu, ExceptionLevel, INSTRUCTION_SIZE, PstateField},
     get_bits_ct,
     instruction::{InstDesc, Instruction},
-    utils::sign_extend,
+    utils::{sign_extend, zero_extend},
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -190,6 +191,39 @@ impl Cbz {
     pub const CBZ: InstDesc = InstDesc {
         mask: 0b0111_1111_0000_0000_0000_0000_0000_0000,
         value: 0b0011_0100_0000_0000_0000_0000_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+/// Conditional compare (immediate)
+#[derive(Debug, Clone, Copy)]
+pub struct Ccmpi {
+    pub sf: bool,
+    pub imm5: u8,
+    pub cond: u8,
+    pub rn: u8,
+    pub nzcv: u8,
+}
+
+impl Ccmpi {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let datasize = if self.sf { 64 } else { 32 };
+        let imm = zero_extend(self.imm5 as u64, datasize);
+        instruction_ccmpi(cpu, datasize, self.rn, imm, self.cond, self.nzcv);
+    }
+
+    pub fn decode(word: u32) -> Instruction {
+        let sf = get_bits_ct!(word, 31, 1) as u8 == 1;
+        let imm5 = get_bits_ct!(word, 16, 5) as u8;
+        let cond = get_bits_ct!(word, 12, 4) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let nzcv = get_bits_ct!(word, 0, 4) as u8;
+        Instruction::Ccmpi(Self { sf, imm5, cond, rn, nzcv })
+    }
+
+    pub const CCMPI: InstDesc = InstDesc {
+        mask: 0b0111_1111_1110_0000_0000_1100_0001_0000,
+        value: 0b0111_1010_0100_0000_0000_1000_0000_0000,
         decode: Self::decode,
     };
 }

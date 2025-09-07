@@ -143,6 +143,8 @@ impl Cpu {
         cpu.sp_el3 = 1024 * 4;
 
         cpu.x[31] = cpu.sp_el0;
+        cpu.pstate.current_el = ExceptionLevel::EL3;
+
         // TODO: Use bitflags crate(?)
         cpu.sctlr_el1 |= 1 << 1; // SCTLR_A
         cpu.sctlr_el1 |= 1 << 2; // SCTLR_C
@@ -411,6 +413,22 @@ impl Cpu {
                     panic!("Please implement CntpctEl0 access for EL0");
                 }
             }
+            MrsRegisters::CurrentEL => {
+                if self.pstate.current_el.is_el0() {
+                    panic!("Undefined")
+                }
+                if self.pstate.current_el.is_el1() {
+                    self.x_write(t.into(), self.pstate.current_el.to_currentel_value(), false);
+                }
+            }
+            MrsRegisters::SctlrEl1 => {
+                if self.pstate.current_el.is_el0() {
+                    panic!("Undefined")
+                }
+                if self.pstate.current_el.is_el1() {
+                    self.x_write(t.into(), self.sctlr_el1, false);
+                }
+            }
         }
     }
 
@@ -598,6 +616,13 @@ impl PState {
         self.masked_f = get_bits_ct!(spsr, 6, 1) != 0;
     }
 
+    pub fn set_flags_from_bits(&mut self, bits: u8) {
+        self.n = (bits & (1 << 3)) != 0;
+        self.z = (bits & (1 << 2)) != 0;
+        self.c = (bits & (1 << 1)) != 0;
+        self.v = (bits & 1) != 0;
+    }
+
     #[inline]
     fn irq_masked(&self) -> bool {
         self.masked_i
@@ -616,25 +641,40 @@ impl PState {
     }
 }
 
+#[repr(u8)]
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum ExceptionLevel {
-    EL0,
-    EL1,
-    EL2,
+    EL0 = 0b00,
+    EL1 = 0b01,
+    EL2 = 0b10,
     #[default]
-    EL3,
+    EL3 = 0b11,
 }
 
 impl ExceptionLevel {
-    fn from_bits(bits: u8) -> Self {
+    pub const fn from_bits(bits: u8) -> Self {
         match bits {
-            0b0 => Self::EL0,
+            0b00 => Self::EL0,
             0b01 => Self::EL1,
             0b10 => Self::EL2,
             0b11 => Self::EL3,
             _ => panic!("Invalid bits"),
         }
     }
+
+    pub const fn bits2(self) -> u8 {
+        self as u8 & 0b11
+    }
+
+    pub const fn from_currentel_value(currentel: u64) -> Self {
+        Self::from_bits(((currentel >> 2) & 0b11) as u8)
+    }
+
+    #[inline]
+    pub const fn to_currentel_value(self) -> u64 {
+        (self.bits2() as u64) << 2
+    }
+
     #[inline]
     pub const fn is_el0(self) -> bool {
         matches!(self, Self::EL0)
@@ -719,6 +759,8 @@ mrs_enum! {
     CntfrqEl0 = 12936151040,
     CntpctEl0 = 12936151041,
     CntpCtlEl0 = 12936151553,
+    CurrentEL = 12885164546,
+    SctlrEl1 = 12884967424,
 }
 
 pub fn sleep_ns(ns: u64) {
