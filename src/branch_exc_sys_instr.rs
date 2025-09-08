@@ -4,7 +4,7 @@ use crate::{
         instruction_ccmpi, instruction_eret, instruction_msr_imm, instruction_ret,
         instruction_tbnz,
     },
-    cpu::{Cpu, ExceptionLevel, INSTRUCTION_SIZE, PstateField},
+    cpu::{Cpu, ExceptionLevel, PstateField},
     get_bits_ct,
     instruction::{InstDesc, Instruction},
     utils::{sign_extend, zero_extend},
@@ -236,7 +236,8 @@ pub struct Bl {
 
 impl Bl {
     pub fn exec(self, cpu: &mut Cpu, old_pc: u64) {
-        instruction_bl(cpu, (self.imm26 << 2).into(), old_pc);
+        let off = crate::utils::sign_extend(self.imm26 as u64, 26) << 2;
+        instruction_bl(cpu, off, old_pc);
     }
     pub const fn decode(word: u32) -> Instruction {
         let imm26 = get_bits_ct!(word, 0, 26);
@@ -257,7 +258,8 @@ pub struct Branch {
 
 impl Branch {
     pub fn exec(self, cpu: &mut Cpu, old_pc: u64) {
-        instruction_bunc(cpu, (self.imm26 as u64) * INSTRUCTION_SIZE, old_pc);
+        let off = crate::utils::sign_extend(self.imm26 as u64, 26) << 2;
+        instruction_bunc(cpu, off, old_pc);
     }
     pub fn decode(word: u32) -> Instruction {
         let imm26 = get_bits_ct!(word, 0, 26);
@@ -384,6 +386,24 @@ impl Wfi {
     pub const WFI: InstDesc = InstDesc {
         mask: 0b1111_1111_1111_1111_1111_1111_1111_1111,
         value: 0b1101_0101_0000_0011_0010_0000_0111_1111,
+        decode: Self::decode,
+    };
+}
+
+/// Data memory barrier
+#[derive(Debug, Clone, Copy)]
+pub struct Dmb;
+
+impl Dmb {
+    pub fn exec(self, _cpu: &mut Cpu, _old_pc: u64) {}
+
+    pub const fn decode(_word: u32) -> Instruction {
+        Instruction::Dmb(Self)
+    }
+
+    pub const DMB: InstDesc = InstDesc {
+        mask: 0b1111_1111_1111_1111_1111_0000_1111_1111,
+        value: 0b1101_0101_0000_0011_0011_0000_1011_1111,
         decode: Self::decode,
     };
 }
