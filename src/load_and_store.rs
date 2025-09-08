@@ -85,6 +85,58 @@ pub fn instruction_ldr_imm_base(
     }
 }
 
+pub fn instruction_stp_signed_offset(
+    cpu: &mut Cpu,
+    t: u8,
+    t2: u8,
+    n: u8,
+    datasize: u8,
+    offset: u64,
+) {
+    let dbytes = datasize / 8;
+    let post_index = false;
+    let non_temporal = false;
+    let tag_checked = false;
+    let rt_unknown = false;
+
+    let privileged = !cpu.pstate.current_el.is_el0();
+    let _acc_descr = AccessDescriptor::create_acc_descr_gpr(
+        crate::memory::MemOp::Store,
+        non_temporal,
+        privileged,
+        tag_checked,
+    );
+
+    let mut address;
+    if n == SP_REGISTER as u8 {
+        cpu.check_space_alignment();
+        address = cpu.sp_read();
+    } else {
+        address = cpu.x_read(n as usize, 64);
+    }
+
+    if !post_index {
+        address += offset;
+    }
+
+    let data1 = if rt_unknown && t == n {
+        //  data1 = bits(datasize) UNKNOWN;
+        panic!("Figure out what does line above means")
+    } else {
+        cpu.x_read(t.into(), datasize)
+    };
+
+    let data2 = if rt_unknown && t == n {
+        //  data2 = bits(datasize) UNKNOWN;
+        panic!("Figure out what does line above means")
+    } else {
+        cpu.x_read(t2.into(), datasize)
+    };
+
+    let address2 = address + dbytes as u64;
+    cpu.bus.write_memory(address as usize, dbytes.into(), data1);
+    cpu.bus.write_memory(address2 as usize, dbytes.into(), data2);
+}
 pub fn instruction_ldr_register(
     cpu: &mut Cpu,
     t: u8,

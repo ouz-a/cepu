@@ -9,8 +9,8 @@ use crate::{
     cpu::Cpu,
     imm_instr::{AddImmediate, Movk, Movz, SubImmediate, Subs},
     load_store_instr::{
-        LdrImmPostIdx, LdrImmPreIdx, LdrImmUnOffset, LdrLit, LdrReg, StrImmUnOffset,
-        StrbImmUnOffset,
+        LdrImmPostIdx, LdrImmPreIdx, LdrImmUnOffset, LdrLit, LdrReg, StpSignedOffset,
+        StrImmUnOffset, StrbImmUnOffset,
     },
     register_instr::{
         AddShiftedReg, AddsShiftedReg, Adrp, AndImmediate, AndShiftedRegister, AndsImmediate, Csel,
@@ -62,6 +62,7 @@ pub enum Instruction {
     LdrImmPreIdx(LdrImmPreIdx),
     LdrReg(LdrReg),
     LdrLit(LdrLit),
+    StpSignedOffset(StpSignedOffset),
     Wfi(Wfi),
 }
 
@@ -104,6 +105,7 @@ impl Instruction {
             Self::LdrImmPreIdx(i) => i.exec(cpu, old_pc),
             Self::LdrReg(i) => i.exec(cpu, old_pc),
             Self::LdrLit(i) => i.exec(cpu, old_pc),
+            Self::StpSignedOffset(i) => i.exec(cpu, old_pc),
             Self::Wfi(i) => i.exec(cpu, old_pc),
         }
     }
@@ -153,6 +155,7 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     LdrImmPreIdx::LDR_IMM_PRE_IDX,
     LdrReg::LDR_REG,
     LdrLit::LDR_LIT,
+    StpSignedOffset::STP_SIGNED_OFFSET,
     Wfi::WFI,
 ]);
 
