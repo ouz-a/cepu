@@ -174,6 +174,28 @@ pub fn instruction_ands_imm(cpu: &mut Cpu, rn: u8, rd: u8, datasize: u8, imm: u6
     cpu.pstate.set_flags_from_bits(state.try_into().unwrap());
 }
 
+pub fn instruction_ands_shifted_reg(
+    cpu: &mut Cpu,
+    rm: u8,
+    rn: u8,
+    rd: u8,
+    datasize: u8,
+    shift_amount: u8,
+    shift_type: ShiftTypes,
+) {
+    let op1 = cpu.x_read(rn.into(), datasize);
+    let op2 = shift_reg(cpu, rm, shift_type, shift_amount, datasize);
+
+    let result = op1 & op2;
+    let is_32b = datasize == 32;
+
+    cpu.x_write(rd.into(), result, is_32b);
+
+    let is_zero = if result == 0 { 1 } else { 0 };
+    let state = (bits_get(result, datasize - 1, 1) << 3) | (is_zero << 2);
+    cpu.pstate.set_flags_from_bits(state.try_into().unwrap());
+}
+
 pub fn instruction_adds_shifted_register(
     cpu: &mut Cpu,
     n: u8,

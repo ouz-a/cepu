@@ -285,6 +285,47 @@ impl AndsImmediate {
     };
 }
 
+/// Bitwise AND (shifted register), setting flags
+#[derive(Debug, Clone, Copy)]
+pub struct AndsShiftedReg {
+    pub sf: bool,
+    pub shift: ShiftTypes,
+    pub rm: u8,
+    pub imm6: u8,
+    pub rn: u8,
+    pub rd: u8,
+}
+
+impl AndsShiftedReg {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let width = if self.sf { 64 } else { 32 };
+        let op1 = cpu.x_read(self.rn.into(), width);
+        let op2 = shift_reg(cpu, self.rm, self.shift, self.imm6, width);
+
+        cpu.x_write(self.rd.into(), op1 | op2, !self.sf);
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let sf = get_bits_ct!(word, 31, 1) == 1;
+        let shift = decode_shift(get_bits_ct!(word, 22, 2) as u8);
+        let rm = get_bits_ct!(word, 16, 5) as u8;
+        let imm6 = get_bits_ct!(word, 10, 6) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rd = get_bits_ct!(word, 0, 5) as u8;
+        if !sf && get_bits_ct!(imm6, 4, 1) == 1 {
+            panic!("Undefined, end of decode");
+        }
+
+        Instruction::AndsShiftedReg(Self { sf, shift, rm, imm6, rn, rd })
+    }
+
+    pub const ANDS_SHIFTED_REG: InstDesc = InstDesc {
+        mask: 0b0111_1111_0010_0000_0000_0000_0000_0000,
+        value: 0b0110_1010_0000_0000_0000_0000_0000_0000,
+        decode: Self::decode,
+    };
+}
+
 /// Bitwise AND
 #[derive(Debug, Clone, Copy)]
 pub struct AndImmediate {
@@ -430,6 +471,79 @@ impl Adrp {
     pub const ADRP: InstDesc = InstDesc {
         mask: 0b1001_1111_0000_0000_0000_0000_0000_0000,
         value: 0b1001_0000_0000_0000_0000_0000_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct Ubfx {
+    pub sf: bool,
+    pub n: bool,
+    pub immr: u8,
+    pub imms: u8,
+    pub rn: u8,
+    pub rd: u8,
+}
+
+impl Ubfx {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let width = if self.sf { 64 } else { 32 };
+        let (wmask, tmask) = decode_bit_mask(self.n, self.imms, self.immr, true, width);
+        let src = cpu.x_read(self.rn.into(), width);
+        let bot = shift_ror(src, self.immr.into()) & wmask;
+
+        cpu.x_write(self.rd.into(), bot & tmask, false);
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let sf = get_bits_ct!(word, 31, 1) == 1;
+        let n = get_bits_ct!(word, 22, 1) == 1;
+        let immr = get_bits_ct!(word, 16, 6) as u8;
+        let imms = get_bits_ct!(word, 10, 6) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rd = get_bits_ct!(word, 0, 5) as u8;
+        if !sf && !n {
+            panic!("Undefined, end of decode");
+        }
+        Instruction::Ubfx(Self { sf, n, immr, imms, rn, rd })
+    }
+
+    pub const UBFX: InstDesc = InstDesc {
+        mask: 0b0111_1111_1000_0000_0000_0000_0000_0000,
+        value: 0b0101_0011_0000_0000_0000_0000_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+/// Logical shift left variable
+#[derive(Clone, Copy, Debug)]
+pub struct Lslv {
+    pub sf: bool,
+    pub rm: u8,
+    pub rn: u8,
+    pub rd: u8,
+}
+
+impl Lslv {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let datasize = if self.sf { 64 } else { 32 };
+        let op2 = cpu.x_read(self.rm.into(), datasize);
+        cpu.x_write(
+            self.rd.into(),
+            cpu.x_read(self.rn.into(), datasize) << (op2 % (datasize as u64)),
+            !self.sf,
+        );
+    }
+    pub const fn decode(word: u32) -> Instruction {
+        let sf = get_bits_ct!(word, 31, 1) == 1;
+        let rm = get_bits_ct!(word, 16, 5) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rd = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::Lslv(Self { sf, rm, rn, rd })
+    }
+    pub const LSLV: InstDesc = InstDesc {
+        mask: 0b0111_1111_1110_0000_1111_1100_0000_0000,
+        value: 0b0001_1010_1100_0000_0010_0000_0000_0000,
         decode: Self::decode,
     };
 }

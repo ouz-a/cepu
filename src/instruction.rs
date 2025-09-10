@@ -14,8 +14,8 @@ use crate::{
         StrImmUnOffset, StrbImmUnOffset,
     },
     register_instr::{
-        AddShiftedReg, AddsShiftedReg, Adrp, AndImmediate, AndShiftedRegister, AndsImmediate, Csel,
-        Madd, Nop, OrShiftedRegister, SubShiftedRegister, Udiv,
+        AddShiftedReg, AddsShiftedReg, Adrp, AndImmediate, AndShiftedRegister, AndsImmediate,
+        AndsShiftedReg, Csel, Lslv, Madd, Nop, OrShiftedRegister, SubShiftedRegister, Ubfx, Udiv,
     },
 };
 
@@ -34,9 +34,12 @@ pub enum Instruction {
     SubShiftedRegister(SubShiftedRegister),
     AndShiftedRegister(AndShiftedRegister),
     AndsImmediate(AndsImmediate),
+    AndsShiftedReg(AndsShiftedReg),
     AndImmediate(AndImmediate),
+    Lslv(Lslv),
     Csel(Csel),
     Adrp(Adrp),
+    Ubfx(Ubfx),
     OrShiftedRegister(OrShiftedRegister),
     Udiv(Udiv),
     AddImmediate(AddImmediate),
@@ -80,9 +83,12 @@ impl Instruction {
             Self::SubShiftedRegister(i) => i.exec(cpu, old_pc),
             Self::AndShiftedRegister(i) => i.exec(cpu, old_pc),
             Self::AndsImmediate(i) => i.exec(cpu, old_pc),
+            Self::AndsShiftedReg(i) => i.exec(cpu, old_pc),
             Self::AndImmediate(i) => i.exec(cpu, old_pc),
             Self::Csel(i) => i.exec(cpu, old_pc),
             Self::Adrp(i) => i.exec(cpu, old_pc),
+            Self::Ubfx(i) => i.exec(cpu, old_pc),
+            Self::Lslv(i) => i.exec(cpu, old_pc),
             Self::OrShiftedRegister(i) => i.exec(cpu, old_pc),
             Self::Udiv(i) => i.exec(cpu, old_pc),
             Self::AddImmediate(i) => i.exec(cpu, old_pc),
@@ -133,6 +139,7 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     SubShiftedRegister::SUB_SHIFTED_REGISTER,
     AndShiftedRegister::AND_SHIFTED_REGISTER,
     AndsImmediate::ANDS_IMMEDIATE,
+    AndsShiftedReg::ANDS_SHIFTED_REG,
     AndImmediate::AND_IMMEDIATE,
     Csel::CSEL,
     Adrp::ADRP,
@@ -167,6 +174,8 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     Wfi::WFI,
     Dmb::DMB,
     Bti::BTI,
+    Ubfx::UBFX,
+    Lslv::LSLV,
 ]);
 
 const fn sort_by_specificity<const N: usize>(mut arr: [InstDesc; N]) -> [InstDesc; N] {
