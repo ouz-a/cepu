@@ -4,7 +4,8 @@ use std::sync::OnceLock;
 
 use crate::{
     branch_exc_sys_instr::{
-        Bcond, Bl, Branch, Cbnz, Cbz, Ccmpi, Dmb, Eret, Mrs, MsrImm, MsrReg, Ret, Tbnz, Tbz, Wfi,
+        Bcond, Bl, Branch, Bti, Cbnz, Cbz, Ccmpi, Dmb, Eret, Mrs, MsrImm, MsrReg, Ret, Tbnz, Tbz,
+        Wfi,
     },
     cpu::Cpu,
     imm_instr::{AddImmediate, Movk, Movz, SubImmediate, Subs},
@@ -14,7 +15,7 @@ use crate::{
     },
     register_instr::{
         AddShiftedReg, AddsShiftedReg, Adrp, AndImmediate, AndShiftedRegister, AndsImmediate, Csel,
-        Madd, OrShiftedRegister, SubShiftedRegister, Udiv,
+        Madd, Nop, OrShiftedRegister, SubShiftedRegister, Udiv,
     },
 };
 
@@ -26,6 +27,7 @@ type DecodeFn = fn(u32) -> Instruction;
 
 #[derive(Debug, Clone, Copy)]
 pub enum Instruction {
+    Nop(Nop),
     Madd(Madd),
     AddsShiftedReg(AddsShiftedReg),
     AddShiftedReg(AddShiftedReg),
@@ -65,11 +67,13 @@ pub enum Instruction {
     StpSignedOffset(StpSignedOffset),
     Wfi(Wfi),
     Dmb(Dmb),
+    Bti(Bti),
 }
 
 impl Instruction {
     pub fn exec(&self, cpu: &mut Cpu, old_pc: u64) {
         match self {
+            Self::Nop(i) => i.exec(cpu, old_pc),
             Self::Madd(i) => i.exec(cpu, old_pc),
             Self::AddsShiftedReg(i) => i.exec(cpu, old_pc),
             Self::AddShiftedReg(i) => i.exec(cpu, old_pc),
@@ -109,6 +113,7 @@ impl Instruction {
             Self::StpSignedOffset(i) => i.exec(cpu, old_pc),
             Self::Wfi(i) => i.exec(cpu, old_pc),
             Self::Dmb(i) => i.exec(cpu, old_pc),
+            Self::Bti(i) => i.exec(cpu, old_pc),
         }
     }
 }
@@ -121,6 +126,7 @@ pub struct InstDesc {
 }
 
 pub const DESCR: &[InstDesc] = &sort_by_specificity([
+    Nop::NOP,
     Madd::MADD,
     AddsShiftedReg::ADDS_SHIFTED_REG,
     AddShiftedReg::ADD_SHIFTED_REG,
@@ -160,6 +166,7 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     StpSignedOffset::STP_SIGNED_OFFSET,
     Wfi::WFI,
     Dmb::DMB,
+    Bti::BTI,
 ]);
 
 const fn sort_by_specificity<const N: usize>(mut arr: [InstDesc; N]) -> [InstDesc; N] {

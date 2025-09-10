@@ -122,6 +122,8 @@ pub struct Cpu {
     /// Holds the vector base address for any exception that is taken to EL1.
     vbar_el1: u64,
 
+    ctr_el0: u64,
+
     event_register: bool,
     pub pstate: PState,
 
@@ -143,6 +145,7 @@ impl Cpu {
         cpu.sp_el3 = 1024 * 4;
 
         cpu.x[31] = cpu.sp_el0;
+        cpu.ctr_el0 = 0x34448004;
         cpu.pstate.current_el = ExceptionLevel::EL3;
 
         // TODO: Use bitflags crate(?)
@@ -428,6 +431,9 @@ impl Cpu {
                 if self.pstate.current_el.is_el1() {
                     self.x_write(t.into(), self.sctlr_el1, false);
                 }
+            }
+            MrsRegisters::CtrEl0 => {
+                self.x_write(t.into(), self.ctr_el0, false);
             }
         }
     }
@@ -761,6 +767,7 @@ mrs_enum! {
     CntpCtlEl0 = 12936151553,
     CurrentEL = 12885164546,
     SctlrEl1 = 12884967424,
+    CtrEl0 = 12935233537,
 }
 
 pub fn sleep_ns(ns: u64) {
