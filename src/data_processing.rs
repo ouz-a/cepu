@@ -1,5 +1,7 @@
 #![allow(clippy::too_many_arguments)]
 
+use std::ops::Not;
+
 use crate::{
     cpu::{Cpu, SP_REGISTER},
     utils::{bits_get, insert_16bit_field, zero_extend},
@@ -211,6 +213,23 @@ pub fn instruction_adds_shifted_register(
     let res = add_with_carry(op1, op2, 0);
     cpu.pstate.c = res.c;
     cpu.x_write(d as usize, res.result, is_32b);
+}
+
+pub fn instruction_susbs_shifted_reg(
+    cpu: &mut Cpu,
+    n: u8,
+    m: u8,
+    d: u8,
+    shift_amount: u8,
+    s_type: ShiftTypes,
+    datasize: u8,
+    is_32b: bool,
+) {
+    let op1 = cpu.x_read(n as usize, datasize);
+    let op2 = shift_reg(cpu, m, s_type, shift_amount, datasize).not();
+    let res = add_with_carry(op1, op2, 1);
+    cpu.x_write(d as usize, res.result, is_32b);
+    cpu.pstate.set_flags_from_bits(res.flag_to_bits());
 }
 
 pub fn instruction_add_shifted_register(

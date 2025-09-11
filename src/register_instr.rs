@@ -620,3 +620,47 @@ impl Lslv {
         decode: Self::decode,
     };
 }
+
+/// Subtract optionally-shifted register, setting flags
+#[derive(Clone, Copy, Debug)]
+pub struct SubsShiftedReg {
+    pub sf: bool,
+    pub shift: ShiftTypes,
+    pub rm: u8,
+    pub imm6: u8,
+    pub rn: u8,
+    pub rd: u8,
+}
+
+impl SubsShiftedReg {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        instruction_sub_shifted_register(
+            cpu,
+            self.rn,
+            self.rm,
+            self.rd,
+            self.imm6,
+            self.shift,
+            if self.sf { 64 } else { 32 },
+            !self.sf,
+        );
+    }
+    pub const fn decode(word: u32) -> Instruction {
+        let sf = get_bits_ct!(word, 31, 1) == 1;
+        let shift = decode_shift(get_bits_ct!(word, 22, 2) as u8);
+        let rm = get_bits_ct!(word, 16, 5) as u8;
+        let imm6 = get_bits_ct!(word, 10, 6) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rd = get_bits_ct!(word, 0, 5) as u8;
+        if !sf && get_bits_ct!(imm6, 4, 1) == 1 {
+            panic!("Undefined, end of decode");
+        }
+        Instruction::SubsShiftedReg(Self { sf, shift, rm, imm6, rn, rd })
+    }
+
+    pub const SUBS_SHIFTED_REG: InstDesc = InstDesc {
+        mask: 0b0111_1111_0010_0000_0000_0000_0000_0000,
+        value: 0b0110_1011_0000_0000_0000_0000_0000_0000,
+        decode: Self::decode,
+    };
+}

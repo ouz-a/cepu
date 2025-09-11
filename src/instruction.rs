@@ -16,7 +16,7 @@ use crate::{
     register_instr::{
         AddShiftedReg, AddsShiftedReg, Adrp, AndImmediate, AndShiftedRegister, AndsImmediate,
         AndsShiftedReg, BicShiftedReg, Csel, Dc, Dsb, Lslv, Madd, Nop, OrShiftedRegister,
-        SubShiftedRegister, Ubfx, Udiv,
+        SubShiftedRegister, SubsShiftedReg, Ubfx, Udiv,
     },
 };
 
@@ -35,6 +35,7 @@ pub enum Instruction {
     AddsShiftedReg(AddsShiftedReg),
     AddShiftedReg(AddShiftedReg),
     SubShiftedRegister(SubShiftedRegister),
+    SubsShiftedReg(SubsShiftedReg),
     AndShiftedRegister(AndShiftedRegister),
     AndsImmediate(AndsImmediate),
     AndsShiftedReg(AndsShiftedReg),
@@ -87,6 +88,7 @@ impl Instruction {
             Self::AddsShiftedReg(i) => i.exec(cpu, old_pc),
             Self::AddShiftedReg(i) => i.exec(cpu, old_pc),
             Self::SubShiftedRegister(i) => i.exec(cpu, old_pc),
+            Self::SubsShiftedReg(i) => i.exec(cpu, old_pc),
             Self::AndShiftedRegister(i) => i.exec(cpu, old_pc),
             Self::AndsImmediate(i) => i.exec(cpu, old_pc),
             Self::AndsShiftedReg(i) => i.exec(cpu, old_pc),
@@ -146,6 +148,7 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     AddsShiftedReg::ADDS_SHIFTED_REG,
     AddShiftedReg::ADD_SHIFTED_REG,
     SubShiftedRegister::SUB_SHIFTED_REGISTER,
+    SubsShiftedReg::SUBS_SHIFTED_REG,
     AndShiftedRegister::AND_SHIFTED_REGISTER,
     AndsImmediate::ANDS_IMMEDIATE,
     AndsShiftedReg::ANDS_SHIFTED_REG,
