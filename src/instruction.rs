@@ -15,7 +15,8 @@ use crate::{
     },
     register_instr::{
         AddShiftedReg, AddsShiftedReg, Adrp, AndImmediate, AndShiftedRegister, AndsImmediate,
-        AndsShiftedReg, Csel, Lslv, Madd, Nop, OrShiftedRegister, SubShiftedRegister, Ubfx, Udiv,
+        AndsShiftedReg, BicShiftedReg, Csel, Dc, Dsb, Lslv, Madd, Nop, OrShiftedRegister,
+        SubShiftedRegister, Ubfx, Udiv,
     },
 };
 
@@ -28,6 +29,8 @@ type DecodeFn = fn(u32) -> Instruction;
 #[derive(Debug, Clone, Copy)]
 pub enum Instruction {
     Nop(Nop),
+    Dc(Dc),
+    Dsb(Dsb),
     Madd(Madd),
     AddsShiftedReg(AddsShiftedReg),
     AddShiftedReg(AddShiftedReg),
@@ -41,6 +44,7 @@ pub enum Instruction {
     Adrp(Adrp),
     Ubfx(Ubfx),
     OrShiftedRegister(OrShiftedRegister),
+    BicShiftedReg(BicShiftedReg),
     Udiv(Udiv),
     AddImmediate(AddImmediate),
     Movz(Movz),
@@ -77,6 +81,8 @@ impl Instruction {
     pub fn exec(&self, cpu: &mut Cpu, old_pc: u64) {
         match self {
             Self::Nop(i) => i.exec(cpu, old_pc),
+            Self::Dc(i) => i.exec(cpu, old_pc),
+            Self::Dsb(i) => i.exec(cpu, old_pc),
             Self::Madd(i) => i.exec(cpu, old_pc),
             Self::AddsShiftedReg(i) => i.exec(cpu, old_pc),
             Self::AddShiftedReg(i) => i.exec(cpu, old_pc),
@@ -90,6 +96,7 @@ impl Instruction {
             Self::Ubfx(i) => i.exec(cpu, old_pc),
             Self::Lslv(i) => i.exec(cpu, old_pc),
             Self::OrShiftedRegister(i) => i.exec(cpu, old_pc),
+            Self::BicShiftedReg(i) => i.exec(cpu, old_pc),
             Self::Udiv(i) => i.exec(cpu, old_pc),
             Self::AddImmediate(i) => i.exec(cpu, old_pc),
             Self::Movz(i) => i.exec(cpu, old_pc),
@@ -133,6 +140,8 @@ pub struct InstDesc {
 
 pub const DESCR: &[InstDesc] = &sort_by_specificity([
     Nop::NOP,
+    Dc::DC,
+    Dsb::DSB,
     Madd::MADD,
     AddsShiftedReg::ADDS_SHIFTED_REG,
     AddShiftedReg::ADD_SHIFTED_REG,
@@ -144,6 +153,7 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     Csel::CSEL,
     Adrp::ADRP,
     OrShiftedRegister::OR_SHIFTED_REGISTER,
+    BicShiftedReg::BIC_SHIFTED_REG,
     Udiv::UDIV,
     AddImmediate::ADD_IMMEDIATE,
     Movz::MOVZ,

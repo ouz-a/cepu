@@ -32,7 +32,7 @@ impl AddImmediate {
     }
 
     pub const ADD_IMMEDIATE: InstDesc = InstDesc {
-        mask: 0b0111_1111_1100_0000_0000_0000_0000_0000,
+        mask: 0b0111_1111_1000_0000_0000_0000_0000_0000,
         value: 0b0001_0001_0000_0000_0000_0000_0000_0000,
         decode: Self::decode,
     };
