@@ -372,7 +372,7 @@ impl AndsShiftedReg {
         let op1 = cpu.x_read(self.rn.into(), width);
         let op2 = shift_reg(cpu, self.rm, self.shift, self.imm6, width);
 
-        cpu.x_write(self.rd.into(), op1 | op2, !self.sf);
+        cpu.x_write(self.rd.into(), op1 & op2, !self.sf);
     }
 
     pub const fn decode(word: u32) -> Instruction {
