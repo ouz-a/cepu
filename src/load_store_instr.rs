@@ -289,7 +289,7 @@ pub struct LdrReg {
 impl LdrReg {
     pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
         let datasize = 8 << (self.size as u64);
-        let is_64 = (self.size & 1) == 1;
+        let is_64 = self.size == 3;
         if is_64 {
             if self.option == 0 {
                 panic!("ldr_register undefined");

@@ -79,7 +79,7 @@ pub fn instruction_ldr_imm_base(
         if n == SP_REGISTER as u8 {
             cpu.sp_write(address);
         } else {
-            cpu.x_write(n as usize, address, true);
+            cpu.x_write(n as usize, address, false);
         }
     }
 }

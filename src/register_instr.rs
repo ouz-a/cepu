@@ -413,7 +413,7 @@ impl AndImmediate {
         if self.rd == 31 {
             cpu.sp_write(zero_extend(result, 64));
         } else {
-            cpu.x_write(self.rd.into(), result, self.sf);
+            cpu.x_write(self.rd.into(), result, !self.sf);
         }
     }
 
@@ -564,9 +564,9 @@ pub struct Adrp {
 impl Adrp {
     pub fn exec(self, cpu: &mut Cpu, old_pc: u64) {
         let imm: u64 = ((self.immhi as u64) << 14) | ((self.immlo as u64) << 12);
-        let imm = sign_extend(imm, 33); 
-        let base = bits_get(old_pc, 12, 64 - 12); 
-        cpu.x_write(self.rd.into(), base + imm, false);
+        let imm = sign_extend(imm, 33);
+        let base = old_pc & !0xfffu64;
+        cpu.x_write(self.rd.into(), base.wrapping_add(imm), false);
     }
 
     pub const fn decode(word: u32) -> Instruction {

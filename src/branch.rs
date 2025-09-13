@@ -8,8 +8,6 @@ use crate::{
 };
 
 pub fn condition_holds(cpu: &Cpu, cond: u8) -> bool {
-    println!("Inside the condition holds pstate of cpu {:?}",cpu.pstate);
-    println!("cond value {cond} and cond >> 1 {}",cond >> 1);
     let mut result = match cond >> 1 {
         0b000 => cpu.pstate.z,
         0b001 => cpu.pstate.c,
@@ -22,11 +20,9 @@ pub fn condition_holds(cpu: &Cpu, cond: u8) -> bool {
         _ => panic!("Unknown condition"),
     };
 
-    println!("result before {result}");
     if bits_get(cond.into(), 0, 1) == 1 && cond != 0b1111 {
         result = !result;
     }
-    println!("result after is {result}");
     result
 }
 
@@ -57,14 +53,10 @@ pub fn branch_addr(vaddress: u64, el: u8) -> u64 {
     }
 }
 
-pub fn branch_to(cpu: &mut Cpu, target: u64, is_32bit: bool, old_pc: u64) {
+pub fn branch_to(cpu: &mut Cpu, target: u64, _is_32bit: bool, _old_pc: u64) {
     cpu.branch_taken = true;
-    if is_32bit {
-        cpu.branch_target = old_pc.wrapping_add(target.wrapping_mul(4))
-    } else {
-        let tgt = branch_addr(target, cpu.pstate.current_el as u8);
-        cpu.branch_target = tgt;
-    }
+    let tgt = branch_addr(target, cpu.pstate.current_el as u8);
+    cpu.branch_target = tgt;
 }
 
 pub fn instruction_branch(cpu: &mut Cpu, cond: u8, offset: u64, old_pc: u64) {
