@@ -317,6 +317,44 @@ impl AndsImmediate {
     };
 }
 
+/// Bitwise OR (immediate)
+#[derive(Debug, Clone, Copy)]
+pub struct OrrImmediate {
+    pub sf: bool,
+    pub n: bool,
+    pub immr: u8,
+    pub imms: u8,
+    pub rn: u8,
+    pub rd: u8,
+}
+
+impl OrrImmediate {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let width = if self.sf { 64 } else { 32 };
+        let (imms, _) = decode_bit_mask(self.n, self.imms, self.immr, true, width);
+        instruction_orr_imm(cpu, self.rn, self.rd, width, imms);
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let sf = get_bits_ct!(word, 31, 1) == 1;
+        let n = get_bits_ct!(word, 22, 1) == 1;
+        let immr = get_bits_ct!(word, 16, 6) as u8;
+        let imms = get_bits_ct!(word, 10, 6) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rd = get_bits_ct!(word, 0, 5) as u8;
+        if !sf && !n {
+            panic!("Undefined, end of decode");
+        }
+        Instruction::OrrImmediate(Self { sf, n, immr, imms, rn, rd })
+    }
+
+    pub const ORR_IMMEDIATE: InstDesc = InstDesc {
+        mask: 0b0111_1111_1000_0000_0000_0000_0000_0000,
+        value: 0b0011_0010_0000_0000_0000_0000_0000_0000,
+        decode: Self::decode,
+    };
+}
+
 /// Bitwise AND (shifted register), setting flags
 #[derive(Debug, Clone, Copy)]
 pub struct AndsShiftedReg {

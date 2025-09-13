@@ -89,7 +89,6 @@ pub fn run_block(cpu: &mut Cpu) {
 
 fn main() {
     let mut cpu = Cpu::init();
-    // FIX don't use not() that's fucking wrong
     //validate_and_load_elf_header(&mut cpu, Path::new("./.executables/boot.elf"));
     load_device_blob(&mut cpu, &PathBuf::from_str("/Users/ouz/code/cepu_now/cepu.dtb").unwrap());
     load_kernel_image(&mut cpu, &PathBuf::from_str("/Users/ouz/code/cepu_now/Image").unwrap());

@@ -176,6 +176,20 @@ pub fn instruction_ands_imm(cpu: &mut Cpu, rn: u8, rd: u8, datasize: u8, imm: u6
     cpu.pstate.set_flags_from_bits(state.try_into().unwrap());
 }
 
+pub fn instruction_orr_imm(cpu: &mut Cpu, rn: u8, rd: u8, datasize: u8, imm: u64) {
+    let op1 = cpu.x_read(rn.into(), datasize);
+    let op2 = imm;
+
+    let result = op1 | op2;
+    let is_32b = datasize == 32;
+
+    if rd == 31 {
+        cpu.sp_write(result);
+    } else {
+        cpu.x_write(rd.into(), result, is_32b);
+    }
+}
+
 pub fn instruction_ands_shifted_reg(
     cpu: &mut Cpu,
     rm: u8,

@@ -16,7 +16,7 @@ use crate::{
     register_instr::{
         AddShiftedReg, AddsShiftedReg, Adrp, AndImmediate, AndShiftedRegister, AndsImmediate,
         AndsShiftedReg, BicShiftedReg, Csel, Dc, Dsb, Lslv, Madd, Nop, OrShiftedRegister,
-        SubShiftedRegister, SubsShiftedReg, Ubfx, Udiv,
+        OrrImmediate, SubShiftedRegister, SubsShiftedReg, Ubfx, Udiv,
     },
 };
 
@@ -38,6 +38,7 @@ pub enum Instruction {
     SubsShiftedReg(SubsShiftedReg),
     AndShiftedRegister(AndShiftedRegister),
     AndsImmediate(AndsImmediate),
+    OrrImmediate(OrrImmediate),
     AndsShiftedReg(AndsShiftedReg),
     AndImmediate(AndImmediate),
     Lslv(Lslv),
@@ -91,6 +92,7 @@ impl Instruction {
             Self::SubsShiftedReg(i) => i.exec(cpu, old_pc),
             Self::AndShiftedRegister(i) => i.exec(cpu, old_pc),
             Self::AndsImmediate(i) => i.exec(cpu, old_pc),
+            Self::OrrImmediate(i) => i.exec(cpu, old_pc),
             Self::AndsShiftedReg(i) => i.exec(cpu, old_pc),
             Self::AndImmediate(i) => i.exec(cpu, old_pc),
             Self::Csel(i) => i.exec(cpu, old_pc),
@@ -151,6 +153,7 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     SubsShiftedReg::SUBS_SHIFTED_REG,
     AndShiftedRegister::AND_SHIFTED_REGISTER,
     AndsImmediate::ANDS_IMMEDIATE,
+    OrrImmediate::ORR_IMMEDIATE,
     AndsShiftedReg::ANDS_SHIFTED_REG,
     AndImmediate::AND_IMMEDIATE,
     Csel::CSEL,
