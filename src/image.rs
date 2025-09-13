@@ -12,7 +12,7 @@ pub fn load_device_blob(cpu: &mut Cpu, dtb_path: &PathBuf) {
     unsafe {
         MEMORY[DTB_LOAD_ADD..(DTB_LOAD_ADD + buf.len())].copy_from_slice(&buf);
     }
-    cpu.sp_write(DTB_LOAD_ADD as u64);
+    cpu.x_write(0, DTB_LOAD_ADD as u64, false);
 }
 
 pub fn load_kernel_image(cpu: &mut Cpu, kernel_image_path: &PathBuf) {

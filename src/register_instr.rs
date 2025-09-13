@@ -141,7 +141,7 @@ pub struct AddShiftedReg {
 
 impl AddShiftedReg {
     pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
-        instruction_adds_shifted_register(
+        instruction_add_shifted_register(
             cpu,
             self.rn,
             self.rm,
@@ -369,10 +369,7 @@ pub struct AndsShiftedReg {
 impl AndsShiftedReg {
     pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
         let width = if self.sf { 64 } else { 32 };
-        let op1 = cpu.x_read(self.rn.into(), width);
-        let op2 = shift_reg(cpu, self.rm, self.shift, self.imm6, width);
-
-        cpu.x_write(self.rd.into(), op1 & op2, !self.sf);
+        instruction_ands_shifted_reg(cpu, self.rm, self.rn, self.rd, width, self.imm6, self.shift);
     }
 
     pub const fn decode(word: u32) -> Instruction {
@@ -601,7 +598,7 @@ impl Ubfx {
         let width = if self.sf { 64 } else { 32 };
         let (wmask, tmask) = decode_bit_mask(self.n, self.imms, self.immr, true, width);
         let src = cpu.x_read(self.rn.into(), width);
-        let bot = shift_ror(src, self.immr.into()) & wmask;
+        let bot = shift_ror(src, self.immr) & wmask;
 
         cpu.x_write(self.rd.into(), bot & tmask, false);
     }
@@ -672,7 +669,7 @@ pub struct SubsShiftedReg {
 
 impl SubsShiftedReg {
     pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
-        instruction_sub_shifted_register(
+        instruction_subs_shifted_reg(
             cpu,
             self.rn,
             self.rm,

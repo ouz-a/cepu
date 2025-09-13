@@ -1,7 +1,7 @@
 use crate::{
     cpu::Cpu,
     data_processing::{
-        instruction_addd_immediate, instruction_imm_sub, instruction_imm_subs, instruction_movk,
+        instruction_add_immediate, instruction_imm_sub, instruction_imm_subs, instruction_movk,
         instruction_movz,
     },
     get_bits_ct,
@@ -20,7 +20,7 @@ pub struct AddImmediate {
 impl AddImmediate {
     pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
         let imm: u32 = if self.sh { (self.imm12 as u32) << 12 } else { self.imm12 as u32 };
-        instruction_addd_immediate(cpu, self.rd, self.rn, imm, !self.sf);
+        instruction_add_immediate(cpu, self.rd, self.rn, imm, !self.sf);
     }
     pub const fn decode(word: u32) -> Instruction {
         let sf = get_bits_ct!(word, 31, 1) == 1;
