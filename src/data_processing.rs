@@ -227,12 +227,10 @@ pub fn instruction_subs_shifted_reg(
     let op1 = cpu.x_read(n as usize, datasize);
     let op2 = shift_reg(cpu, m, s_type, shift_amount, datasize).not();
     let res = add_with_carry(op1, op2, 1);
-    println!("res {res:?} flags to bits {:b}", res.flag_to_bits());
     if d != 31 {
         cpu.x_write(d as usize, res.result, is_32b);
     }
     cpu.pstate.set_flags_from_bits(res.flag_to_bits());
-    println!("cpu pstate {:?}", cpu.pstate);
 }
 
 pub fn instruction_add_shifted_register(
