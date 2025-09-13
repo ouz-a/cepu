@@ -22,7 +22,6 @@ pub enum ExtendType {
 }
 
 impl ExtendType {
-    #[inline]
     pub const fn from_u8(bits: u8) -> Self {
         match bits {
             0b000 => Self::UxTb,
@@ -273,6 +272,39 @@ pub fn instruction_strb_imm_un_off(
             cpu.x_write(n as usize, address, false);
         }
     }
+}
+
+pub fn instruction_str_register(
+    cpu: &mut Cpu,
+    n: u8,
+    t: u8,
+    m: u8,
+    exttype: ExtendType,
+    shift: u8,
+    datasize: u8,
+) {
+    let privileged = !cpu.pstate.current_el.is_el0();
+    let _acc_descr = AccessDescriptor::create_acc_descr_gpr(
+        crate::memory::MemOp::Store,
+        false,
+        privileged,
+        true,
+    );
+    let offset = extend_register(cpu, m, exttype, shift, 64);
+    let mut address;
+    if n == SP_REGISTER as u8 {
+        cpu.check_space_alignment();
+        address = cpu.sp_read();
+    } else {
+        address = cpu.x_read(n as usize, 64);
+    }
+    address += offset;
+
+    cpu.bus.write_memory(
+        address as usize,
+        (datasize / 8).into(),
+        cpu.x_read(t.into(), datasize).into(),
+    );
 }
 
 #[inline(always)]

@@ -299,6 +299,9 @@ impl Cpu {
 
     pub fn x_write(&mut self, n: usize, value: u64, is_32b: bool) {
         assert!(n < GPRS);
+        if n == 31 {
+            return;
+        }
         if is_32b {
             // We want lower 32 bits when value is 32bit
             self.x[n] = (self.x[n] & HIGH_32_MASK) | (value & LOW_32_MASK);

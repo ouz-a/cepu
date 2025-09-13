@@ -536,7 +536,7 @@ impl Csel {
         } else {
             cpu.x_read(self.rm.into(), width)
         };
-        cpu.x_write(self.rd.into(), result, self.sf);
+        cpu.x_write(self.rd.into(), result, !self.sf);
     }
     pub const fn decode(word: u32) -> Instruction {
         let sf = get_bits_ct!(word, 31, 1) == 1;
@@ -563,9 +563,9 @@ pub struct Adrp {
 
 impl Adrp {
     pub fn exec(self, cpu: &mut Cpu, old_pc: u64) {
-        let imm: u32 = (self.immhi << 14) | ((self.immlo as u32) << 12);
-        let imm = sign_extend(imm.into(), 64);
-        let base = bits_get(old_pc, 12, 64 - 12);
+        let imm: u64 = ((self.immhi as u64) << 14) | ((self.immlo as u64) << 12);
+        let imm = sign_extend(imm, 33); 
+        let base = bits_get(old_pc, 12, 64 - 12); 
         cpu.x_write(self.rd.into(), base + imm, false);
     }
 
@@ -600,7 +600,7 @@ impl Ubfx {
         let src = cpu.x_read(self.rn.into(), width);
         let bot = shift_ror(src, self.immr) & wmask;
 
-        cpu.x_write(self.rd.into(), bot & tmask, false);
+        cpu.x_write(self.rd.into(), bot & tmask, !self.sf);
     }
 
     pub const fn decode(word: u32) -> Instruction {

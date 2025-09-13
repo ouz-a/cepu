@@ -11,7 +11,7 @@ use crate::{
     imm_instr::{AddImmediate, Movk, Movz, SubImmediate, Subs},
     load_store_instr::{
         LdrImmPostIdx, LdrImmPreIdx, LdrImmUnOffset, LdrLit, LdrReg, StpSignedOffset,
-        StrImmUnOffset, StrbImmUnOffset,
+        StrImmUnOffset, StrRegister, StrbImmUnOffset,
     },
     register_instr::{
         AddShiftedReg, AddsShiftedReg, Adrp, AndImmediate, AndShiftedRegister, AndsImmediate,
@@ -67,6 +67,7 @@ pub enum Instruction {
     MsrReg(MsrReg),
     Mrs(Mrs),
     StrImmUnOffset(StrImmUnOffset),
+    StrRegister(StrRegister),
     StrbImmUnOffset(StrbImmUnOffset),
     LdrImmUnOffset(LdrImmUnOffset),
     LdrImmPostIdx(LdrImmPostIdx),
@@ -121,6 +122,7 @@ impl Instruction {
             Self::MsrReg(i) => i.exec(cpu, old_pc),
             Self::Mrs(i) => i.exec(cpu, old_pc),
             Self::StrImmUnOffset(i) => i.exec(cpu, old_pc),
+            Self::StrRegister(i) => i.exec(cpu, old_pc),
             Self::StrbImmUnOffset(i) => i.exec(cpu, old_pc),
             Self::LdrImmUnOffset(i) => i.exec(cpu, old_pc),
             Self::LdrImmPostIdx(i) => i.exec(cpu, old_pc),
@@ -180,6 +182,7 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     MsrReg::MSR_REG,
     Mrs::MRS,
     StrImmUnOffset::STR_IMM_UN_OFFSET,
+    StrRegister::STR_REGISTER,
     StrbImmUnOffset::STRB_IMM_UN_OFFSET,
     LdrImmUnOffset::LDR_IMM_UN_OFFSET,
     LdrImmPostIdx::LDR_IMM_POST_IDX,

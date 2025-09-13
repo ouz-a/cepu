@@ -8,6 +8,8 @@ use crate::{
 };
 
 pub fn condition_holds(cpu: &Cpu, cond: u8) -> bool {
+    println!("Inside the condition holds pstate of cpu {:?}",cpu.pstate);
+    println!("cond value {cond} and cond >> 1 {}",cond >> 1);
     let mut result = match cond >> 1 {
         0b000 => cpu.pstate.z,
         0b001 => cpu.pstate.c,
@@ -20,9 +22,11 @@ pub fn condition_holds(cpu: &Cpu, cond: u8) -> bool {
         _ => panic!("Unknown condition"),
     };
 
-    if (cond & 0b0001) == 0b1 && cond != 0b1111 {
+    println!("result before {result}");
+    if bits_get(cond.into(), 0, 1) == 1 && cond != 0b1111 {
         result = !result;
     }
+    println!("result after is {result}");
     result
 }
 

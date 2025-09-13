@@ -5,7 +5,8 @@ use crate::{
     instruction::{InstDesc, Instruction},
     load_and_store::{
         ExtendType, instruction_ldr_imm_base, instruction_ldr_literal, instruction_ldr_register,
-        instruction_stp_signed_offset, instruction_str_imm_un_off, instruction_strb_imm_un_off,
+        instruction_stp_signed_offset, instruction_str_imm_un_off, instruction_str_register,
+        instruction_strb_imm_un_off,
     },
     utils::{sign_extend, sign_extend_xor, zero_extend},
 };
@@ -98,6 +99,45 @@ impl StrbImmUnOffset {
     pub const STRB_IMM_UN_OFFSET: InstDesc = InstDesc {
         mask: 0b1111_1111_1100_0000_0000_0000_0000_0000,
         value: 0b0011_1001_0000_0000_0000_0000_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+/// Store register (register)
+#[derive(Clone, Copy, Debug)]
+pub struct StrRegister {
+    pub size: u8,
+    pub rm: u8,
+    pub option: u8,
+    pub s: bool,
+    pub rn: u8,
+    pub rt: u8,
+}
+
+impl StrRegister {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let extend_type = ExtendType::from_u8(self.option);
+        let shift = if self.s { self.size } else { 0 };
+        let datasize = 8 << self.size;
+        instruction_str_register(cpu, self.rn, self.rt, self.rm, extend_type, shift, datasize);
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let size = get_bits_ct!(word, 30, 2) as u8;
+        let rm = get_bits_ct!(word, 16, 5) as u8;
+        let option = get_bits_ct!(word, 13, 3) as u8;
+        let s = get_bits_ct!(word, 12, 1) == 1;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rt = get_bits_ct!(word, 0, 5) as u8;
+        if get_bits_ct!(option, 0, 1) == 0 {
+            panic!("Undef, sub-word index")
+        }
+        Instruction::StrRegister(Self { size, rm, option, s, rn, rt })
+    }
+
+    pub const STR_REGISTER: InstDesc = InstDesc {
+        mask: 0b1011_1111_1110_0000_0000_1100_0000_0000,
+        value: 0b1011_1000_0010_0000_0000_1000_0000_0000,
         decode: Self::decode,
     };
 }

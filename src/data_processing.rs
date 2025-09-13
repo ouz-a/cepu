@@ -26,6 +26,7 @@ pub const fn decode_shift(bits: u8) -> ShiftTypes {
     }
 }
 
+#[derive(Debug)]
 pub struct AddResult {
     pub result: u64,
     pub n: bool,
@@ -209,7 +210,7 @@ pub fn instruction_adds_shifted_register(
     let op1 = cpu.x_read(n as usize, datasize);
     let op2 = shift_reg(cpu, m, s_type, shift_amount, datasize);
     let res = add_with_carry(op1, op2, 0);
-    cpu.pstate.c = res.c;
+    cpu.pstate.set_flags_from_bits(res.flag_to_bits());
     cpu.x_write(d as usize, res.result, is_32b);
 }
 
@@ -226,8 +227,12 @@ pub fn instruction_subs_shifted_reg(
     let op1 = cpu.x_read(n as usize, datasize);
     let op2 = shift_reg(cpu, m, s_type, shift_amount, datasize).not();
     let res = add_with_carry(op1, op2, 1);
-    cpu.x_write(d as usize, res.result, is_32b);
+    println!("res {res:?} flags to bits {:b}", res.flag_to_bits());
+    if d != 31 {
+        cpu.x_write(d as usize, res.result, is_32b);
+    }
     cpu.pstate.set_flags_from_bits(res.flag_to_bits());
+    println!("cpu pstate {:?}", cpu.pstate);
 }
 
 pub fn instruction_add_shifted_register(
@@ -259,10 +264,6 @@ pub fn instruction_sub_shifted_register(
     let op1 = cpu.x_read(n as usize, datasize);
     let op2 = !shift_reg(cpu, m, s_type, shift_amount, datasize);
     let res = add_with_carry(op1, op2, 1);
-    cpu.pstate.n = res.n;
-    cpu.pstate.z = res.z;
-    cpu.pstate.c = res.c;
-    cpu.pstate.v = res.v;
     cpu.x_write(d as usize, res.result, is_32b);
 }
 
