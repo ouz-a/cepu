@@ -6,7 +6,7 @@ use crate::{
     data_processing::*,
     get_bits_ct,
     instruction::*,
-    utils::{bits_get, decode_bit_mask, sign_extend, zero_extend},
+    utils::{decode_bit_mask, sign_extend, zero_extend},
 };
 
 #[derive(Clone, Copy, Debug)]
