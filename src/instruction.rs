@@ -1,5 +1,3 @@
-// src/instruction.rs
-
 use std::sync::OnceLock;
 
 use crate::{
@@ -15,7 +13,7 @@ use crate::{
     },
     register_instr::{
         AddShiftedReg, AddsShiftedReg, Adrp, AndImmediate, AndShiftedRegister, AndsImmediate,
-        AndsShiftedReg, BicShiftedReg, Csel, Dc, Dsb, Lslv, Madd, Nop, OrShiftedRegister,
+        AndsShiftedReg, BicShiftedReg, Csel, Dc, Dsb, Lslv, Lsrv, Madd, Nop, OrShiftedRegister,
         OrrImmediate, SubShiftedRegister, SubsShiftedReg, Ubfx, Udiv,
     },
 };
@@ -42,6 +40,7 @@ pub enum Instruction {
     AndsShiftedReg(AndsShiftedReg),
     AndImmediate(AndImmediate),
     Lslv(Lslv),
+    Lsrv(Lsrv),
     Csel(Csel),
     Adrp(Adrp),
     Ubfx(Ubfx),
@@ -100,6 +99,7 @@ impl Instruction {
             Self::Adrp(i) => i.exec(cpu, old_pc),
             Self::Ubfx(i) => i.exec(cpu, old_pc),
             Self::Lslv(i) => i.exec(cpu, old_pc),
+            Self::Lsrv(i) => i.exec(cpu, old_pc),
             Self::OrShiftedRegister(i) => i.exec(cpu, old_pc),
             Self::BicShiftedReg(i) => i.exec(cpu, old_pc),
             Self::Udiv(i) => i.exec(cpu, old_pc),
@@ -195,6 +195,7 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     Bti::BTI,
     Ubfx::UBFX,
     Lslv::LSLV,
+    Lsrv::LSRV,
 ]);
 
 const fn sort_by_specificity<const N: usize>(mut arr: [InstDesc; N]) -> [InstDesc; N] {
