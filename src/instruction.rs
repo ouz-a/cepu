@@ -13,8 +13,8 @@ use crate::{
     },
     register_instr::{
         AddShiftedReg, AddsShiftedReg, Adrp, AndImmediate, AndShiftedRegister, AndsImmediate,
-        AndsShiftedReg, BicShiftedReg, Csel, Dc, Dsb, Lslv, Lsrv, Madd, Nop, OrShiftedRegister,
-        OrrImmediate, SubShiftedRegister, SubsShiftedReg, Ubfx, Udiv,
+        AndsShiftedReg, Bfm, BicShiftedReg, Csel, Dc, Dsb, Isb, Lslv, Lsrv, Madd, Nop,
+        OrShiftedRegister, OrrImmediate, SubShiftedRegister, SubsShiftedReg, Ubfx, Udf, Udiv,
     },
 };
 
@@ -26,6 +26,8 @@ type DecodeFn = fn(u32) -> Instruction;
 
 #[derive(Debug, Clone, Copy)]
 pub enum Instruction {
+    Udf(Udf),
+    Isb(Isb),
     Nop(Nop),
     Dc(Dc),
     Dsb(Dsb),
@@ -44,6 +46,7 @@ pub enum Instruction {
     Csel(Csel),
     Adrp(Adrp),
     Ubfx(Ubfx),
+    Bfm(Bfm),
     OrShiftedRegister(OrShiftedRegister),
     BicShiftedReg(BicShiftedReg),
     Udiv(Udiv),
@@ -82,7 +85,9 @@ pub enum Instruction {
 impl Instruction {
     pub fn exec(&self, cpu: &mut Cpu, old_pc: u64) {
         match self {
+            Self::Udf(i) => i.exec(cpu, old_pc),
             Self::Nop(i) => i.exec(cpu, old_pc),
+            Self::Isb(i) => i.exec(cpu, old_pc),
             Self::Dc(i) => i.exec(cpu, old_pc),
             Self::Dsb(i) => i.exec(cpu, old_pc),
             Self::Madd(i) => i.exec(cpu, old_pc),
@@ -98,6 +103,7 @@ impl Instruction {
             Self::Csel(i) => i.exec(cpu, old_pc),
             Self::Adrp(i) => i.exec(cpu, old_pc),
             Self::Ubfx(i) => i.exec(cpu, old_pc),
+            Self::Bfm(i) => i.exec(cpu, old_pc),
             Self::Lslv(i) => i.exec(cpu, old_pc),
             Self::Lsrv(i) => i.exec(cpu, old_pc),
             Self::OrShiftedRegister(i) => i.exec(cpu, old_pc),
@@ -145,6 +151,8 @@ pub struct InstDesc {
 }
 
 pub const DESCR: &[InstDesc] = &sort_by_specificity([
+    Udf::UDF,
+    Isb::ISB,
     Nop::NOP,
     Dc::DC,
     Dsb::DSB,
@@ -194,6 +202,7 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     Dmb::DMB,
     Bti::BTI,
     Ubfx::UBFX,
+    Bfm::BFM,
     Lslv::LSLV,
     Lsrv::LSRV,
 ]);

@@ -24,6 +24,34 @@ impl Nop {
     };
 }
 
+/// Instruction sync barrier
+#[derive(Clone, Copy, Debug)]
+pub struct Isb;
+impl Isb {
+    pub fn exec(self, _cpu: &mut Cpu, _old_pc: u64) {}
+    pub const fn decode(_word: u32) -> Instruction {
+        Instruction::Isb(Self)
+    }
+
+    pub const ISB: InstDesc = InstDesc {
+        mask: 0b1111_1111_1111_1111_1111_0000_1111_1111,
+        value: 0b1101_0101_0000_0011_0011_0000_1101_1111,
+        decode: Self::decode,
+    };
+}
+
+#[derive(Clone, Debug, Copy)]
+pub struct Udf;
+
+impl Udf {
+    pub fn exec(self, _cpu: &mut Cpu, _old_pc: u64) {}
+    pub const fn decode(_word: u32) -> Instruction {
+        Instruction::Udf(Self)
+    }
+
+    pub const UDF: InstDesc = InstDesc { mask: 0, value: 0, decode: Self::decode };
+}
+
 #[derive(Clone, Copy, Debug)]
 pub struct Dc;
 
@@ -619,6 +647,49 @@ impl Ubfx {
     pub const UBFX: InstDesc = InstDesc {
         mask: 0b0111_1111_1000_0000_0000_0000_0000_0000,
         value: 0b0101_0011_0000_0000_0000_0000_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+/// Bitfield move
+#[derive(Clone, Copy, Debug)]
+pub struct Bfm {
+    pub sf: bool,
+    pub n: bool,
+    pub immr: u8,
+    pub imms: u8,
+    pub rn: u8,
+    pub rd: u8,
+}
+
+impl Bfm {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let width = if self.sf { 64 } else { 32 };
+        let (wmask, tmask) = decode_bit_mask(self.n, self.imms, self.immr, false, width);
+        let dst = cpu.x_read(self.rd.into(), width);
+        let src = cpu.x_read(self.rn.into(), width);
+        let bot = (dst & wmask.not()) | (shift_ror(src, self.immr) & wmask);
+        let val = (dst & tmask.not()) | (bot & tmask);
+
+        cpu.x_write(self.rd.into(), val, !self.sf);
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let sf = get_bits_ct!(word, 31, 1) == 1;
+        let n = get_bits_ct!(word, 22, 1) == 1;
+        let immr = get_bits_ct!(word, 16, 6) as u8;
+        let imms = get_bits_ct!(word, 10, 6) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rd = get_bits_ct!(word, 0, 5) as u8;
+        if !sf && !n {
+            panic!("Undefined, end of decode");
+        }
+        Instruction::Bfm(Self { sf, n, immr, imms, rn, rd })
+    }
+
+    pub const BFM: InstDesc = InstDesc {
+        mask: 0b0111_1111_1000_0000_0000_0000_0000_0000,
+        value: 0b0011_0011_0000_0000_0000_0000_0000_0000,
         decode: Self::decode,
     };
 }

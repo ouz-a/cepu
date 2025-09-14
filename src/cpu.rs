@@ -123,6 +123,8 @@ pub struct Cpu {
     vbar_el1: u64,
 
     ctr_el0: u64,
+    cpacr_el1: u64,
+    mdscr_el1: u64,
 
     event_register: bool,
     pub pstate: PState,
@@ -146,7 +148,7 @@ impl Cpu {
 
         cpu.x[31] = cpu.sp_el0;
         cpu.ctr_el0 = 0x34448004;
-        cpu.pstate.current_el = ExceptionLevel::EL3;
+        cpu.pstate.current_el = ExceptionLevel::EL1;
 
         // TODO: Use bitflags crate(?)
         cpu.sctlr_el1 |= 1 << 1; // SCTLR_A
@@ -373,6 +375,25 @@ impl Cpu {
             MsrRegisters::VbarEl1 => {
                 if !self.pstate.current_el.is_el2() {
                     self.vbar_el1 = self.x_read(t.into(), 64);
+                }
+            }
+            MsrRegisters::SctlrEl1 => {
+                self.sctlr_el1 = self.x_read(t.into(), 64);
+            }
+            MsrRegisters::SpsrEl1 => {
+                self.spsr_el1 = self.x_read(t.into(), 64);
+            }
+            MsrRegisters::ElrEl1 => {
+                self.elr_el1 = self.x_read(t.into(), 64);
+            }
+            MsrRegisters::CpacrEl1 => {
+                if self.pstate.current_el.is_el1() {
+                    self.cpacr_el1 = self.x_read(t.into(), 64);
+                }
+            }
+            MsrRegisters::MdscrEl1 => {
+                if self.pstate.current_el.is_el1() {
+                    self.mdscr_el1 = self.x_read(t.into(), 64);
                 }
             }
         }
@@ -736,6 +757,11 @@ msr_enum! {
     CntpCvalEl0 = 12936151554,
     CntpCtlEl0 =  12936151553,
     VbarEl1 = 12885688320,
+    SctlrEl1 = 12884967424,
+    SpsrEl1 = 12885164032,
+    ElrEl1 = 12885164033,
+    CpacrEl1 = 12884967426,
+    MdscrEl1 = 8589935106,
 }
 
 macro_rules! mrs_enum {
