@@ -125,6 +125,7 @@ pub struct Cpu {
     ctr_el0: u64,
     cpacr_el1: u64,
     mdscr_el1: u64,
+    id_aa64dfr0_el1: u64,
 
     event_register: bool,
     pub pstate: PState,
@@ -145,6 +146,7 @@ impl Cpu {
         cpu.sp_el1 = 1024 * 2;
         cpu.sp_el2 = 1024 * 3;
         cpu.sp_el3 = 1024 * 4;
+        cpu.id_aa64dfr0_el1 = 0x000f00f010101009;
 
         cpu.x[31] = cpu.sp_el0;
         cpu.ctr_el0 = 0x34448004;
@@ -458,6 +460,9 @@ impl Cpu {
             }
             MrsRegisters::CtrEl0 => {
                 self.x_write(t.into(), self.ctr_el0, false);
+            }
+            MrsRegisters::IdAa64dfr0El1 => {
+                self.x_write(t.into(), self.id_aa64dfr0_el1, false);
             }
         }
     }
@@ -797,6 +802,7 @@ mrs_enum! {
     CurrentEL = 12885164546,
     SctlrEl1 = 12884967424,
     CtrEl0 = 12935233537,
+    IdAa64dfr0El1 = 12884903168,
 }
 
 pub fn sleep_ns(ns: u64) {

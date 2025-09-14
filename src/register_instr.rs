@@ -40,18 +40,6 @@ impl Isb {
     };
 }
 
-#[derive(Clone, Debug, Copy)]
-pub struct Udf;
-
-impl Udf {
-    pub fn exec(self, _cpu: &mut Cpu, _old_pc: u64) {}
-    pub const fn decode(_word: u32) -> Instruction {
-        Instruction::Udf(Self)
-    }
-
-    pub const UDF: InstDesc = InstDesc { mask: 0, value: 0, decode: Self::decode };
-}
-
 #[derive(Clone, Copy, Debug)]
 pub struct Dc;
 

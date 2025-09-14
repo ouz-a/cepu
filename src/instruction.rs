@@ -14,7 +14,7 @@ use crate::{
     register_instr::{
         AddShiftedReg, AddsShiftedReg, Adrp, AndImmediate, AndShiftedRegister, AndsImmediate,
         AndsShiftedReg, Bfm, BicShiftedReg, Csel, Dc, Dsb, Isb, Lslv, Lsrv, Madd, Nop,
-        OrShiftedRegister, OrrImmediate, SubShiftedRegister, SubsShiftedReg, Ubfx, Udf, Udiv,
+        OrShiftedRegister, OrrImmediate, SubShiftedRegister, SubsShiftedReg, Ubfx, Udiv,
     },
 };
 
@@ -26,7 +26,6 @@ type DecodeFn = fn(u32) -> Instruction;
 
 #[derive(Debug, Clone, Copy)]
 pub enum Instruction {
-    Udf(Udf),
     Isb(Isb),
     Nop(Nop),
     Dc(Dc),
@@ -85,7 +84,6 @@ pub enum Instruction {
 impl Instruction {
     pub fn exec(&self, cpu: &mut Cpu, old_pc: u64) {
         match self {
-            Self::Udf(i) => i.exec(cpu, old_pc),
             Self::Nop(i) => i.exec(cpu, old_pc),
             Self::Isb(i) => i.exec(cpu, old_pc),
             Self::Dc(i) => i.exec(cpu, old_pc),
@@ -151,7 +149,6 @@ pub struct InstDesc {
 }
 
 pub const DESCR: &[InstDesc] = &sort_by_specificity([
-    Udf::UDF,
     Isb::ISB,
     Nop::NOP,
     Dc::DC,
