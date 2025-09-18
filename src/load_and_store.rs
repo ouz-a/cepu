@@ -300,11 +300,7 @@ pub fn instruction_str_register(
     }
     address += offset;
 
-    cpu.bus.write_memory(
-        address as usize,
-        (datasize / 8).into(),
-        cpu.x_read(t.into(), datasize).into(),
-    );
+    cpu.bus.write_memory(address as usize, (datasize / 8).into(), cpu.x_read(t.into(), datasize));
 }
 
 #[inline(always)]

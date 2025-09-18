@@ -14,7 +14,8 @@ use crate::{
     register_instr::{
         AddShiftedReg, AddsShiftedReg, Adrp, AndImmediate, AndShiftedRegister, AndsImmediate,
         AndsShiftedReg, Bfm, BicShiftedReg, Csel, Dc, Dsb, Isb, Lslv, Lsrv, Madd, Nop,
-        OrShiftedRegister, OrrImmediate, SubShiftedRegister, SubsShiftedReg, Ubfx, Udiv,
+        OrShiftedRegister, OrrImmediate, Sbfm, SubShiftedRegister, SubsShiftedReg, Tlbi, Ubfx,
+        Udiv,
     },
 };
 
@@ -26,6 +27,7 @@ type DecodeFn = fn(u32) -> Instruction;
 
 #[derive(Debug, Clone, Copy)]
 pub enum Instruction {
+    Tlbi(Tlbi),
     Isb(Isb),
     Nop(Nop),
     Dc(Dc),
@@ -79,11 +81,13 @@ pub enum Instruction {
     Wfi(Wfi),
     Dmb(Dmb),
     Bti(Bti),
+    Sbfm(Sbfm),
 }
 
 impl Instruction {
     pub fn exec(&self, cpu: &mut Cpu, old_pc: u64) {
         match self {
+            Self::Tlbi(i) => i.exec(cpu, old_pc),
             Self::Nop(i) => i.exec(cpu, old_pc),
             Self::Isb(i) => i.exec(cpu, old_pc),
             Self::Dc(i) => i.exec(cpu, old_pc),
@@ -137,6 +141,7 @@ impl Instruction {
             Self::Wfi(i) => i.exec(cpu, old_pc),
             Self::Dmb(i) => i.exec(cpu, old_pc),
             Self::Bti(i) => i.exec(cpu, old_pc),
+            Self::Sbfm(i) => i.exec(cpu, old_pc),
         }
     }
 }
@@ -149,6 +154,7 @@ pub struct InstDesc {
 }
 
 pub const DESCR: &[InstDesc] = &sort_by_specificity([
+    Tlbi::TLBI,
     Isb::ISB,
     Nop::NOP,
     Dc::DC,
@@ -200,6 +206,7 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     Bti::BTI,
     Ubfx::UBFX,
     Bfm::BFM,
+    Sbfm::SBFM,
     Lslv::LSLV,
     Lsrv::LSRV,
 ]);
