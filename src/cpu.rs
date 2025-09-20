@@ -126,6 +126,13 @@ pub struct Cpu {
     cpacr_el1: u64,
     mdscr_el1: u64,
     id_aa64dfr0_el1: u64,
+    /// Provides additional information about implemented PE features in AArch64
+    /// state.
+    id_aa64pfr0_el1: u64,
+
+    /// Provides identification information for the PE, including an implementer
+    /// code for the device and a device ID number.
+    pub midr_el1: u64,
 
     event_register: bool,
     pub pstate: PState,
@@ -147,6 +154,8 @@ impl Cpu {
         cpu.sp_el2 = 1024 * 3;
         cpu.sp_el3 = 1024 * 4;
         cpu.id_aa64dfr0_el1 = 0x000f00f010101009;
+        cpu.id_aa64pfr0_el1 = 0x22;
+        cpu.midr_el1 = 0x00000000_000F0510;
 
         cpu.x[31] = cpu.sp_el0;
         cpu.ctr_el0 = 0x34448004;
@@ -463,6 +472,14 @@ impl Cpu {
             }
             MrsRegisters::IdAa64dfr0El1 => {
                 self.x_write(t.into(), self.id_aa64dfr0_el1, false);
+            }
+            MrsRegisters::IdAa64pfr0El1 => {
+                self.x_write(t.into(), self.id_aa64pfr0_el1, false);
+            }
+            MrsRegisters::MidrEl1 => {
+                if self.pstate.current_el.is_el1() {
+                    self.x_write(t.into(), self.midr_el1, false);
+                }
             }
         }
     }
@@ -803,6 +820,8 @@ mrs_enum! {
     SctlrEl1 = 12884967424,
     CtrEl0 = 12935233537,
     IdAa64dfr0El1 = 12884903168,
+    IdAa64pfr0El1 = 12884902912,
+    MidrEl1 = 12884901888,
 }
 
 pub fn sleep_ns(ns: u64) {
