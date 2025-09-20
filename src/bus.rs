@@ -33,7 +33,7 @@ impl Bus {
         let address_range = address + size;
         match address_range {
             ROM_RANGE_BEG..=ROM_RANGE_END => {
-                panic!("Trying to write to ROM!")
+                panic!("Trying to write to ROM! Adress range is {address_range}")
             }
             RAM_RANGE_BEG..=RAM_RANGE_END => Bus::write_memory_impl(address, size, value),
             UART_RANGE_BEG..=UART_RANGE_END => {

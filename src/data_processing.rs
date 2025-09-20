@@ -80,7 +80,7 @@ pub fn add_with_carry(x: u64, y: u64, carry_in: u64) -> AddResult {
 }
 
 pub fn instruction_add_immediate(cpu: &mut Cpu, d: u8, n: u8, imm12: u32, is_32b: bool) {
-    let operand1 = if d == SP_REGISTER as u8 {
+    let operand1 = if n == SP_REGISTER as u8 {
         cpu.sp_read()
     } else {
         cpu.x_read(n as usize, if is_32b { 32 } else { 64 })

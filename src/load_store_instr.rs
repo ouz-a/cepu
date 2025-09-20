@@ -5,7 +5,7 @@ use crate::{
     instruction::{InstDesc, Instruction},
     load_and_store::{
         ExtendType, instruction_ldr_imm_base, instruction_ldr_literal, instruction_ldr_register,
-        instruction_stp_signed_offset, instruction_str_imm_un_off, instruction_str_register,
+        instruction_stp, instruction_str_imm_un_off, instruction_str_register,
         instruction_strb_imm_un_off,
     },
     utils::{sign_extend, sign_extend_xor, zero_extend},
@@ -379,8 +379,8 @@ impl StpSignedOffset {
     pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
         let scale = 2 + self.opc;
         let datasize = 8 << scale;
-        let offset = shift_lsl(sign_extend(self.imm7.into(), 64), scale);
-        instruction_stp_signed_offset(cpu, self.rt, self.rt2, self.rn, datasize, offset);
+        let offset = shift_lsl(sign_extend(self.imm7.into(), 7), scale);
+        instruction_stp(cpu, self.rt, self.rt2, self.rn, datasize, offset, false, false);
     }
 
     pub const fn decode(word: u32) -> Instruction {
@@ -395,6 +395,39 @@ impl StpSignedOffset {
     pub const STP_SIGNED_OFFSET: InstDesc = InstDesc {
         mask: 0b0111_1111_1100_0000_0000_0000_0000_0000,
         value: 0b0010_1001_0000_0000_0000_0000_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct StpPreIndex {
+    opc: u8,
+    imm7: u8,
+    rt2: u8,
+    rn: u8,
+    rt: u8,
+}
+
+impl StpPreIndex {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let scale = 2 + self.opc;
+        let datasize = 8 << scale;
+        let offset = shift_lsl(sign_extend(self.imm7.into(), 7), scale);
+        instruction_stp(cpu, self.rt, self.rt2, self.rn, datasize, offset, true, false);
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let opc = get_bits_ct!(word, 31, 1) as u8;
+        let imm7 = get_bits_ct!(word, 15, 7) as u8;
+        let rt2 = get_bits_ct!(word, 10, 5) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rt = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::StpPreIndex(Self { opc, imm7, rt2, rn, rt })
+    }
+
+    pub const STP_PRE_INDEX: InstDesc = InstDesc {
+        mask: 0b0111_1111_1100_0000_0000_0000_0000_0000,
+        value: 0b0010_1001_1000_0000_0000_0000_0000_0000,
         decode: Self::decode,
     };
 }

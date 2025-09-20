@@ -39,6 +39,7 @@ pub fn sign_extend_xor(val: u64, width: isize) -> u64 {
 }
 
 /// We preserve SIGN of a value while extending it
+/// Please enter width of the value, not width you are extenting into
 pub fn sign_extend(val: u64, width: u8) -> u64 {
     if width == 64 {
         return val;

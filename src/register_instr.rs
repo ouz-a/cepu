@@ -879,7 +879,7 @@ impl Clz {
         let op1 = cpu.x_read(self.rn.into(), datasize);
 
         let count: u64 = if self.sf {
-            (op1 as u64).leading_zeros() as u64 // 0 → 64, etc.
+            op1.leading_zeros() as u64 // 0 → 64, etc.
         } else {
             (op1 as u32).leading_zeros() as u64 // 0 → 32, etc.
         };
