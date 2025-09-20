@@ -31,6 +31,7 @@ pub fn run_block(cpu: &mut Cpu) {
 
     let mut pc = cpu.pc;
     let limit = MEMORY_SIZE;
+    let mut how_many = 0;
     loop {
         if !cpu.sleeping.load(Ordering::Relaxed) {
             cpu.handle_devices();
@@ -41,6 +42,8 @@ pub fn run_block(cpu: &mut Cpu) {
             let dec = decode(word);
             println!("Instruction is {dec:?} raw: {:08X}", word.to_be());
             dec.exec(cpu, old_pc);
+            how_many += 1;
+            println!("Executed {how_many} instructions");
 
             if cpu.branch_taken {
                 pc = cpu.branch_target;

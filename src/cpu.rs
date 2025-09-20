@@ -126,13 +126,30 @@ pub struct Cpu {
     cpacr_el1: u64,
     mdscr_el1: u64,
     id_aa64dfr0_el1: u64,
+
     /// Provides additional information about implemented PE features in AArch64
     /// state.
     id_aa64pfr0_el1: u64,
 
+    /// Provides information about the implemented memory model and memory
+    /// management support in AArch64 state.
+    id_aa64mmfr0_el1: u64,
+
+    /// Provides information about the implemented memory model and memory
+    /// management support in AArch64 state.
+    id_aa64mmfr1_el1: u64,
+
     /// Provides identification information for the PE, including an implementer
     /// code for the device and a device ID number.
     pub midr_el1: u64,
+
+    mair_el1: u64,
+    tcr_el1: u64,
+
+    ttbr0_el1: u64,
+    ttbr1_el1: u64,
+
+    id_aa64mmfr3_el1: u64,
 
     event_register: bool,
     pub pstate: PState,
@@ -156,6 +173,10 @@ impl Cpu {
         cpu.id_aa64dfr0_el1 = 0x000f00f010101009;
         cpu.id_aa64pfr0_el1 = 0x22;
         cpu.midr_el1 = 0x00000000_000F0510;
+        cpu.id_aa64mmfr0_el1 = 0x000000000F000020;
+        cpu.id_aa64mmfr1_el1 = 0;
+
+        cpu.id_aa64mmfr3_el1 = 0;
 
         cpu.x[31] = cpu.sp_el0;
         cpu.ctr_el0 = 0x34448004;
@@ -338,55 +359,36 @@ impl Cpu {
             | ((sys_crm as u64) << 8)
             | (sys_op2 as u64);
 
+        if !self.pstate.current_el.is_el1() {
+            panic!("Insufficient privilege");
+        }
         let register: MsrRegisters = comp.into();
         match register {
             MsrRegisters::Unknown => {
                 panic!("Value {comp} not convered, please check the ARM docs!")
             }
             MsrRegisters::ElrEl3 => {
-                if self.pstate.current_el.is_el3() {
-                    self.elr_el3 = self.x_read(t.into(), 64);
-                } else {
-                    panic!("Can't modify ELR_EL3, at current exception level");
-                }
+                self.elr_el3 = self.x_read(t.into(), 64);
             }
             MsrRegisters::SpsrEl3 => {
-                if self.pstate.current_el.is_el3() {
-                    self.spsr_el3 = self.x_read(t.into(), 64);
-                } else {
-                    panic!("Can't modify SPSR_EL3, at current exception level");
-                }
+                self.spsr_el3 = self.x_read(t.into(), 64);
             }
             MsrRegisters::ScrEl3 => {
-                if self.pstate.current_el.is_el3() {
-                    self.scr_el3 = self.x_read(t.into(), 64);
-                } else {
-                    panic!("Can't modify SCR_EL3, at current exception level");
-                }
+                self.scr_el3 = self.x_read(t.into(), 64);
             }
             MsrRegisters::SpEl1 => {
-                if self.pstate.current_el.is_el2() || self.pstate.current_el.is_el3() {
-                    self.sp_el1 = self.x_read(t.into(), 64);
-                } else {
-                    panic!("Can't modify SP_EL1, at current exception level");
-                }
+                self.sp_el1 = self.x_read(t.into(), 64);
             }
             MsrRegisters::CntpCvalEl0 => {
-                if !self.pstate.current_el.is_el2() {
-                    self.timer.cntp_cval_el0 = self.x_read(t.into(), 64);
-                    self.timer_rearm();
-                }
+                self.timer.cntp_cval_el0 = self.x_read(t.into(), 64);
+                self.timer_rearm();
             }
             MsrRegisters::CntpCtlEl0 => {
-                if !self.pstate.current_el.is_el2() {
-                    self.timer.cntp_ctl_el0 = self.x_read(t.into(), 32) as u32;
-                    self.timer_rearm();
-                }
+                self.timer.cntp_ctl_el0 = self.x_read(t.into(), 32) as u32;
+                self.timer_rearm();
             }
             MsrRegisters::VbarEl1 => {
-                if !self.pstate.current_el.is_el2() {
-                    self.vbar_el1 = self.x_read(t.into(), 64);
-                }
+                self.vbar_el1 = self.x_read(t.into(), 64);
             }
             MsrRegisters::SctlrEl1 => {
                 self.sctlr_el1 = self.x_read(t.into(), 64);
@@ -398,14 +400,22 @@ impl Cpu {
                 self.elr_el1 = self.x_read(t.into(), 64);
             }
             MsrRegisters::CpacrEl1 => {
-                if self.pstate.current_el.is_el1() {
-                    self.cpacr_el1 = self.x_read(t.into(), 64);
-                }
+                self.cpacr_el1 = self.x_read(t.into(), 64);
             }
             MsrRegisters::MdscrEl1 => {
-                if self.pstate.current_el.is_el1() {
-                    self.mdscr_el1 = self.x_read(t.into(), 64);
-                }
+                self.mdscr_el1 = self.x_read(t.into(), 64);
+            }
+            MsrRegisters::MairEl1 => {
+                self.mair_el1 = self.x_read(t.into(), 64);
+            }
+            MsrRegisters::TcrEl1 => {
+                self.tcr_el1 = self.x_read(t.into(), 64);
+            }
+            MsrRegisters::Ttbr0El1 => {
+                self.ttbr0_el1 = self.x_read(t.into(), 64);
+            }
+            MsrRegisters::Ttbr1El1 => {
+                self.ttbr1_el1 = self.x_read(t.into(), 64);
             }
         }
     }
@@ -479,6 +489,21 @@ impl Cpu {
             MrsRegisters::MidrEl1 => {
                 if self.pstate.current_el.is_el1() {
                     self.x_write(t.into(), self.midr_el1, false);
+                }
+            }
+            MrsRegisters::IdAa64mmfr0El1 => {
+                if self.pstate.current_el.is_el1() {
+                    self.x_write(t.into(), self.id_aa64mmfr0_el1, false);
+                }
+            }
+            MrsRegisters::IdAa64mmfr1El1 => {
+                if self.pstate.current_el.is_el1() {
+                    self.x_write(t.into(), self.id_aa64mmfr1_el1, false);
+                }
+            }
+            MrsRegisters::IdAa64mmfr3El1 => {
+                if self.pstate.current_el.is_el1() {
+                    self.x_write(t.into(), self.id_aa64mmfr3_el1, false);
                 }
             }
         }
@@ -784,6 +809,10 @@ msr_enum! {
     ElrEl1 = 12885164033,
     CpacrEl1 = 12884967426,
     MdscrEl1 = 8589935106,
+    MairEl1 = 12885557760,
+    TcrEl1 = 12885032962,
+    Ttbr0El1 = 12885032960,
+    Ttbr1El1 = 12885032961,
 }
 
 macro_rules! mrs_enum {
@@ -822,6 +851,10 @@ mrs_enum! {
     IdAa64dfr0El1 = 12884903168,
     IdAa64pfr0El1 = 12884902912,
     MidrEl1 = 12884901888,
+
+    IdAa64mmfr0El1 = 12884903680,
+    IdAa64mmfr1El1 = 12884903681,
+    IdAa64mmfr3El1 = 12884903683,
 }
 
 pub fn sleep_ns(ns: u64) {

@@ -11,8 +11,15 @@ macro_rules! get_bits_ct {
 
 #[inline(always)]
 pub fn bits_get(val: u64, start: u8, len: u8) -> u64 {
-    debug_assert!(len <= 64 - start);
-    (val >> start) & ((1u64 << len) - 1)
+    debug_assert!((start as u16 + len as u16) <= 64);
+
+    if len == 0 {
+        return 0;
+    }
+
+    let mask = if len == 64 { u64::MAX } else { (1u64 << len) - 1 };
+
+    (val >> start) & mask
 }
 
 #[inline]

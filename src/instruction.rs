@@ -13,7 +13,7 @@ use crate::{
     },
     register_instr::{
         AddShiftedReg, AddsShiftedReg, Adrp, AndImmediate, AndShiftedRegister, AndsImmediate,
-        AndsShiftedReg, Bfm, BicShiftedReg, Csel, Dc, Dsb, Isb, Lslv, Lsrv, Madd, Nop,
+        AndsShiftedReg, Bfm, BicShiftedReg, Clz, Csel, Dc, Dsb, Isb, Lslv, Lsrv, Madd, Nop,
         OrShiftedRegister, OrrImmediate, Sbfm, SubShiftedRegister, SubsShiftedReg, Tlbi, Ubfx,
         Udiv,
     },
@@ -83,6 +83,7 @@ pub enum Instruction {
     Dmb(Dmb),
     Bti(Bti),
     Sbfm(Sbfm),
+    Clz(Clz),
 }
 
 impl Instruction {
@@ -144,6 +145,7 @@ impl Instruction {
             Self::Dmb(i) => i.exec(cpu, old_pc),
             Self::Bti(i) => i.exec(cpu, old_pc),
             Self::Sbfm(i) => i.exec(cpu, old_pc),
+            Self::Clz(i) => i.exec(cpu, old_pc),
         }
     }
 }
@@ -212,6 +214,7 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     Sbfm::SBFM,
     Lslv::LSLV,
     Lsrv::LSRV,
+    Clz::CLZ,
 ]);
 
 const fn sort_by_specificity<const N: usize>(mut arr: [InstDesc; N]) -> [InstDesc; N] {

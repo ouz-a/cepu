@@ -863,3 +863,39 @@ impl SubsShiftedReg {
         decode: Self::decode,
     };
 }
+
+/// Count leading zeros
+#[derive(Debug, Clone, Copy)]
+pub struct Clz {
+    pub sf: bool,
+    pub rn: u8,
+    pub rd: u8,
+}
+
+impl Clz {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let datasize = if self.sf { 64 } else { 32 };
+
+        let op1 = cpu.x_read(self.rn.into(), datasize);
+
+        let count: u64 = if self.sf {
+            (op1 as u64).leading_zeros() as u64 // 0 → 64, etc.
+        } else {
+            (op1 as u32).leading_zeros() as u64 // 0 → 32, etc.
+        };
+
+        cpu.x_write(self.rd.into(), bits_get(count, 0, datasize), !self.sf);
+    }
+    pub const fn decode(word: u32) -> Instruction {
+        let sf = get_bits_ct!(word, 31, 1) == 1;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rd = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::Clz(Self { sf, rn, rd })
+    }
+
+    pub const CLZ: InstDesc = InstDesc {
+        mask: 0b0111_1111_1111_1111_1111_1100_0000_0000,
+        value: 0b0101_1010_1100_0000_0001_0000_0000_0000,
+        decode: Self::decode,
+    };
+}
