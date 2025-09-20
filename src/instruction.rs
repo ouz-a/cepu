@@ -8,14 +8,14 @@ use crate::{
     cpu::Cpu,
     imm_instr::{AddImmediate, Movk, Movn, Movz, SubImmediate, Subs},
     load_store_instr::{
-        LdpPostIndex, LdrImmPostIdx, LdrImmPreIdx, LdrImmUnOffset, LdrLit, LdrReg, StpPreIndex,
-        StpSignedOffset, StrImmUnOffset, StrRegister, StrbImmUnOffset,
+        LdpPostIndex, LdpSignedOffset, LdrImmPostIdx, LdrImmPreIdx, LdrImmUnOffset, LdrLit, LdrReg,
+        StpPreIndex, StpSignedOffset, StrImmUnOffset, StrRegister, StrbImmUnOffset,
     },
     register_instr::{
         AddShiftedReg, AddsShiftedReg, Adrp, AndImmediate, AndShiftedRegister, AndsImmediate,
-        AndsShiftedReg, Bfm, BicShiftedReg, Clz, Csel, Dc, Dsb, Isb, Lslv, Lsrv, Madd, Nop,
-        OrShiftedRegister, OrrImmediate, Sbfm, SubShiftedRegister, SubsShiftedReg, Tlbi, Ubfx,
-        Udiv,
+        AndsShiftedReg, Bfm, BicShiftedReg, BicShiftedRegSet, Clz, Csel, Dc, Dsb, Isb, Lslv, Lsrv,
+        Madd, Nop, OrShiftedRegister, OrrImmediate, Rev, Sbfm, SubShiftedRegister, SubsShiftedReg,
+        Tlbi, Ubfx, Udiv,
     },
 };
 
@@ -50,6 +50,8 @@ pub enum Instruction {
     Bfm(Bfm),
     OrShiftedRegister(OrShiftedRegister),
     BicShiftedReg(BicShiftedReg),
+    BicShiftedRegSet(BicShiftedRegSet),
+    Rev(Rev),
     Udiv(Udiv),
     AddImmediate(AddImmediate),
     Movz(Movz),
@@ -86,6 +88,7 @@ pub enum Instruction {
     Bti(Bti),
     Sbfm(Sbfm),
     Clz(Clz),
+    LdpSignedOffset(LdpSignedOffset),
 }
 
 impl Instruction {
@@ -114,6 +117,7 @@ impl Instruction {
             Self::Lsrv(i) => i.exec(cpu, old_pc),
             Self::OrShiftedRegister(i) => i.exec(cpu, old_pc),
             Self::BicShiftedReg(i) => i.exec(cpu, old_pc),
+            Self::BicShiftedRegSet(i) => i.exec(cpu, old_pc),
             Self::Udiv(i) => i.exec(cpu, old_pc),
             Self::AddImmediate(i) => i.exec(cpu, old_pc),
             Self::Movz(i) => i.exec(cpu, old_pc),
@@ -137,6 +141,7 @@ impl Instruction {
             Self::StrImmUnOffset(i) => i.exec(cpu, old_pc),
             Self::StrRegister(i) => i.exec(cpu, old_pc),
             Self::LdpPostIndex(i) => i.exec(cpu, old_pc),
+            Self::LdpSignedOffset(i) => i.exec(cpu, old_pc),
             Self::StrbImmUnOffset(i) => i.exec(cpu, old_pc),
             Self::LdrImmUnOffset(i) => i.exec(cpu, old_pc),
             Self::LdrImmPostIdx(i) => i.exec(cpu, old_pc),
@@ -150,6 +155,7 @@ impl Instruction {
             Self::Bti(i) => i.exec(cpu, old_pc),
             Self::Sbfm(i) => i.exec(cpu, old_pc),
             Self::Clz(i) => i.exec(cpu, old_pc),
+            Self::Rev(i) => i.exec(cpu, old_pc),
         }
     }
 }
@@ -181,6 +187,7 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     Adrp::ADRP,
     OrShiftedRegister::OR_SHIFTED_REGISTER,
     BicShiftedReg::BIC_SHIFTED_REG,
+    BicShiftedRegSet::BIC_SHIFTED_REG_SET,
     Udiv::UDIV,
     AddImmediate::ADD_IMMEDIATE,
     Movz::MOVZ,
@@ -212,6 +219,7 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     StpSignedOffset::STP_SIGNED_OFFSET,
     StpPreIndex::STP_PRE_INDEX,
     LdpPostIndex::LDP_POST_INDEX,
+    LdpSignedOffset::LDP_SIGNED_OFFSET,
     Wfi::WFI,
     Dmb::DMB,
     Bti::BTI,
@@ -221,6 +229,7 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     Lslv::LSLV,
     Lsrv::LSRV,
     Clz::CLZ,
+    Rev::REV,
 ]);
 
 const fn sort_by_specificity<const N: usize>(mut arr: [InstDesc; N]) -> [InstDesc; N] {

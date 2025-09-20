@@ -461,7 +461,7 @@ impl AndImmediate {
         let imms = get_bits_ct!(word, 10, 6) as u8;
         let rn = get_bits_ct!(word, 5, 5) as u8;
         let rd = get_bits_ct!(word, 0, 5) as u8;
-        if !sf && !n {
+        if !sf && n {
             panic!("Undefined, end of decode");
         }
         Instruction::AndImmediate(Self { sf, n, immr, imms, rn, rd })
@@ -552,6 +552,50 @@ impl BicShiftedReg {
     pub const BIC_SHIFTED_REG: InstDesc = InstDesc {
         mask: 0b0111_1111_0010_0000_0000_0000_0000_0000,
         value: 0b0000_1010_0010_0000_0000_0000_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct BicShiftedRegSet {
+    pub sf: bool,
+    pub shift: ShiftTypes,
+    pub rm: u8,
+    pub imm6: u8,
+    pub rn: u8,
+    pub rd: u8,
+}
+
+impl BicShiftedRegSet {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let width = if self.sf { 64 } else { 32 };
+        let op1 = cpu.x_read(self.rn.into(), width);
+        let op2 = shift_reg(cpu, self.rm, self.shift, self.imm6, width);
+        let result = op1 & op2.not();
+        let is_zero = if result == 0 { 1 } else { 0 };
+        let state = (bits_get(result, width - 1, 1) << 3) | (is_zero << 2);
+
+        cpu.x_write(self.rd.into(), result, !self.sf);
+        cpu.pstate.set_flags_from_bits(state.try_into().unwrap());
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let sf = get_bits_ct!(word, 31, 1) == 1;
+        let shift = decode_shift(get_bits_ct!(word, 22, 2) as u8);
+        let rm = get_bits_ct!(word, 16, 5) as u8;
+        let imm6 = get_bits_ct!(word, 10, 6) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rd = get_bits_ct!(word, 0, 5) as u8;
+        if !sf && get_bits_ct!(imm6, 4, 1) == 1 {
+            panic!("Undefined, end of decode");
+        }
+
+        Instruction::BicShiftedRegSet(Self { sf, shift, rm, imm6, rn, rd })
+    }
+
+    pub const BIC_SHIFTED_REG_SET: InstDesc = InstDesc {
+        mask: 0b0111_1111_0010_0000_0000_0000_0000_0000,
+        value: 0b0110_1010_0010_0000_0000_0000_0000_0000,
         decode: Self::decode,
     };
 }
@@ -896,6 +940,40 @@ impl Clz {
     pub const CLZ: InstDesc = InstDesc {
         mask: 0b0111_1111_1111_1111_1111_1100_0000_0000,
         value: 0b0101_1010_1100_0000_0001_0000_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct Rev {
+    pub sf: bool,
+    pub opc: u8,
+    pub rn: u8,
+    pub rd: u8,
+}
+
+impl Rev {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let datasize = if self.sf { 64 } else { 32 };
+        let op = cpu.x_read(self.rn.into(), datasize);
+        let res = if datasize == 32 { (op as u32).swap_bytes() as u64 } else { op.swap_bytes() };
+        cpu.x_write(self.rd.into(), res, datasize == 32);
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let sf = get_bits_ct!(word, 31, 1) == 1;
+        let opc = get_bits_ct!(word, 10, 2) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rd = get_bits_ct!(word, 0, 5) as u8;
+        if opc == 0b11 && !sf {
+            panic!("Undefined Rev")
+        }
+        Instruction::Rev(Self { sf, opc, rn, rd })
+    }
+
+    pub const REV: InstDesc = InstDesc {
+        mask: 0b0111_1111_1111_1111_1111_1000_0000_0000,
+        value: 0b0101_1010_1100_0000_0000_1000_0000_0000,
         decode: Self::decode,
     };
 }

@@ -155,9 +155,6 @@ impl LdrImmUnOffset {
         let offset = shift_lsl(zero_extend(self.imm12 as u64, 64), self.size);
         let datasize = (8 << (self.size)) as u64;
         let tag_checked = self.rn != 31;
-        if self.rn == self.rt && self.rn != 31 {
-            panic!("Unpredictable");
-        }
         instruction_ldr_imm_base(
             cpu,
             self.rn,
@@ -460,6 +457,40 @@ impl LdpPostIndex {
     }
 
     pub const LDP_POST_INDEX: InstDesc = InstDesc {
+        mask: 0b0111_1111_1100_0000_0000_0000_0000_0000,
+        value: 0b0010_1000_1100_0000_0000_0000_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+/// Load pair of registers
+#[derive(Debug, Clone, Copy)]
+pub struct LdpSignedOffset {
+    opc: u8,
+    imm7: u8,
+    rt2: u8,
+    rn: u8,
+    rt: u8,
+}
+
+impl LdpSignedOffset {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let scale = 2 + self.opc;
+        let datasize = 8 << scale;
+        let offset = shift_lsl(sign_extend(self.imm7.into(), 7), scale);
+        instruction_ldp(cpu, self.rt, self.rt2, self.rn, datasize, offset, false, false);
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let opc = get_bits_ct!(word, 31, 1) as u8;
+        let imm7 = get_bits_ct!(word, 15, 7) as u8;
+        let rt2 = get_bits_ct!(word, 10, 5) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rt = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::LdpSignedOffset(Self { opc, imm7, rt2, rn, rt })
+    }
+
+    pub const LDP_SIGNED_OFFSET: InstDesc = InstDesc {
         mask: 0b0111_1111_1100_0000_0000_0000_0000_0000,
         value: 0b0010_1001_0100_0000_0000_0000_0000_0000,
         decode: Self::decode,

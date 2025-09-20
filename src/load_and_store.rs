@@ -84,7 +84,7 @@ pub fn instruction_ldr_imm_base(
     }
 }
 
-pub fn instruction_stp(
+pub fn instruction_ldp(
     cpu: &mut Cpu,
     t: u8,
     t2: u8,
@@ -138,7 +138,7 @@ pub fn instruction_stp(
     }
 }
 
-pub fn instruction_ldp(
+pub fn instruction_stp(
     cpu: &mut Cpu,
     t: u8,
     t2: u8,
