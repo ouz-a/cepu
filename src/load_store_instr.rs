@@ -4,9 +4,9 @@ use crate::{
     get_bits_ct,
     instruction::{InstDesc, Instruction},
     load_and_store::{
-        ExtendType, instruction_ldr_imm_base, instruction_ldr_literal, instruction_ldr_register,
-        instruction_stp, instruction_str_imm_un_off, instruction_str_register,
-        instruction_strb_imm_un_off,
+        ExtendType, instruction_ldp, instruction_ldr_imm_base, instruction_ldr_literal,
+        instruction_ldr_register, instruction_stp, instruction_str_imm_un_off,
+        instruction_str_register, instruction_strb_imm_un_off,
     },
     utils::{sign_extend, sign_extend_xor, zero_extend},
 };
@@ -428,6 +428,40 @@ impl StpPreIndex {
     pub const STP_PRE_INDEX: InstDesc = InstDesc {
         mask: 0b0111_1111_1100_0000_0000_0000_0000_0000,
         value: 0b0010_1001_1000_0000_0000_0000_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+/// Load pair of registers
+#[derive(Debug, Clone, Copy)]
+pub struct LdpPostIndex {
+    opc: u8,
+    imm7: u8,
+    rt2: u8,
+    rn: u8,
+    rt: u8,
+}
+
+impl LdpPostIndex {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let scale = 2 + self.opc;
+        let datasize = 8 << scale;
+        let offset = shift_lsl(sign_extend(self.imm7.into(), 7), scale);
+        instruction_ldp(cpu, self.rt, self.rt2, self.rn, datasize, offset, true, true);
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let opc = get_bits_ct!(word, 31, 1) as u8;
+        let imm7 = get_bits_ct!(word, 15, 7) as u8;
+        let rt2 = get_bits_ct!(word, 10, 5) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rt = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::LdpPostIndex(Self { opc, imm7, rt2, rn, rt })
+    }
+
+    pub const LDP_POST_INDEX: InstDesc = InstDesc {
+        mask: 0b0111_1111_1100_0000_0000_0000_0000_0000,
+        value: 0b0010_1001_0100_0000_0000_0000_0000_0000,
         decode: Self::decode,
     };
 }

@@ -98,11 +98,65 @@ pub fn instruction_stp(
     let post_index = postindex;
     let non_temporal = false;
     let tag_checked = false;
-    let rt_unknown = false;
+    //    let rt_unknown = false;
 
     let privileged = !cpu.pstate.current_el.is_el0();
     let _acc_descr = AccessDescriptor::create_acc_descr_gpr(
         crate::memory::MemOp::Store,
+        non_temporal,
+        privileged,
+        tag_checked,
+    );
+
+    let mut address;
+    if n == SP_REGISTER as u8 {
+        cpu.check_space_alignment();
+        address = cpu.sp_read();
+    } else {
+        address = cpu.x_read(n as usize, 64);
+    }
+
+    if !post_index {
+        address = address.wrapping_add(offset);
+    }
+
+    let address2 = address + dbytes as u64;
+    let data1 = cpu.bus.read_memory(address as usize, dbytes.into());
+    let data2 = cpu.bus.read_memory(address2 as usize, dbytes.into());
+    cpu.x_write(t.into(), data1.1, datasize == 32);
+    cpu.x_write(t2.into(), data2.1, datasize == 32);
+
+    if wback {
+        if post_index {
+            address = address.wrapping_add(offset);
+        }
+        if n == 31 {
+            cpu.sp_write(address);
+        } else {
+            cpu.x_write(n.into(), address, false);
+        }
+    }
+}
+
+pub fn instruction_ldp(
+    cpu: &mut Cpu,
+    t: u8,
+    t2: u8,
+    n: u8,
+    datasize: u8,
+    offset: u64,
+    wback: bool,
+    postindex: bool,
+) {
+    let dbytes = datasize / 8;
+    let post_index = postindex;
+    let non_temporal = false;
+    let tag_checked = false;
+    let rt_unknown = false;
+
+    let privileged = !cpu.pstate.current_el.is_el0();
+    let _acc_descr = AccessDescriptor::create_acc_descr_gpr(
+        crate::memory::MemOp::Load,
         non_temporal,
         privileged,
         tag_checked,
