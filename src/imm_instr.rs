@@ -2,7 +2,7 @@ use crate::{
     cpu::Cpu,
     data_processing::{
         instruction_add_immediate, instruction_imm_sub, instruction_imm_subs, instruction_movk,
-        instruction_movz,
+        instruction_movn, instruction_movz,
     },
     get_bits_ct,
     instruction::*,
@@ -63,6 +63,37 @@ impl Movz {
     pub const MOVZ: InstDesc = InstDesc {
         mask: 0b0111_1111_1000_0000_0000_0000_0000_0000,
         value: 0b0101_0010_1000_0000_0000_0000_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct Movn {
+    pub sf: bool,
+    pub hw: u8,
+    pub imm16: u16,
+    pub rd: u8,
+}
+
+impl Movn {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        if !self.sf && (self.hw & 0b10) != 0 {
+            panic!("Undefined");
+        }
+        instruction_movn(cpu, self.rd.into(), self.imm16, self.hw << 4, !self.sf);
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let sf = get_bits_ct!(word, 31, 1) == 1;
+        let hw = get_bits_ct!(word, 21, 2) as u8;
+        let imm16 = get_bits_ct!(word, 5, 16) as u16;
+        let rd = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::Movn(Self { sf, hw, imm16, rd })
+    }
+
+    pub const MOVN: InstDesc = InstDesc {
+        mask: 0b0111_1111_1000_0000_0000_0000_0000_0000,
+        value: 0b0001_0010_1000_0000_0000_0000_0000_0000,
         decode: Self::decode,
     };
 }
