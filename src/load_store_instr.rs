@@ -5,11 +5,38 @@ use crate::{
     instruction::{InstDesc, Instruction},
     load_and_store::{
         ExtendType, instruction_ldp, instruction_ldr_imm_base, instruction_ldr_literal,
-        instruction_ldr_register, instruction_stp, instruction_str_imm_un_off,
-        instruction_str_register, instruction_strb_imm_un_off,
+        instruction_ldr_register, instruction_stp, instruction_str_halfword_imm,
+        instruction_str_imm_un_off, instruction_str_register, instruction_strb_imm_un_off,
     },
     utils::{sign_extend, sign_extend_xor, zero_extend},
 };
+
+/// Store register halfword
+#[derive(Debug, Clone, Copy)]
+pub struct StrhUnsigned {
+    pub imm12: u16,
+    pub rn: u8,
+    pub rt: u8,
+}
+
+impl StrhUnsigned {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let offset = shift_lsl(self.imm12.into(), 1);
+        instruction_str_halfword_imm(cpu, self.rn, self.rt, offset, false, false);
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let imm12 = get_bits_ct!(word, 10, 12) as u16;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rt = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::StrhUnsigned(Self { imm12, rn, rt })
+    }
+    pub const STRH_UNSIGNED: InstDesc = InstDesc {
+        mask: 0b0111_1111_1100_0000_0000_0000_0000_0000,
+        value: 0b0111_1001_0000_0000_0000_0000_0000_0000,
+        decode: Self::decode,
+    };
+}
 
 #[derive(Debug, Clone, Copy)]
 pub struct StrImmUnOffset {
@@ -21,11 +48,7 @@ pub struct StrImmUnOffset {
 
 impl StrImmUnOffset {
     pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
-        let offset = if (self.size & 1) == 1 {
-            shift_lsl(self.imm12 as u64, self.size)
-        } else {
-            self.imm12 as u64
-        };
+        let offset = shift_lsl(self.imm12 as u64, self.size);
         let datasize = (8 << (self.size)) as u64;
         let tag_checked = self.rn != 31;
         if self.rn == self.rt && self.rn != 31 {

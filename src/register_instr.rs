@@ -501,7 +501,7 @@ impl OrShiftedRegister {
         let imm6 = get_bits_ct!(word, 10, 6) as u8;
         let rn = get_bits_ct!(word, 5, 5) as u8;
         let rd = get_bits_ct!(word, 0, 5) as u8;
-        if !sf && get_bits_ct!(imm6, 4, 1) == 1 {
+        if !sf && get_bits_ct!(imm6, 5, 1) == 1 {
             panic!("Undefined, end of decode");
         }
 

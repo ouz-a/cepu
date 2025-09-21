@@ -253,6 +253,37 @@ pub fn instruction_ldr_literal(cpu: &mut Cpu, t: u8, size: u8, offset: u64, _old
     let (_, word) = cpu.bus.read_memory(address as usize, size as usize);
     cpu.x_write(t as usize, word, !is_64b);
 }
+pub fn instruction_str_halfword_imm(
+    cpu: &mut Cpu,
+    n: u8,
+    t: u8,
+    offset: u64,
+    postindex: bool,
+    wback: bool,
+) {
+    let mut address;
+    if n == SP_REGISTER as u8 {
+        address = cpu.sp_read();
+    } else {
+        address = cpu.x_read(n.into(), 64);
+    };
+    if !postindex {
+        address = address.wrapping_add(offset);
+    }
+
+    let data = cpu.x_read(t.into(), 16);
+    cpu.bus.write_memory(address as usize, 2, data);
+    if wback {
+        if postindex {
+            address = address.wrapping_add(offset);
+        }
+        if n == SP_REGISTER as u8 {
+            cpu.sp_write(address);
+        } else {
+            cpu.x_write(n.into(), address, false);
+        }
+    }
+}
 
 pub fn instruction_str_imm_un_off(
     cpu: &mut Cpu,

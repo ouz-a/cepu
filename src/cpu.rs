@@ -9,6 +9,7 @@ use std::{
 };
 
 use crate::{bus::Bus, get_bits_ct, utils::align};
+pub const MEM_TOP: usize = crate::memory::MEMORY_SIZE;
 
 static START: OnceLock<Instant> = OnceLock::new();
 pub const MAX_SLEEP_NS: u64 = 80 * 1000 * 1000;
@@ -21,9 +22,6 @@ const GPRS: usize = 32;
 
 const ZERO_REG: usize = 31;
 pub const SP_REGISTER: usize = 31;
-
-const HIGH_32_MASK: u64 = 0xFFFF_FFFF_0000_0000;
-const LOW_32_MASK: u64 = 0xFFFF_FFFFu64;
 
 const HAVE_AARCH64: bool = true;
 const HAVE_EL: bool = true;
@@ -150,6 +148,7 @@ pub struct Cpu {
     ttbr1_el1: u64,
 
     id_aa64mmfr3_el1: u64,
+    id_aa64isar0_el1: u64,
 
     event_register: bool,
     pub pstate: PState,
@@ -175,6 +174,7 @@ impl Cpu {
         cpu.midr_el1 = 0x00000000_000F0510;
         cpu.id_aa64mmfr0_el1 = 0x000000000F000020;
         cpu.id_aa64mmfr1_el1 = 0;
+        cpu.id_aa64isar0_el1 = 0;
 
         cpu.id_aa64mmfr3_el1 = 0;
 
@@ -337,8 +337,7 @@ impl Cpu {
             return;
         }
         if is_32b {
-            // We want lower 32 bits when value is 32bit
-            self.x[n] = (self.x[n] & HIGH_32_MASK) | (value & LOW_32_MASK);
+            self.x[n] = value & 0xFFFF_FFFF;
         } else {
             self.x[n] = value;
         }
@@ -505,6 +504,10 @@ impl Cpu {
                 if self.pstate.current_el.is_el1() {
                     self.x_write(t.into(), self.id_aa64mmfr3_el1, false);
                 }
+            }
+            MrsRegisters::IdAa64isar0El1 => {
+                let v = self.id_aa64isar0_el1;
+                self.x_write(t.into(), v, false);
             }
         }
     }
@@ -855,6 +858,7 @@ mrs_enum! {
     IdAa64mmfr0El1 = 12884903680,
     IdAa64mmfr1El1 = 12884903681,
     IdAa64mmfr3El1 = 12884903683,
+    IdAa64isar0El1=12884903424,
 }
 
 pub fn sleep_ns(ns: u64) {
