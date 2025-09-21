@@ -152,6 +152,7 @@ pub struct Cpu {
 
     event_register: bool,
     pub pstate: PState,
+    dczid_el0: u64,
 
     pub timer: Timer,
     pub condvar: Arc<(Mutex<bool>, Condvar)>,
@@ -175,6 +176,7 @@ impl Cpu {
         cpu.id_aa64mmfr0_el1 = 0x000000000F000020;
         cpu.id_aa64mmfr1_el1 = 0;
         cpu.id_aa64isar0_el1 = 0;
+        cpu.dczid_el0 = 0x14;
 
         cpu.id_aa64mmfr3_el1 = 0;
 
@@ -508,6 +510,9 @@ impl Cpu {
             MrsRegisters::IdAa64isar0El1 => {
                 let v = self.id_aa64isar0_el1;
                 self.x_write(t.into(), v, false);
+            }
+            MrsRegisters::DczidEl0 => {
+                self.x_write(t.into(), self.dczid_el0, false);
             }
         }
     }
@@ -854,6 +859,7 @@ mrs_enum! {
     IdAa64dfr0El1 = 12884903168,
     IdAa64pfr0El1 = 12884902912,
     MidrEl1 = 12884901888,
+    DczidEl0 = 12935233543,
 
     IdAa64mmfr0El1 = 12884903680,
     IdAa64mmfr1El1 = 12884903681,
