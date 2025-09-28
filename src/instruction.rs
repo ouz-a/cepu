@@ -9,7 +9,8 @@ use crate::{
     imm_instr::{AddImmediate, Movk, Movn, Movz, SubImmediate, Subs},
     load_store_instr::{
         LdpPostIndex, LdpSignedOffset, LdrImmPostIdx, LdrImmPreIdx, LdrImmUnOffset, LdrLit, LdrReg,
-        StpPreIndex, StpSignedOffset, StrImmUnOffset, StrRegister, StrbImmUnOffset, StrhUnsigned,
+        Ldur, StpPreIndex, StpSignedOffset, StrImmUnOffset, StrRegister, StrbImmUnOffset,
+        StrhUnsigned,
     },
     register_instr::{
         AddShiftedReg, AddsShiftedReg, Adrp, AndImmediate, AndShiftedRegister, AndsImmediate,
@@ -21,12 +22,24 @@ use crate::{
 
 const PRIME_SIZE: usize = 1 << 12;
 
-static TABLES: OnceLock<Tables> = OnceLock::new();
+macro_rules! define_instructions {
+    ($($variant:ident($inner:ty)),* $(,)?) => {
+        #[derive(Debug, Clone, Copy)]
+        pub enum Instruction {
+            $($variant($inner),)*
+        }
 
-type DecodeFn = fn(u32) -> Instruction;
+        impl Instruction {
+            pub fn exec(&self, cpu: &mut Cpu, old_pc: u64) {
+                match self {
+                    $(Self::$variant(i) => i.exec(cpu, old_pc),)*
+                }
+            }
+        }
+    };
+}
 
-#[derive(Debug, Clone, Copy)]
-pub enum Instruction {
+define_instructions!(
     Tlbi(Tlbi),
     Isb(Isb),
     Nop(Nop),
@@ -81,6 +94,7 @@ pub enum Instruction {
     LdrImmPreIdx(LdrImmPreIdx),
     LdrReg(LdrReg),
     LdrLit(LdrLit),
+    Ldur(Ldur),
     StpSignedOffset(StpSignedOffset),
     StpPreIndex(StpPreIndex),
     LdpPostIndex(LdpPostIndex),
@@ -90,77 +104,9 @@ pub enum Instruction {
     Sbfm(Sbfm),
     Clz(Clz),
     LdpSignedOffset(LdpSignedOffset),
-}
+);
 
-impl Instruction {
-    pub fn exec(&self, cpu: &mut Cpu, old_pc: u64) {
-        match self {
-            Self::Tlbi(i) => i.exec(cpu, old_pc),
-            Self::Nop(i) => i.exec(cpu, old_pc),
-            Self::Isb(i) => i.exec(cpu, old_pc),
-            Self::Dc(i) => i.exec(cpu, old_pc),
-            Self::Dsb(i) => i.exec(cpu, old_pc),
-            Self::Madd(i) => i.exec(cpu, old_pc),
-            Self::AddsShiftedReg(i) => i.exec(cpu, old_pc),
-            Self::AddShiftedReg(i) => i.exec(cpu, old_pc),
-            Self::SubShiftedRegister(i) => i.exec(cpu, old_pc),
-            Self::SubsShiftedReg(i) => i.exec(cpu, old_pc),
-            Self::AndShiftedRegister(i) => i.exec(cpu, old_pc),
-            Self::AndsImmediate(i) => i.exec(cpu, old_pc),
-            Self::OrrImmediate(i) => i.exec(cpu, old_pc),
-            Self::AndsShiftedReg(i) => i.exec(cpu, old_pc),
-            Self::AndImmediate(i) => i.exec(cpu, old_pc),
-            Self::Csel(i) => i.exec(cpu, old_pc),
-            Self::Adrp(i) => i.exec(cpu, old_pc),
-            Self::Ubfx(i) => i.exec(cpu, old_pc),
-            Self::Bfm(i) => i.exec(cpu, old_pc),
-            Self::Lslv(i) => i.exec(cpu, old_pc),
-            Self::Lsrv(i) => i.exec(cpu, old_pc),
-            Self::OrShiftedRegister(i) => i.exec(cpu, old_pc),
-            Self::BicShiftedReg(i) => i.exec(cpu, old_pc),
-            Self::BicShiftedRegSet(i) => i.exec(cpu, old_pc),
-            Self::Udiv(i) => i.exec(cpu, old_pc),
-            Self::AddImmediate(i) => i.exec(cpu, old_pc),
-            Self::Movz(i) => i.exec(cpu, old_pc),
-            Self::Movk(i) => i.exec(cpu, old_pc),
-            Self::Movn(i) => i.exec(cpu, old_pc),
-            Self::Subs(i) => i.exec(cpu, old_pc),
-            Self::SubImmediate(i) => i.exec(cpu, old_pc),
-            Self::Ret(i) => i.exec(cpu, old_pc),
-            Self::Eret(i) => i.exec(cpu, old_pc),
-            Self::Bcond(i) => i.exec(cpu, old_pc),
-            Self::Cbnz(i) => i.exec(cpu, old_pc),
-            Self::Ccmpi(i) => i.exec(cpu, old_pc),
-            Self::Tbnz(i) => i.exec(cpu, old_pc),
-            Self::Tbz(i) => i.exec(cpu, old_pc),
-            Self::Cbz(i) => i.exec(cpu, old_pc),
-            Self::Bl(i) => i.exec(cpu, old_pc),
-            Self::Branch(i) => i.exec(cpu, old_pc),
-            Self::MsrImm(i) => i.exec(cpu, old_pc),
-            Self::MsrReg(i) => i.exec(cpu, old_pc),
-            Self::Mrs(i) => i.exec(cpu, old_pc),
-            Self::StrImmUnOffset(i) => i.exec(cpu, old_pc),
-            Self::StrRegister(i) => i.exec(cpu, old_pc),
-            Self::StrhUnsigned(i) => i.exec(cpu, old_pc),
-            Self::LdpPostIndex(i) => i.exec(cpu, old_pc),
-            Self::LdpSignedOffset(i) => i.exec(cpu, old_pc),
-            Self::StrbImmUnOffset(i) => i.exec(cpu, old_pc),
-            Self::LdrImmUnOffset(i) => i.exec(cpu, old_pc),
-            Self::LdrImmPostIdx(i) => i.exec(cpu, old_pc),
-            Self::LdrImmPreIdx(i) => i.exec(cpu, old_pc),
-            Self::LdrReg(i) => i.exec(cpu, old_pc),
-            Self::LdrLit(i) => i.exec(cpu, old_pc),
-            Self::StpSignedOffset(i) => i.exec(cpu, old_pc),
-            Self::StpPreIndex(i) => i.exec(cpu, old_pc),
-            Self::Wfi(i) => i.exec(cpu, old_pc),
-            Self::Dmb(i) => i.exec(cpu, old_pc),
-            Self::Bti(i) => i.exec(cpu, old_pc),
-            Self::Sbfm(i) => i.exec(cpu, old_pc),
-            Self::Clz(i) => i.exec(cpu, old_pc),
-            Self::Rev(i) => i.exec(cpu, old_pc),
-        }
-    }
-}
+type DecodeFn = fn(u32) -> Instruction;
 
 #[derive(Clone, Copy)]
 pub struct InstDesc {
@@ -168,6 +114,8 @@ pub struct InstDesc {
     pub value: u32,
     pub decode: DecodeFn,
 }
+
+static TABLES: OnceLock<Tables> = OnceLock::new();
 
 pub const DESCR: &[InstDesc] = &sort_by_specificity([
     Tlbi::TLBI,
@@ -233,6 +181,7 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     Lsrv::LSRV,
     Clz::CLZ,
     Rev::REV,
+    Ldur::LDUR,
 ]);
 
 const fn sort_by_specificity<const N: usize>(mut arr: [InstDesc; N]) -> [InstDesc; N] {

@@ -63,7 +63,7 @@ pub fn instruction_ldr_imm_base(
         address = cpu.x_read(n as usize, 64);
     }
     if !postindex {
-        address += offset;
+        address = address.wrapping_add(offset);
     }
     let data = if wb_unknown {
         panic!("Unpredictable");
@@ -74,7 +74,7 @@ pub fn instruction_ldr_imm_base(
 
     if wback {
         if postindex {
-            address += offset;
+            address = address.wrapping_add(offset);
         }
         if n == SP_REGISTER as u8 {
             cpu.sp_write(address);
@@ -232,7 +232,7 @@ pub fn instruction_ldr_register(
         address = cpu.x_read(n as usize, 64);
     }
 
-    address += offset;
+    address = address.wrapping_add(offset);
 
     let (_, data) = cpu.bus.read_memory(address as usize, (datasize / 8) as usize);
     let is_32b = reg_size == 32;
@@ -312,7 +312,7 @@ pub fn instruction_str_imm_un_off(
         address = cpu.x_read(n as usize, 64);
     }
     if !postindex {
-        address += offset;
+        address = address.wrapping_add(offset);
     }
 
     let data =
@@ -355,7 +355,7 @@ pub fn instruction_strb_imm_un_off(
         address = cpu.x_read(n as usize, 64);
     }
     if !postindex {
-        address += offset;
+        address = address.wrapping_add(offset);
     }
 
     let data = if rt_unknown { panic!("Unpredictable") } else { cpu.x_read(t as usize, 8) };
@@ -396,7 +396,7 @@ pub fn instruction_str_register(
     } else {
         address = cpu.x_read(n as usize, 64);
     }
-    address += offset;
+    address = address.wrapping_add(offset);
 
     cpu.bus.write_memory(address as usize, (datasize / 8).into(), cpu.x_read(t.into(), datasize));
 }
