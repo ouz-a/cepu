@@ -8,9 +8,7 @@ use crate::{
     cpu::Cpu,
     imm_instr::{AddImmediate, Movk, Movn, Movz, SubImmediate, Subs},
     load_store_instr::{
-        LdpPostIndex, LdpSignedOffset, LdrImmPostIdx, LdrImmPreIdx, LdrImmUnOffset, LdrLit, LdrReg,
-        Ldur, StpPreIndex, StpSignedOffset, StrImmUnOffset, StrRegister, StrbImmUnOffset,
-        StrhUnsigned,
+        LdpPostIndex, LdpSignedOffset, LdrImmPostIdx, LdrImmPreIdx, LdrImmUnOffset, LdrLit, LdrReg, LdrbUnsignedOff, Ldur, StpPreIndex, StpSignedOffset, StrImmUnOffset, StrRegister, StrbImmUnOffset, StrhUnsigned
     },
     register_instr::{
         AddShiftedReg, AddsShiftedReg, Adrp, AndImmediate, AndShiftedRegister, AndsImmediate,
@@ -104,6 +102,7 @@ define_instructions!(
     Sbfm(Sbfm),
     Clz(Clz),
     LdpSignedOffset(LdpSignedOffset),
+    LdrbUnsignedOff(LdrbUnsignedOff),
 );
 
 type DecodeFn = fn(u32) -> Instruction;
@@ -182,6 +181,7 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     Clz::CLZ,
     Rev::REV,
     Ldur::LDUR,
+    LdrbUnsignedOff::LDRB_UNSIGNED_OFF,
 ]);
 
 const fn sort_by_specificity<const N: usize>(mut arr: [InstDesc; N]) -> [InstDesc; N] {

@@ -554,3 +554,35 @@ impl Ldur {
         decode: Self::decode,
     };
 }
+
+
+/// Load register byte (immediate)
+#[derive(Debug, Clone, Copy)]
+pub struct LdrbUnsignedOff {
+    imm12: u16,
+    rn: u8,
+    rt: u8,
+}
+
+impl LdrbUnsignedOff {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let offset = self.imm12 as u64;
+
+        let mut address =
+            if self.rn == 31 { cpu.sp_read() } else { cpu.x_read(self.rn.into(), 64) };
+        address = address.wrapping_add(offset);
+        let data = cpu.mmu.read_memory(address as usize, 1);
+        cpu.x_write(self.rt.into(), zero_extend(data.1, 32), true);
+    }
+    pub const fn decode(word: u32) -> Instruction {
+        let imm12 = get_bits_ct!(word, 10, 12) as u16;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rt = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::LdrbUnsignedOff(Self {  imm12, rn, rt })
+    }
+    pub const LDRB_UNSIGNED_OFF: InstDesc = InstDesc {
+        mask: 0b1111_1111_1100_0000_0000_0000_0000_0000,
+        value: 0b0011_1001_0100_0000_0000_0000_0000_0000,
+        decode: Self::decode,
+    };
+}
