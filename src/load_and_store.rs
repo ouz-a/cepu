@@ -70,7 +70,6 @@ pub fn instruction_ldr_imm_base(
     } else {
         cpu.mmu.read_memory(address as usize, datasize / 8)
     };
-    println!("  LDR: X{} = mem[{:#x}] = {:#x} (size={})", t, address, data.1, datasize);
     cpu.x_write(t as usize, data.1, datasize == 32);
 
     if wback {

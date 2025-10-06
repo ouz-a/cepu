@@ -1,13 +1,15 @@
+use std::ops::Not;
+
 use crate::{
     branch::{
-        instruction_bl, instruction_branch, instruction_bunc, instruction_cbnz, instruction_cbz,
-        instruction_ccmpi, instruction_eret, instruction_msr_imm, instruction_ret,
+        condition_holds, instruction_bl, instruction_branch, instruction_bunc, instruction_cbnz,
+        instruction_cbz, instruction_ccmpi, instruction_eret, instruction_msr_imm, instruction_ret,
         instruction_tbnz, instruction_tbz,
     },
     cpu::{Cpu, ExceptionLevel, PstateField},
     get_bits_ct,
     instruction::{InstDesc, Instruction},
-    utils::{sign_extend, zero_extend},
+    utils::{bits_get, sign_extend, zero_extend},
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -422,6 +424,79 @@ impl Bti {
     pub const BTI: InstDesc = InstDesc {
         mask: 0b1111_1111_1111_1111_1111_1111_0011_1111,
         value: 0b1101_0101_0000_0011_0010_0100_0001_1111,
+        decode: Self::decode,
+    };
+}
+
+/// Conditional select invert
+#[derive(Debug, Clone, Copy)]
+pub struct Csinv {
+    pub sf: bool,
+    pub rm: u8,
+    pub cond: u8,
+    pub rn: u8,
+    pub rd: u8,
+}
+
+impl Csinv {
+    pub fn exec(self, cpu: &mut Cpu, _: u64) {
+        let datasize = if self.sf { 64 } else { 32 };
+        let result = if condition_holds(cpu, self.cond) {
+            cpu.x_read(self.rn.into(), datasize)
+        } else {
+            let not = cpu.x_read(self.rm.into(), datasize).not();
+            bits_get(not, 0, datasize)
+        };
+        cpu.x_write(self.rd.into(), result, self.sf);
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let sf = get_bits_ct!(word, 31, 1) == 1;
+        let rm = get_bits_ct!(word, 16, 5) as u8;
+        let cond = get_bits_ct!(word, 12, 4) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rd = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::Csinv(Self { sf, rm, cond, rn, rd })
+    }
+    pub const CSINV: InstDesc = InstDesc {
+        mask: 0b0111_1111_1110_0000_0000_1100_0000_0000,
+        value: 0b0101_1010_1000_0000_0000_0000_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+/// Conditional select increment
+#[derive(Debug, Clone, Copy)]
+pub struct Csinc {
+    pub sf: bool,
+    pub rm: u8,
+    pub cond: u8,
+    pub rn: u8,
+    pub rd: u8,
+}
+
+impl Csinc {
+    pub fn exec(self, cpu: &mut Cpu, _: u64) {
+        let datasize = if self.sf { 64 } else { 32 };
+        let result = if condition_holds(cpu, self.cond) {
+            cpu.x_read(self.rn.into(), datasize)
+        } else {
+            cpu.x_read(self.rm.into(), datasize).not()
+        };
+        cpu.x_write(self.rd.into(), result, self.sf);
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let sf = get_bits_ct!(word, 31, 1) == 1;
+        let rm = get_bits_ct!(word, 16, 5) as u8;
+        let cond = get_bits_ct!(word, 12, 4) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rd = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::Csinc(Self { sf, rm, cond, rn, rd })
+    }
+    pub const CSINC: InstDesc = InstDesc {
+        mask: 0b0111_1111_1110_0000_0000_1100_0000_0000,
+        value: 0b0001_1010_1000_0000_0000_0100_0000_0000,
         decode: Self::decode,
     };
 }
