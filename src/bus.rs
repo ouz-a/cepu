@@ -7,7 +7,7 @@ pub const RAM_RANGE_END: usize = RAM_RANGE_BEG + RAM_SIZE - 1;
 pub const UART_RANGE_BEG: usize = 0x9000_0000;
 pub const UART_RANGE_END: usize = UART_RANGE_BEG + 4096;
 
-#[derive(Default, Clone, Debug)]
+#[derive(Default, Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Bus {
     pub uart: Uart,
 }
@@ -18,7 +18,7 @@ impl Bus {
             RAM_RANGE_BEG..=RAM_RANGE_END => Bus::read_memory_impl(address, size),
             UART_RANGE_BEG..=UART_RANGE_END => self.uart.read((address - UART_RANGE_BEG) as u8),
             _ => {
-                panic!("Out of bounds memory access! Range {address:x}")
+                panic!("Out of bounds memory read! Range {address:x}")
             }
         }
     }
@@ -31,7 +31,7 @@ impl Bus {
                 self.uart.write((address - UART_RANGE_BEG) as u8, value, size)
             }
             _ => {
-                panic!("Out of bounds memory access! Range {address:x}")
+                panic!("Out of bounds memory write! Range {address:x}")
             }
         }
     }

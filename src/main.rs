@@ -23,6 +23,7 @@ pub mod instruction;
 pub mod load_and_store;
 pub mod load_store_instr;
 pub mod memory;
+pub mod mmu;
 pub mod register_instr;
 pub mod utils;
 
@@ -37,7 +38,12 @@ pub fn run_block(cpu: &mut Cpu) {
             cpu.handle_devices();
             cpu.handle_interrupts(&mut pc);
             let old_pc = pc;
-            let word = read_32(old_pc as usize);
+            let word = if cpu.mmu.enabled {
+                let pa = cpu.mmu.read_memory(old_pc as usize, 4).1;
+                read_32(pa.try_into().unwrap())
+            } else {
+                read_32(old_pc as usize)
+            };
             pc = pc.wrapping_add(INSTRUCTION_SIZE);
             let dec = decode(word);
             println!("Instruction is {dec:?} raw: {:08X}", word.to_be());

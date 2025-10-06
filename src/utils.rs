@@ -9,6 +9,18 @@ macro_rules! get_bits_ct {
     }};
 }
 
+/// I find these bit operations always confusing
+///
+/// Example: let b = `0b1011_1111_1111_1110_...`
+///
+/// If you wanted to get top `16`s bits
+/// You need to `64` - `48`
+///
+/// Thus:
+/// start: `48`
+/// len: `16`
+///
+/// you would get: `0b1011_1111_1111_1110`
 #[inline(always)]
 pub fn bits_get(val: u64, start: u8, len: u8) -> u64 {
     debug_assert!((start as u16 + len as u16) <= 64);
@@ -20,6 +32,12 @@ pub fn bits_get(val: u64, start: u8, len: u8) -> u64 {
     let mask = if len == 64 { u64::MAX } else { (1u64 << len) - 1 };
 
     (val >> start) & mask
+}
+
+/// Gets bits then shifts them to left by `start` amount
+/// This has the same effect as masking value
+pub fn bits_get_in_place(val: u64, start: u8, len: u8) -> u64 {
+    bits_get(val, start, len) << start
 }
 
 #[inline]

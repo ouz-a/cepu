@@ -8,7 +8,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use crate::{bus::Bus, get_bits_ct, utils::align};
+use crate::{get_bits_ct, mmu::Mmu, utils::align};
 pub const MEM_TOP: usize = crate::memory::MEMORY_SIZE;
 
 static START: OnceLock<Instant> = OnceLock::new();
@@ -94,7 +94,7 @@ pub struct Cpu {
     sp_el3: u64,
 
     /// System Control Register EL1
-    sctlr_el1: u64,
+    pub sctlr_el1: u64,
     /// System Control Register EL2
     _sctlr_el2: u64,
     /// System Control Register EL3
@@ -142,10 +142,6 @@ pub struct Cpu {
     pub midr_el1: u64,
 
     mair_el1: u64,
-    tcr_el1: u64,
-
-    ttbr0_el1: u64,
-    ttbr1_el1: u64,
 
     id_aa64mmfr3_el1: u64,
     id_aa64isar0_el1: u64,
@@ -159,7 +155,7 @@ pub struct Cpu {
     pub pending_irq: AtomicU32,
     pub sleeping: AtomicBool,
 
-    pub bus: Bus,
+    pub mmu: Mmu,
 }
 
 impl Cpu {
@@ -192,10 +188,10 @@ impl Cpu {
     }
 
     pub fn handle_devices(&mut self) {
-        if self.bus.uart.dr != 0 {
-            stdout().write_all(&[self.bus.uart.dr]).unwrap();
+        if self.mmu.bus.uart.dr != 0 {
+            stdout().write_all(&[self.mmu.bus.uart.dr]).unwrap();
             stdout().flush().unwrap();
-            self.bus.uart.dr = 0;
+            self.mmu.bus.uart.dr = 0;
         }
     }
 
@@ -393,6 +389,11 @@ impl Cpu {
             }
             MsrRegisters::SctlrEl1 => {
                 self.sctlr_el1 = self.x_read(t.into(), 64);
+                if self.sctlr_el1 & 0b1 == 1 {
+                    self.mmu.enabled = true;
+                } else if self.sctlr_el1 & 0b1 != 0{
+                    self.mmu.enabled = false;
+                }
             }
             MsrRegisters::SpsrEl1 => {
                 self.spsr_el1 = self.x_read(t.into(), 64);
@@ -410,13 +411,13 @@ impl Cpu {
                 self.mair_el1 = self.x_read(t.into(), 64);
             }
             MsrRegisters::TcrEl1 => {
-                self.tcr_el1 = self.x_read(t.into(), 64);
+                self.mmu.tcr_el1 = self.x_read(t.into(), 64);
             }
             MsrRegisters::Ttbr0El1 => {
-                self.ttbr0_el1 = self.x_read(t.into(), 64);
+                self.mmu.ttbr0_el1 = self.x_read(t.into(), 64);
             }
             MsrRegisters::Ttbr1El1 => {
-                self.ttbr1_el1 = self.x_read(t.into(), 64);
+                self.mmu.ttbr1_el1 = self.x_read(t.into(), 64);
             }
         }
     }
@@ -513,6 +514,9 @@ impl Cpu {
             }
             MrsRegisters::DczidEl0 => {
                 self.x_write(t.into(), self.dczid_el0, false);
+            }
+            MrsRegisters::TcrEl1 => {
+                self.x_write(t.into(), self.mmu.tcr_el1, false);
             }
         }
     }
@@ -860,6 +864,7 @@ mrs_enum! {
     IdAa64pfr0El1 = 12884902912,
     MidrEl1 = 12884901888,
     DczidEl0 = 12935233543,
+    TcrEl1 = 12885032962,
 
     IdAa64mmfr0El1 = 12884903680,
     IdAa64mmfr1El1 = 12884903681,

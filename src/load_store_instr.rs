@@ -538,9 +538,7 @@ impl Ldur {
         let mut address =
             if self.rn == 31 { cpu.sp_read() } else { cpu.x_read(self.rn.into(), 64) };
         address = address.wrapping_add(offset);
-        println!("address is {address}");
-        let data = cpu.bus.read_memory(address as usize, datasize / 8);
-        println!("data is ?? {}",zero_extend(data.1, regsize));
+        let data = cpu.mmu.read_memory(address as usize, datasize / 8);
         cpu.x_write(self.rt.into(), zero_extend(data.1, regsize), datasize == 32);
     }
     pub const fn decode(word: u32) -> Instruction {

@@ -2,7 +2,7 @@ use std::io::{self, Write};
 
 use crate::memory::PhyMemStatus;
 
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct FlatRegister {
     /// Clear to send(Modem related, not used)
     ///
@@ -101,7 +101,7 @@ impl FlatRegister {
 /// PL011
 ///
 /// https://developer.arm.com/documentation/ddi0183/latest/
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Uart {
     /// Data Register, offset: 0x00
     pub dr: u8,
