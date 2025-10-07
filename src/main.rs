@@ -39,8 +39,7 @@ pub fn run_block(cpu: &mut Cpu) {
             cpu.handle_interrupts(&mut pc);
             let old_pc = pc;
             let word = if cpu.mmu.enabled {
-                let pa = cpu.mmu.read_memory(old_pc as usize, 4).1;
-                read_32(pa.try_into().unwrap())
+                cpu.mmu.read_memory(old_pc as usize, 4).1 as u32
             } else {
                 read_32(old_pc as usize)
             };

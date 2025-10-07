@@ -2,9 +2,9 @@ use std::ops::Not;
 
 use crate::{
     branch::{
-        condition_holds, instruction_bl, instruction_branch, instruction_bunc, instruction_cbnz,
-        instruction_cbz, instruction_ccmpi, instruction_eret, instruction_msr_imm, instruction_ret,
-        instruction_tbnz, instruction_tbz,
+        branch_to, condition_holds, instruction_bl, instruction_branch, instruction_bunc,
+        instruction_cbnz, instruction_cbz, instruction_ccmpi, instruction_eret,
+        instruction_msr_imm, instruction_ret, instruction_tbnz, instruction_tbz,
     },
     cpu::{Cpu, ExceptionLevel, PstateField},
     get_bits_ct,
@@ -481,7 +481,7 @@ impl Csinc {
         let result = if condition_holds(cpu, self.cond) {
             cpu.x_read(self.rn.into(), datasize)
         } else {
-            cpu.x_read(self.rm.into(), datasize).not()
+            cpu.x_read(self.rm.into(), datasize) + 1
         };
         cpu.x_write(self.rd.into(), result, self.sf);
     }
@@ -497,6 +497,31 @@ impl Csinc {
     pub const CSINC: InstDesc = InstDesc {
         mask: 0b0111_1111_1110_0000_0000_1100_0000_0000,
         value: 0b0001_1010_1000_0000_0000_0100_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+/// Branch with link to register
+#[derive(Debug, Clone, Copy)]
+pub struct Blr {
+    rn: u8,
+}
+
+impl Blr {
+    pub fn exec(self, cpu: &mut Cpu, old_pc: u64) {
+        let target = cpu.x_read(self.rn.into(), 64);
+        cpu.x_write(30, old_pc.wrapping_add(4), false);
+        branch_to(cpu, target, false, old_pc);
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        Instruction::Blr(Self { rn })
+    }
+
+    pub const BLR: InstDesc = InstDesc {
+        mask: 0b1111_1111_1111_1111_1111_1100_0001_1111,
+        value: 0b1101_0110_0011_1111_0000_0000_0000_0000,
         decode: Self::decode,
     };
 }

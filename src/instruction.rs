@@ -2,12 +2,12 @@ use std::sync::OnceLock;
 
 use crate::{
     branch_exc_sys_instr::{
-        Bcond, Bl, Branch, Bti, Cbnz, Cbz, Ccmpi, Csinc, Csinv, Dmb, Eret, Mrs, MsrImm, MsrReg, Ret, Tbnz, Tbz, Wfi
+        Bcond, Bl, Blr, Branch, Bti, Cbnz, Cbz, Ccmpi, Csinc, Csinv, Dmb, Eret, Mrs, MsrImm, MsrReg, Ret, Tbnz, Tbz, Wfi
     },
     cpu::Cpu,
     imm_instr::{AddImmediate, Movk, Movn, Movz, SubImmediate, Subs},
     load_store_instr::{
-        LdpPostIndex, LdpSignedOffset, LdrImmPostIdx, LdrImmPreIdx, LdrImmUnOffset, LdrLit, LdrReg, LdrbUnsignedOff, Ldur, StpPreIndex, StpSignedOffset, StrImmUnOffset, StrRegister, StrbImmUnOffset, StrhUnsigned
+        LdpPostIndex, LdpSignedOffset, LdrImmPostIdx, LdrImmPreIdx, LdrImmUnOffset, LdrLit, LdrReg, LdrbUnsignedOff, Ldur, StpPreIndex, StpSignedOffset, StrImmUnOffset, StrRegister, StrbImmUnOffset, StrhUnsigned, Stur
     },
     register_instr::{
         AddShiftedReg, AddsShiftedReg, Adrp, AndImmediate, AndShiftedRegister, AndsImmediate,
@@ -92,6 +92,7 @@ define_instructions!(
     LdrReg(LdrReg),
     LdrLit(LdrLit),
     Ldur(Ldur),
+    Stur(Stur),
     StpSignedOffset(StpSignedOffset),
     StpPreIndex(StpPreIndex),
     LdpPostIndex(LdpPostIndex),
@@ -104,6 +105,7 @@ define_instructions!(
     LdrbUnsignedOff(LdrbUnsignedOff),
     Csinv(Csinv),
     Csinc(Csinc),
+    Blr(Blr),
 );
 
 type DecodeFn = fn(u32) -> Instruction;
@@ -182,9 +184,11 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     Clz::CLZ,
     Rev::REV,
     Ldur::LDUR,
+    Stur::STUR,
     LdrbUnsignedOff::LDRB_UNSIGNED_OFF,
     Csinv::CSINV,
     Csinc::CSINC,
+    Blr::BLR,
 ]);
 
 const fn sort_by_specificity<const N: usize>(mut arr: [InstDesc; N]) -> [InstDesc; N] {

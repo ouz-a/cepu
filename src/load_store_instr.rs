@@ -555,6 +555,39 @@ impl Ldur {
     };
 }
 
+/// Store register (unscaled)
+#[derive(Debug, Clone, Copy)]
+pub struct Stur {
+    size: u8,
+    imm9: u8,
+    rn: u8,
+    rt: u8,
+}
+
+impl Stur {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let offset = sign_extend(self.imm9.into(), 9);
+        let datasize = 8 << self.size;
+
+        let mut address =
+            if self.rn == 31 { cpu.sp_read() } else { cpu.x_read(self.rn.into(), 64) };
+        address = address.wrapping_add(offset);
+        let val = cpu.x_read(self.rt.into(), datasize);
+        cpu.mmu.write_memory(address as usize, (datasize / 8).into(), val);
+    }
+    pub const fn decode(word: u32) -> Instruction {
+        let size = get_bits_ct!(word, 30, 2) as u8;
+        let imm9 = get_bits_ct!(word, 12, 9) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rt = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::Stur(Self { size, imm9, rn, rt })
+    }
+    pub const STUR: InstDesc = InstDesc {
+        mask: 0b1011_1111_1110_0000_0000_1100_0000_0000,
+        value: 0b1011_1000_0000_0000_0000_0000_0000_0000,
+        decode: Self::decode,
+    };
+}
 
 /// Load register byte (immediate)
 #[derive(Debug, Clone, Copy)]
@@ -578,7 +611,7 @@ impl LdrbUnsignedOff {
         let imm12 = get_bits_ct!(word, 10, 12) as u16;
         let rn = get_bits_ct!(word, 5, 5) as u8;
         let rt = get_bits_ct!(word, 0, 5) as u8;
-        Instruction::LdrbUnsignedOff(Self {  imm12, rn, rt })
+        Instruction::LdrbUnsignedOff(Self { imm12, rn, rt })
     }
     pub const LDRB_UNSIGNED_OFF: InstDesc = InstDesc {
         mask: 0b1111_1111_1100_0000_0000_0000_0000_0000,

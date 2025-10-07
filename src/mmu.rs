@@ -67,7 +67,13 @@ impl Mmu {
                 return final_physical_addr as usize;
             }
             match DescriptorKind::from(descriptor) {
-                DescriptorKind::Invalid => panic!("Invalid memory"),
+                DescriptorKind::Invalid => {
+                    eprintln!(
+                        "Page fault at VA: 0x{:x}, entry_idx: {}, descriptor: 0x{:x}",
+                        va, entry_idx, descriptor
+                    );
+                    panic!("Invalid memory")
+                }
                 DescriptorKind::Block => {
                     let block_base = bits_get_in_place(descriptor, entry_idx, descript_bits);
                     let offset = bits_get(va.try_into().unwrap(), 0, entry_idx);
