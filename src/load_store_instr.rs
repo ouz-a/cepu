@@ -524,7 +524,7 @@ impl LdpSignedOffset {
 #[derive(Debug, Clone, Copy)]
 pub struct Ldur {
     size: u8,
-    imm9: u8,
+    imm9: u16,
     rn: u8,
     rt: u8,
 }
@@ -539,11 +539,14 @@ impl Ldur {
             if self.rn == 31 { cpu.sp_read() } else { cpu.x_read(self.rn.into(), 64) };
         address = address.wrapping_add(offset);
         let data = cpu.mmu.read_memory(address as usize, datasize / 8);
+        if cpu.mmu.faulted {
+            return;
+        }
         cpu.x_write(self.rt.into(), zero_extend(data.1, regsize), datasize == 32);
     }
     pub const fn decode(word: u32) -> Instruction {
         let size = get_bits_ct!(word, 30, 2) as u8;
-        let imm9 = get_bits_ct!(word, 12, 9) as u8;
+        let imm9 = get_bits_ct!(word, 12, 9) as u16;
         let rn = get_bits_ct!(word, 5, 5) as u8;
         let rt = get_bits_ct!(word, 0, 5) as u8;
         Instruction::Ldur(Self { size, imm9, rn, rt })
@@ -559,7 +562,7 @@ impl Ldur {
 #[derive(Debug, Clone, Copy)]
 pub struct Stur {
     size: u8,
-    imm9: u8,
+    imm9: u16,
     rn: u8,
     rt: u8,
 }
@@ -574,10 +577,13 @@ impl Stur {
         address = address.wrapping_add(offset);
         let val = cpu.x_read(self.rt.into(), datasize);
         cpu.mmu.write_memory(address as usize, (datasize / 8).into(), val);
+        if cpu.mmu.faulted {
+            return;
+        }
     }
     pub const fn decode(word: u32) -> Instruction {
         let size = get_bits_ct!(word, 30, 2) as u8;
-        let imm9 = get_bits_ct!(word, 12, 9) as u8;
+        let imm9 = get_bits_ct!(word, 12, 9) as u16;
         let rn = get_bits_ct!(word, 5, 5) as u8;
         let rt = get_bits_ct!(word, 0, 5) as u8;
         Instruction::Stur(Self { size, imm9, rn, rt })
@@ -605,6 +611,9 @@ impl LdrbUnsignedOff {
             if self.rn == 31 { cpu.sp_read() } else { cpu.x_read(self.rn.into(), 64) };
         address = address.wrapping_add(offset);
         let data = cpu.mmu.read_memory(address as usize, 1);
+        if cpu.mmu.faulted {
+            return;
+        }
         cpu.x_write(self.rt.into(), zero_extend(data.1, 32), true);
     }
     pub const fn decode(word: u32) -> Instruction {

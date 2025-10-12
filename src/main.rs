@@ -43,10 +43,18 @@ pub fn run_block(cpu: &mut Cpu) {
             } else {
                 read_32(old_pc as usize)
             };
+            if cpu.mmu.faulted {
+                cpu.handle_instruction_abort(&mut pc);
+                continue;
+            }
             pc = pc.wrapping_add(INSTRUCTION_SIZE);
             let dec = decode(word);
             println!("Instruction is {dec:?} raw: {:08X}", word.to_be());
             dec.exec(cpu, old_pc);
+            if cpu.mmu.faulted {
+                cpu.handle_data_abort(&mut pc);
+                continue;
+            }
             how_many += 1;
             println!("Executed {how_many} instructions");
 

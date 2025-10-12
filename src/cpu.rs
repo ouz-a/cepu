@@ -146,6 +146,9 @@ pub struct Cpu {
     id_aa64mmfr3_el1: u64,
     id_aa64isar0_el1: u64,
 
+    pub far_el1: u64,
+    pub esr_el1: u64,
+
     event_register: bool,
     pub pstate: PState,
     dczid_el0: u64,
@@ -162,28 +165,28 @@ impl Cpu {
     pub fn init() -> Self {
         let mut cpu = Self::default();
         cpu.pstate.sp = 1;
-        cpu.sp_el0 = 1024;
-        cpu.sp_el1 = 1024 * 2;
-        cpu.sp_el2 = 1024 * 3;
-        cpu.sp_el3 = 1024 * 4;
+
+        cpu.sp_el0 = 0x100000; // 1MB
+        cpu.sp_el1 = 0x10000000 - 0x10000; // 256MB - 64KB
+        cpu.sp_el2 = 0x10000000 - 0x20000; // 256MB - 128KB
+        cpu.sp_el3 = 0x10000000 - 0x30000; // 256MB - 192KB
+
+        // System identification registers
         cpu.id_aa64dfr0_el1 = 0x000f00f010101009;
         cpu.id_aa64pfr0_el1 = 0x22;
         cpu.midr_el1 = 0x00000000_000F0510;
         cpu.id_aa64mmfr0_el1 = 0x000000000F000020;
         cpu.id_aa64mmfr1_el1 = 0;
         cpu.id_aa64isar0_el1 = 0;
-        cpu.dczid_el0 = 0x14;
-
         cpu.id_aa64mmfr3_el1 = 0;
-
-        cpu.x[31] = cpu.sp_el0;
+        cpu.dczid_el0 = 0x14;
         cpu.ctr_el0 = 0x34448004;
+
+        // Boot at EL1 (kernel mode)
         cpu.pstate.current_el = ExceptionLevel::EL1;
 
-        // TODO: Use bitflags crate(?)
-        cpu.sctlr_el1 |= 1 << 1; // SCTLR_A
-        cpu.sctlr_el1 |= 1 << 2; // SCTLR_C
-        cpu.sctlr_el1 |= 1 << 12; // SCTLR_I 
+        // System Control Register - MMU off, caches configured for boot
+        cpu.sctlr_el1 = 0x00C50838;
         cpu
     }
 
@@ -197,6 +200,26 @@ impl Cpu {
 
     pub fn post_interrupt(&mut self, line: u32) -> u32 {
         self.pending_irq.fetch_or(1 << line, Ordering::Relaxed)
+    }
+
+    pub fn handle_data_abort(&mut self, old_pc: &mut u64) {
+        self.elr_el1 = *old_pc;
+        self.spsr_el1 = self.spsr_from_pstate();
+        self.far_el1 = self.mmu.fault_va.try_into().unwrap();
+        self.esr_el1 = (0x25u64 << 26) | (1u64 << 25) | (self.mmu.fault_level as u64 + 4);
+        self.pstate.daif_disable();
+        *old_pc = self.vbar_el1 + 0x200;
+        self.mmu.faulted = false;
+    }
+
+    pub fn handle_instruction_abort(&mut self, old_pc: &mut u64) {
+        self.elr_el1 = *old_pc;
+        self.spsr_el1 = self.spsr_from_pstate();
+        self.far_el1 = self.mmu.fault_va.try_into().unwrap();
+        self.esr_el1 = (0x21u64 << 26) | (1u64 << 25) | (self.mmu.fault_level as u64 + 4);
+        self.pstate.daif_disable();
+        *old_pc = self.vbar_el1 + 0x200;
+        self.mmu.faulted = false;
     }
 
     pub fn handle_interrupts(&mut self, next_pc: &mut u64) {
@@ -227,8 +250,7 @@ impl Cpu {
         self.pstate.current_el = target_el;
         self.pstate.set_to_exception();
 
-        // TODO: Fix the magic number
-        *next_pc = 0x280;
+        *next_pc = self.vbar_el1 + 0x280;
     }
 
     pub fn timer_device_tick(&mut self) {
@@ -391,7 +413,7 @@ impl Cpu {
                 self.sctlr_el1 = self.x_read(t.into(), 64);
                 if self.sctlr_el1 & 0b1 == 1 {
                     self.mmu.enabled = true;
-                } else if self.sctlr_el1 & 0b1 != 0{
+                } else if self.sctlr_el1 & 0b1 != 0 {
                     self.mmu.enabled = false;
                 }
             }

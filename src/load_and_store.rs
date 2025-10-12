@@ -70,6 +70,9 @@ pub fn instruction_ldr_imm_base(
     } else {
         cpu.mmu.read_memory(address as usize, datasize / 8)
     };
+    if cpu.mmu.faulted {
+        return;
+    }
     cpu.x_write(t as usize, data.1, datasize == 32);
 
     if wback {
@@ -122,7 +125,13 @@ pub fn instruction_ldp(
 
     let address2 = address + dbytes as u64;
     let data1 = cpu.mmu.read_memory(address as usize, dbytes.into());
+    if cpu.mmu.faulted {
+        return;
+    }
     let data2 = cpu.mmu.read_memory(address2 as usize, dbytes.into());
+    if cpu.mmu.faulted {
+        return;
+    }
     cpu.x_write(t.into(), data1.1, datasize == 32);
     cpu.x_write(t2.into(), data2.1, datasize == 32);
 
@@ -190,7 +199,13 @@ pub fn instruction_stp(
 
     let address2 = address + dbytes as u64;
     cpu.mmu.write_memory(address as usize, dbytes.into(), data1);
+    if cpu.mmu.faulted {
+        return;
+    }
     cpu.mmu.write_memory(address2 as usize, dbytes.into(), data2);
+    if cpu.mmu.faulted {
+        return;
+    }
 
     if wback {
         if post_index {
@@ -235,6 +250,9 @@ pub fn instruction_ldr_register(
     address = address.wrapping_add(offset);
 
     let (_, data) = cpu.mmu.read_memory(address as usize, (datasize / 8) as usize);
+    if cpu.mmu.faulted {
+        return;
+    }
     let is_32b = reg_size == 32;
     cpu.x_write(t as usize, data, is_32b);
 }
@@ -251,6 +269,9 @@ pub fn instruction_ldr_literal(cpu: &mut Cpu, t: u8, size: u8, offset: u64, _old
 
     let is_64b = size * 8 >= 64;
     let (_, word) = cpu.mmu.read_memory(address as usize, size as usize);
+    if cpu.mmu.faulted {
+        return;
+    }
     cpu.x_write(t as usize, word, !is_64b);
 }
 pub fn instruction_str_halfword_imm(
@@ -273,6 +294,9 @@ pub fn instruction_str_halfword_imm(
 
     let data = cpu.x_read(t.into(), 16);
     cpu.mmu.write_memory(address as usize, 2, data);
+    if cpu.mmu.faulted {
+        return;
+    }
     if wback {
         if postindex {
             address = address.wrapping_add(offset);
@@ -318,6 +342,9 @@ pub fn instruction_str_imm_un_off(
     let data =
         if rt_unknown { panic!("Unpredictable") } else { cpu.x_read(t as usize, datasize as u8) };
     cpu.mmu.write_memory(address as usize, datasize / 8, data);
+    if cpu.mmu.faulted {
+        return;
+    }
     if wback {
         if postindex {
             address = address.wrapping_add(offset);
@@ -360,6 +387,9 @@ pub fn instruction_strb_imm_un_off(
 
     let data = if rt_unknown { panic!("Unpredictable") } else { cpu.x_read(t as usize, 8) };
     cpu.mmu.write_memory(address as usize, 1, data);
+    if cpu.mmu.faulted {
+        return;
+    }
     if wback {
         if postindex {
             address = address.wrapping_add(offset);
@@ -398,11 +428,10 @@ pub fn instruction_str_register(
     }
     address = address.wrapping_add(offset);
 
-    cpu.mmu.write_memory(
-        address as usize,
-        (datasize / 8).into(),
-        cpu.x_read(t.into(), datasize),
-    );
+    cpu.mmu.write_memory(address as usize, (datasize / 8).into(), cpu.x_read(t.into(), datasize));
+    if cpu.mmu.faulted {
+        return;
+    }
 }
 
 #[inline(always)]

@@ -13,12 +13,20 @@ pub struct Mmu {
 
     pub ttbr0_el1: u64,
     pub ttbr1_el1: u64,
+
+    // Fault state
+    pub faulted: bool,
+    pub fault_va: usize,
+    pub fault_level: u8,
 }
 
 impl Mmu {
     pub fn read_memory(&mut self, address: usize, size: usize) -> (PhyMemStatus, u64) {
         if self.enabled {
             let pa = self.page_walk(address);
+            if self.faulted {
+                return (PhyMemStatus::default(), 0);
+            }
             self.bus.read_memory(pa, size)
         } else {
             self.bus.read_memory(address, size)
@@ -27,6 +35,9 @@ impl Mmu {
     pub fn write_memory(&mut self, address: usize, size: usize, value: u64) -> PhyMemStatus {
         if self.enabled {
             let pa = self.page_walk(address);
+            if self.faulted {
+                return PhyMemStatus::default();
+            }
             self.bus.write_memory(pa, size, value)
         } else {
             self.bus.write_memory(address, size, value)
@@ -50,7 +61,10 @@ impl Mmu {
         let entry = base_add + (bits_get(va as u64, 39, 9) * 8) as usize;
         let mut descriptor = self.bus.read_memory(entry, 8).1;
         if DescriptorKind::from(descriptor) == DescriptorKind::Invalid {
-            panic!("Invalid memory");
+            self.faulted = true;
+            self.fault_va = va;
+            self.fault_level = (entry_idx - 12) / 9;
+            return 0;
         }
 
         loop {
@@ -60,6 +74,12 @@ impl Mmu {
             let entry = table + (bits_get(va as u64, entry_idx, 9) * 8) as usize;
             descriptor = self.bus.read_memory(entry, 8).1;
             if entry_idx == 12 {
+                if DescriptorKind::from(descriptor) == DescriptorKind::Invalid {
+                    self.faulted = true;
+                    self.fault_va = va;
+                    self.fault_level = 3;
+                    return 0;
+                }
                 let page_addr = bits_get_in_place(descriptor, 12, 36);
 
                 let page_offset = bits_get(va.try_into().unwrap(), 0, entry_idx);
@@ -68,11 +88,10 @@ impl Mmu {
             }
             match DescriptorKind::from(descriptor) {
                 DescriptorKind::Invalid => {
-                    eprintln!(
-                        "Page fault at VA: 0x{:x}, entry_idx: {}, descriptor: 0x{:x}",
-                        va, entry_idx, descriptor
-                    );
-                    panic!("Invalid memory")
+                    self.faulted = true;
+                    self.fault_va = va;
+                    self.fault_level = (entry_idx - 12) / 9;
+                    return 0;
                 }
                 DescriptorKind::Block => {
                     let block_base = bits_get_in_place(descriptor, entry_idx, descript_bits);
