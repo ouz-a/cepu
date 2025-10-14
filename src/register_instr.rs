@@ -179,7 +179,7 @@ pub struct AddsImmediate {
 impl AddsImmediate {
     pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
         let datasize = if self.sf { 64 } else { 32 };
-        let imm = if self.sh { (self.imm12 as u32) << 12  } else { self.imm12 as u32 };
+        let imm = if self.sh { (self.imm12 as u32) << 12 } else { self.imm12 as u32 };
         let op1 = if self.rn == 31 { cpu.sp_read() } else { cpu.x_read(self.rn.into(), datasize) };
         let op2 = zero_extend(imm.into(), datasize);
 
@@ -1092,6 +1092,43 @@ impl Rev {
     pub const REV: InstDesc = InstDesc {
         mask: 0b0111_1111_1111_1111_1111_1000_0000_0000,
         value: 0b0101_1010_1100_0000_0000_1000_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct CcmpRegister {
+    pub sf: bool,
+    pub rm: u8,
+    pub cond: u8,
+    pub rn: u8,
+    pub nzcv: u8,
+}
+
+impl CcmpRegister {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let datasize = if self.sf { 64 } else { 32 };
+        let mut flags = self.nzcv;
+        if condition_holds(cpu, self.cond) {
+            let op1 = cpu.x_read(self.rn.into(), datasize);
+            let op2 = cpu.x_read(self.rm.into(), datasize);
+            flags = add_with_carry(op1, op2, 1).flag_to_bits();
+        }
+        cpu.pstate.set_flags_from_bits(flags);
+    }
+
+    pub fn decode(word: u32) -> Instruction {
+        let sf = get_bits_ct!(word, 31, 1) == 1;
+        let rm = get_bits_ct!(word, 16, 5) as u8;
+        let cond = get_bits_ct!(word, 12, 4) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let nzcv = get_bits_ct!(word, 0, 4) as u8;
+        Instruction::CcmpRegister(Self { sf, rm, cond, rn, nzcv })
+    }
+
+    pub const CCMP_REGISTER: InstDesc = InstDesc {
+        mask: 0b0111_1111_1110_0000_0000_1100_0001_0000,
+        value: 0b0111_1010_0100_0000_0000_0000_0000_0000,
         decode: Self::decode,
     };
 }
