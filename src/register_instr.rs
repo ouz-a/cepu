@@ -717,6 +717,41 @@ impl Csel {
     };
 }
 
+#[derive(Clone, Copy, Debug)]
+pub struct Csneg {
+    pub sf: bool,
+    pub rm: u8,
+    pub cond: u8,
+    pub rn: u8,
+    pub rd: u8,
+}
+
+impl Csneg {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let width = if self.sf { 64 } else { 32 };
+        let result = if condition_holds(cpu, self.cond) {
+            cpu.x_read(self.rn.into(), width)
+        } else {
+            let not = cpu.x_read(self.rm.into(), width).not();
+            bits_get(not, 0, width) + 1
+        };
+        cpu.x_write(self.rd.into(), result, !self.sf);
+    }
+    pub const fn decode(word: u32) -> Instruction {
+        let sf = get_bits_ct!(word, 31, 1) == 1;
+        let rm = get_bits_ct!(word, 16, 5) as u8;
+        let cond = get_bits_ct!(word, 12, 4) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rd = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::Csneg(Self { sf, rm, cond, rn, rd })
+    }
+    pub const CSNEG: InstDesc = InstDesc {
+        mask: 0b0111_1111_1110_0000_0000_1100_0000_0000,
+        value: 0b0101_1010_1000_0000_0000_0100_0000_0000,
+        decode: Self::decode,
+    };
+}
+
 /// Form PC-relative address to 4KB page
 #[derive(Clone, Copy, Debug)]
 pub struct Adrp {
