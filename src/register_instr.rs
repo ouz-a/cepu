@@ -390,7 +390,7 @@ impl AndsImmediate {
         let imms = get_bits_ct!(word, 10, 6) as u8;
         let rn = get_bits_ct!(word, 5, 5) as u8;
         let rd = get_bits_ct!(word, 0, 5) as u8;
-        if !sf && !n {
+        if !sf && n {
             panic!("Undefined, end of decode");
         }
         Instruction::AndsImmediate(Self { sf, n, immr, imms, rn, rd })
@@ -428,7 +428,7 @@ impl OrrImmediate {
         let imms = get_bits_ct!(word, 10, 6) as u8;
         let rn = get_bits_ct!(word, 5, 5) as u8;
         let rd = get_bits_ct!(word, 0, 5) as u8;
-        if !sf && !n {
+        if !sf && n {
             panic!("Undefined, end of decode");
         }
         Instruction::OrrImmediate(Self { sf, n, immr, imms, rn, rd })
@@ -740,7 +740,7 @@ impl Ubfx {
         let imms = get_bits_ct!(word, 10, 6) as u8;
         let rn = get_bits_ct!(word, 5, 5) as u8;
         let rd = get_bits_ct!(word, 0, 5) as u8;
-        if !sf && !n {
+        if sf && !n {
             panic!("Undefined, end of decode");
         }
         Instruction::Ubfx(Self { sf, n, immr, imms, rn, rd })
