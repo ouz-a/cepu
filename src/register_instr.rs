@@ -726,7 +726,7 @@ pub struct Ubfx {
 impl Ubfx {
     pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
         let width = if self.sf { 64 } else { 32 };
-        let (wmask, tmask) = decode_bit_mask(self.n, self.imms, self.immr, true, width);
+        let (wmask, tmask) = decode_bit_mask(self.n, self.imms, self.immr, false, width);
         let src = cpu.x_read(self.rn.into(), width);
         let bot = shift_ror(src, self.immr) & wmask;
 
