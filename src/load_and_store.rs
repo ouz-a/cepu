@@ -429,8 +429,7 @@ pub fn instruction_str_register(
     address = address.wrapping_add(offset);
 
     cpu.mmu.write_memory(address as usize, (datasize / 8).into(), cpu.x_read(t.into(), datasize));
-    if cpu.mmu.faulted {
-    }
+    if cpu.mmu.faulted {}
 }
 
 #[inline(always)]

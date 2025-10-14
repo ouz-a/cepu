@@ -168,6 +168,43 @@ impl AddsShiftedReg {
 }
 
 #[derive(Clone, Copy, Debug)]
+pub struct AddsImmediate {
+    pub sf: bool,
+    pub sh: bool,
+    pub imm12: u16,
+    pub rn: u8,
+    pub rd: u8,
+}
+
+impl AddsImmediate {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let datasize = if self.sf { 64 } else { 32 };
+        let imm = if self.sh { (self.imm12 as u32) << 12  } else { self.imm12 as u32 };
+        let op1 = if self.rn == 31 { cpu.sp_read() } else { cpu.x_read(self.rn.into(), datasize) };
+        let op2 = zero_extend(imm.into(), datasize);
+
+        let res = add_with_carry(op1, op2, 0);
+        cpu.x_write(self.rd.into(), res.result, !self.sf);
+        cpu.pstate.set_flags_from_bits(res.flag_to_bits());
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let sf = get_bits_ct!(word, 31, 1) == 1;
+        let sh = get_bits_ct!(word, 22, 1) == 1;
+        let imm12 = get_bits_ct!(word, 10, 12) as u16;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rd = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::AddsImmediate(Self { sf, sh, imm12, rn, rd })
+    }
+
+    pub const ADDS_IMMEDIATE: InstDesc = InstDesc {
+        mask: 0b0111_1111_1000_0000_0000_0000_0000_0000,
+        value: 0b0011_0001_0000_0000_0000_0000_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+#[derive(Clone, Copy, Debug)]
 pub struct AddShiftedReg {
     pub sf: bool,
     pub shift: ShiftTypes,
@@ -225,11 +262,8 @@ pub struct AddExtendedRegister {
 
 impl AddExtendedRegister {
     pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
-        match self.imm3 {
-            0b101..=0b111 => {
-                panic!("UNDEFINED")
-            }
-            _ => (),
+        if let 0b101..=0b111 = self.imm3 {
+            panic!("UNDEFINED")
         }
         let datasize = if self.sf { 64 } else { 32 };
         let extend_type = ExtendType::from_u8(self.option);

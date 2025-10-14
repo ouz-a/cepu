@@ -577,8 +577,7 @@ impl Stur {
         address = address.wrapping_add(offset);
         let val = cpu.x_read(self.rt.into(), datasize);
         cpu.mmu.write_memory(address as usize, (datasize / 8).into(), val);
-        if cpu.mmu.faulted {
-        }
+        if cpu.mmu.faulted {}
     }
     pub const fn decode(word: u32) -> Instruction {
         let size = get_bits_ct!(word, 30, 2) as u8;
