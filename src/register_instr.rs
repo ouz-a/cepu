@@ -1111,7 +1111,7 @@ impl CcmpRegister {
         let mut flags = self.nzcv;
         if condition_holds(cpu, self.cond) {
             let op1 = cpu.x_read(self.rn.into(), datasize);
-            let op2 = cpu.x_read(self.rm.into(), datasize);
+            let op2 = cpu.x_read(self.rm.into(), datasize).not();
             flags = add_with_carry(op1, op2, 1).flag_to_bits();
         }
         cpu.pstate.set_flags_from_bits(flags);
