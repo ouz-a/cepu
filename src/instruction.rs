@@ -9,8 +9,8 @@ use crate::{
     imm_instr::{AddImmediate, Movk, Movn, Movz, SubImmediate, Subs},
     load_store_instr::{
         LdpPostIndex, LdpSignedOffset, LdrImmPostIdx, LdrImmPreIdx, LdrImmUnOffset, LdrLit, LdrReg,
-        LdrbUnsignedOff, Ldur, StpPreIndex, StpSignedOffset, StrImmUnOffset, StrRegister,
-        StrbImmUnOffset, StrhUnsigned, Stur,
+        LdrbPostIndex, LdrbUnsignedOff, Ldur, StpPreIndex, StpSignedOffset, StrImmUnOffset,
+        StrRegister, StrbImmUnOffset, StrhUnsigned, Stur,
     },
     register_instr::{
         AddExtendedRegister, AddShiftedReg, AddsShiftedReg, Adrp, AndImmediate, AndShiftedRegister,
@@ -107,6 +107,7 @@ define_instructions!(
     Clz(Clz),
     LdpSignedOffset(LdpSignedOffset),
     LdrbUnsignedOff(LdrbUnsignedOff),
+    LdrbPostIndex(LdrbPostIndex),
     Csinv(Csinv),
     Csinc(Csinc),
     Blr(Blr),
@@ -191,6 +192,7 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     Ldur::LDUR,
     Stur::STUR,
     LdrbUnsignedOff::LDRB_UNSIGNED_OFF,
+    LdrbPostIndex::LDRB_POST_INDEX,
     Csinv::CSINV,
     Csinc::CSINC,
     Blr::BLR,
