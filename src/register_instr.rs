@@ -6,6 +6,7 @@ use crate::{
     data_processing::*,
     get_bits_ct,
     instruction::*,
+    load_and_store::{ExtendType, extend_register},
     utils::{bits_get, decode_bit_mask, replicate_bits_u64, sign_extend, zero_extend},
 };
 
@@ -208,6 +209,54 @@ impl AddShiftedReg {
     pub const ADD_SHIFTED_REG: InstDesc = InstDesc {
         mask: 0b0111_1111_0010_0000_0000_0000_0000_0000,
         value: 0b0000_1011_0000_0000_0000_0000_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct AddExtendedRegister {
+    pub sf: bool,
+    pub rm: u8,
+    pub option: u8,
+    pub imm3: u8,
+    pub rn: u8,
+    pub rd: u8,
+}
+
+impl AddExtendedRegister {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        match self.imm3 {
+            0b101 | 0b110 | 0b111 => {
+                panic!("UNDEFINED")
+            }
+            _ => (),
+        }
+        let datasize = if self.sf { 64 } else { 32 };
+        let extend_type = ExtendType::from_u8(self.option);
+        let op1 = if self.rn == 31 { cpu.sp_read() } else { cpu.x_read(self.rn.into(), datasize) };
+        let op2 = extend_register(cpu, self.rm, extend_type, self.imm3, datasize);
+
+        let res = add_with_carry(op1, op2, 0).result;
+
+        if self.rd == 31 {
+            cpu.sp_write(zero_extend(res, datasize));
+        } else {
+            cpu.x_write(self.rd.into(), res, !self.sf);
+        }
+    }
+    pub const fn decode(word: u32) -> Instruction {
+        let sf = get_bits_ct!(word, 31, 1) == 1;
+        let rm = get_bits_ct!(word, 16, 5) as u8;
+        let option = get_bits_ct!(word, 13, 3) as u8;
+        let imm3 = get_bits_ct!(word, 10, 3) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rd = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::AddExtendedRegister(Self { sf, rm, option, imm3, rn, rd })
+    }
+
+    pub const ADD_EXTENDED_REGISTER: InstDesc = InstDesc {
+        mask: 0b0111_1111_1110_0000_0000_0000_0000_0000,
+        value: 0b0000_1011_0010_0000_0000_0000_0000_0000,
         decode: Self::decode,
     };
 }

@@ -13,10 +13,10 @@ use crate::{
         StrbImmUnOffset, StrhUnsigned, Stur,
     },
     register_instr::{
-        AddShiftedReg, AddsShiftedReg, Adrp, AndImmediate, AndShiftedRegister, AndsImmediate,
-        AndsShiftedReg, Bfm, BicShiftedReg, BicShiftedRegSet, Clz, Csel, Dc, Dsb, Isb, Lslv, Lsrv,
-        Madd, Nop, OrShiftedRegister, OrrImmediate, Rev, Sbfm, SubShiftedRegister, SubsShiftedReg,
-        Tlbi, Ubfx, Udiv,
+        AddExtendedRegister, AddShiftedReg, AddsShiftedReg, Adrp, AndImmediate, AndShiftedRegister,
+        AndsImmediate, AndsShiftedReg, Bfm, BicShiftedReg, BicShiftedRegSet, Clz, Csel, Dc, Dsb,
+        Isb, Lslv, Lsrv, Madd, Nop, OrShiftedRegister, OrrImmediate, Rev, Sbfm, SubShiftedRegister,
+        SubsShiftedReg, Tlbi, Ubfx, Udiv,
     },
 };
 
@@ -48,6 +48,7 @@ define_instructions!(
     Madd(Madd),
     AddsShiftedReg(AddsShiftedReg),
     AddShiftedReg(AddShiftedReg),
+    AddExtendedRegister(AddExtendedRegister),
     SubShiftedRegister(SubShiftedRegister),
     SubsShiftedReg(SubsShiftedReg),
     AndShiftedRegister(AndShiftedRegister),
@@ -131,6 +132,7 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     Madd::MADD,
     AddsShiftedReg::ADDS_SHIFTED_REG,
     AddShiftedReg::ADD_SHIFTED_REG,
+    AddExtendedRegister::ADD_EXTENDED_REGISTER,
     SubShiftedRegister::SUB_SHIFTED_REGISTER,
     SubsShiftedReg::SUBS_SHIFTED_REG,
     AndShiftedRegister::AND_SHIFTED_REGISTER,
