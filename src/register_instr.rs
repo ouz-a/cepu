@@ -226,7 +226,7 @@ pub struct AddExtendedRegister {
 impl AddExtendedRegister {
     pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
         match self.imm3 {
-            0b101 | 0b110 | 0b111 => {
+            0b101..=0b111 => {
                 panic!("UNDEFINED")
             }
             _ => (),

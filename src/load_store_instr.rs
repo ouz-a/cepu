@@ -578,7 +578,6 @@ impl Stur {
         let val = cpu.x_read(self.rt.into(), datasize);
         cpu.mmu.write_memory(address as usize, (datasize / 8).into(), val);
         if cpu.mmu.faulted {
-            return;
         }
     }
     pub const fn decode(word: u32) -> Instruction {
@@ -639,7 +638,7 @@ pub struct LdrbPostIndex {
 
 impl LdrbPostIndex {
     pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
-        let offset = sign_extend(self.imm9.try_into().unwrap(), 9);
+        let offset = sign_extend(self.imm9.into(), 9);
 
         let mut address =
             if self.rn == 31 { cpu.sp_read() } else { cpu.x_read(self.rn.into(), 64) };

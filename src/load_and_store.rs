@@ -430,7 +430,6 @@ pub fn instruction_str_register(
 
     cpu.mmu.write_memory(address as usize, (datasize / 8).into(), cpu.x_read(t.into(), datasize));
     if cpu.mmu.faulted {
-        return;
     }
 }
 
