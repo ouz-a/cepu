@@ -4,11 +4,12 @@ use crate::{
     get_bits_ct,
     instruction::{InstDesc, Instruction},
     load_and_store::{
-        ExtendType, instruction_ldp, instruction_ldr_imm_base, instruction_ldr_literal,
-        instruction_ldr_register, instruction_stp, instruction_str_halfword_imm,
-        instruction_str_imm_un_off, instruction_str_register, instruction_strb_imm_un_off,
+        ExtendType, extend_register, instruction_ldp, instruction_ldr_imm_base,
+        instruction_ldr_literal, instruction_ldr_register, instruction_stp,
+        instruction_str_halfword_imm, instruction_str_imm_un_off, instruction_str_register,
+        instruction_strb_imm_un_off,
     },
-    utils::{sign_extend, sign_extend_xor, zero_extend},
+    utils::{bits_get, sign_extend, sign_extend_xor, zero_extend},
 };
 
 /// Store register halfword
@@ -663,6 +664,44 @@ impl LdrbPostIndex {
     pub const LDRB_POST_INDEX: InstDesc = InstDesc {
         mask: 0b1111_1111_1110_0000_0000_1100_0000_0000,
         value: 0b0011_1000_0100_0000_0000_0100_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct LdrbRegister {
+    pub rm: u8,
+    pub option: u8,
+    pub rn: u8,
+    pub rt: u8,
+}
+
+impl LdrbRegister {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        if bits_get(self.option.try_into().unwrap(), 1, 1) == 0 {
+            panic!("Sub word index");
+        }
+        let extend_type = ExtendType::from_u8(self.option);
+        let offset = extend_register(cpu, self.rm.into(), extend_type, 0, 64);
+
+        let mut address =
+            if self.rn == 31 { cpu.sp_read() } else { cpu.x_read(self.rn.into(), 64) };
+        address = address.wrapping_add(offset);
+
+        let data = cpu.mmu.read_memory(address.try_into().unwrap(), 1);
+        cpu.x_write(self.rt.into(), data.1, true);
+    }
+    pub fn decode(word: u32) -> Instruction {
+        let rm = get_bits_ct!(word, 16, 5) as u8;
+        let option = get_bits_ct!(word, 13, 3) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rt = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::LdrbRegister(Self { rm, option, rn, rt })
+    }
+
+    pub const LDRB_REGISTER: InstDesc = InstDesc {
+        mask: 0b1111_1111_1110_0000_0000_1100_0000_0000,
+        value: 0b0011_1000_0110_0000_0000_1000_0000_0000,
         decode: Self::decode,
     };
 }

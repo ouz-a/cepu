@@ -129,7 +129,8 @@ pub fn instruction_multiply_add(cpu: &mut Cpu, d: u8, n: u8, m: u8, a: u8, datas
     let op2 = cpu.x_read(m as usize, datasize);
     let op3 = cpu.x_read(a as usize, datasize);
 
-    let res = op3 + (op1 * op2);
+    let mult = op1.wrapping_mul(op2);
+    let res = op3.wrapping_add(mult);
     let is_32b = datasize == 32;
     cpu.x_write(d as usize, res, is_32b);
 }
