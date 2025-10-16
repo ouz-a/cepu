@@ -14,11 +14,7 @@ use crate::{
         Stur,
     },
     register_instr::{
-        AddExtendedRegister, AddShiftedReg, AddsImmediate, AddsShiftedReg, Adrp, AndImmediate,
-        AndShiftedRegister, AndsImmediate, AndsShiftedReg, Bfm, BicShiftedReg, BicShiftedRegSet,
-        CcmpRegister, Clz, Csel, Csneg, Dc, Dsb, EorShiftedReg, Isb, Lslv, Lsrv, Madd, Nop,
-        OrShiftedRegister, OrrImmediate, Rev, Sbfm, SubShiftedRegister, SubsShiftedReg, Tlbi, Ubfx,
-        Udiv,
+        AddExtendedRegister, AddShiftedReg, AddsImmediate, AddsShiftedReg, Adrp, AndImmediate, AndShiftedRegister, AndsImmediate, AndsShiftedReg, Bfm, BicShiftedReg, BicShiftedRegSet, CcmpRegister, Clz, Csel, Csneg, Dc, Dsb, EorShiftedReg, Isb, Lslv, Lsrv, Madd, Nop, OrShiftedRegister, OrrImmediate, Rev, Sbfm, Smaddl, SubShiftedRegister, SubsShiftedReg, Tlbi, Ubfx, Udiv
     },
 };
 
@@ -42,6 +38,7 @@ macro_rules! define_instructions {
 }
 
 define_instructions!(
+    Smaddl(Smaddl),
     StrbRegister(StrbRegister),
     EorShiftedReg(EorShiftedReg),
     Tlbi(Tlbi),
@@ -134,6 +131,7 @@ pub struct InstDesc {
 static TABLES: OnceLock<Tables> = OnceLock::new();
 
 pub const DESCR: &[InstDesc] = &sort_by_specificity([
+    Smaddl::SMADDL,
     LdpPreIndex::LDP_PRE_INDEX,
     StrbRegister::STRB_REGISTER,
     EorShiftedReg::EOR_SHIFTED_REG,
