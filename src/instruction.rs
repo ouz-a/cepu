@@ -8,7 +8,10 @@ use crate::{
     cpu::Cpu,
     imm_instr::{AddImmediate, Movk, Movn, Movz, SubImmediate, Subs},
     load_store_instr::{
-        LdpPostIndex, LdpSignedOffset, LdrImmPostIdx, LdrImmPreIdx, LdrImmUnOffset, LdrLit, LdrReg, LdrbPostIndex, LdrbRegister, LdrbUnsignedOff, Ldur, StpPreIndex, StpSignedOffset, StrImmUnOffset, StrRegister, StrbImmUnOffset, StrbRegister, StrhUnsigned, Stur
+        LdpPostIndex, LdpPreIndex, LdpSignedOffset, LdrImmPostIdx, LdrImmPreIdx, LdrImmUnOffset,
+        LdrLit, LdrReg, LdrbPostIndex, LdrbRegister, LdrbUnsignedOff, Ldur, StpPreIndex,
+        StpSignedOffset, StrImmUnOffset, StrRegister, StrbImmUnOffset, StrbRegister, StrhUnsigned,
+        Stur,
     },
     register_instr::{
         AddExtendedRegister, AddShiftedReg, AddsImmediate, AddsShiftedReg, Adrp, AndImmediate,
@@ -105,6 +108,7 @@ define_instructions!(
     StpSignedOffset(StpSignedOffset),
     StpPreIndex(StpPreIndex),
     LdpPostIndex(LdpPostIndex),
+    LdpPreIndex(LdpPreIndex),
     Wfi(Wfi),
     Dmb(Dmb),
     Bti(Bti),
@@ -130,6 +134,7 @@ pub struct InstDesc {
 static TABLES: OnceLock<Tables> = OnceLock::new();
 
 pub const DESCR: &[InstDesc] = &sort_by_specificity([
+    LdpPreIndex::LDP_PRE_INDEX,
     StrbRegister::STRB_REGISTER,
     EorShiftedReg::EOR_SHIFTED_REG,
     Tlbi::TLBI,
