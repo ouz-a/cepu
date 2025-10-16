@@ -104,9 +104,9 @@ impl Madd {
     pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
         instruction_multiply_add(
             cpu,
+            self.rd,
             self.rn,
             self.rm,
-            self.rd,
             self.ra,
             if self.sf { 64 } else { 32 },
         );
