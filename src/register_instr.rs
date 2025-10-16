@@ -1132,3 +1132,42 @@ impl CcmpRegister {
         decode: Self::decode,
     };
 }
+
+#[derive(Debug, Clone, Copy)]
+pub struct EorShiftedReg {
+    pub sf: bool,
+    pub shift: u8,
+    pub rm: u8,
+    pub imm6: u8,
+    pub rn: u8,
+    pub rd: u8,
+}
+impl EorShiftedReg {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        if !self.sf && get_bits_ct!(self.imm6, 5, 1) == 1 {
+            panic!("Undef");
+        }
+        let datasize = if self.sf { 64 } else { 32 };
+        let shift = decode_shift(self.shift);
+        let op1 = cpu.x_read(self.rn.into(), datasize);
+        let op2 = shift_reg(cpu, self.rm, shift, self.imm6, datasize);
+
+        cpu.x_write(self.rd.into(), op1 ^ op2, !self.sf);
+    }
+
+    pub fn decode(word: u32) -> Instruction {
+        let sf = get_bits_ct!(word, 31, 1) == 1;
+        let shift = get_bits_ct!(word, 22, 2) as u8;
+        let rm = get_bits_ct!(word, 16, 5) as u8;
+        let imm6 = get_bits_ct!(word, 10, 6) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rd = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::EorShiftedReg(Self { sf, shift, rm, imm6, rn, rd })
+    }
+
+    pub const EOR_SHIFTED_REG: InstDesc = InstDesc {
+        mask: 0b0111_1111_0010_0000_0000_0000_0000_0000,
+        value: 0b0100_1010_0000_0000_0000_0000_0000_0000,
+        decode: Self::decode,
+    };
+}
