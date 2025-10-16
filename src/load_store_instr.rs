@@ -127,6 +127,46 @@ impl StrbImmUnOffset {
     };
 }
 
+/// Store register byte (register)
+#[derive(Debug, Clone, Copy)]
+pub struct StrbRegister {
+    pub rm: u8,
+    pub option: u8,
+    pub rn: u8,
+    pub rt: u8,
+}
+
+impl StrbRegister {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        if bits_get(self.option.into(), 1, 1) == 0 {
+            panic!("Sub word index");
+        }
+        let extend_type = ExtendType::from_u8(self.option);
+        let offset = extend_register(cpu, self.rm, extend_type, 0, 64);
+
+        let mut address =
+            if self.rn == 31 { cpu.sp_read() } else { cpu.x_read(self.rn.into(), 64) };
+
+        address = address.wrapping_add(offset);
+
+        cpu.mmu.write_memory(address as usize, 1, cpu.x_read(self.rt.into(), 8));
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let rm = get_bits_ct!(word, 16, 5) as u8;
+        let option = get_bits_ct!(word, 13, 3) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rt = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::StrbRegister(Self { rm, option, rn, rt })
+    }
+
+    pub const STRB_REGISTER: InstDesc = InstDesc {
+        mask: 0b1111_1111_1110_0000_0000_1100_0000_0000,
+        value: 0b0011_1000_0010_0000_0000_1000_0000_0000,
+        decode: Self::decode,
+    };
+}
+
 /// Store register (register)
 #[derive(Clone, Copy, Debug)]
 pub struct StrRegister {
