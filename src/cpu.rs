@@ -162,6 +162,7 @@ pub struct Cpu {
     pub sleeping: AtomicBool,
 
     pub mmu: Mmu,
+    tpidr_el1: u64,
 }
 
 impl Cpu {
@@ -446,6 +447,12 @@ impl Cpu {
             }
             MsrRegisters::Ttbr1El1 => {
                 self.mmu.ttbr1_el1 = self.x_read(t.into(), 64);
+            }
+            MsrRegisters::SpEl0 => {
+                self.sp_el0 = self.x_read(t.into(), 64);
+            }
+            MsrRegisters::TpidrEl1 => {
+                self.tpidr_el1 = self.x_read(t.into(), 64);
             }
         }
     }
@@ -862,6 +869,8 @@ msr_enum! {
     TcrEl1 = 12885032962,
     Ttbr0El1 = 12885032960,
     Ttbr1El1 = 12885032961,
+    SpEl0 = 12885164288,
+    TpidrEl1 = 12885753860,
 }
 
 macro_rules! mrs_enum {
