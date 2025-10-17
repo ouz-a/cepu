@@ -145,6 +145,9 @@ pub struct Cpu {
 
     id_aa64mmfr3_el1: u64,
     id_aa64isar0_el1: u64,
+    id_aa64isar1_el1: u64,
+    id_aa64isar2_el1: u64,
+    id_aa64pfr1_el1: u64,
 
     pub far_el1: u64,
     pub esr_el1: u64,
@@ -179,6 +182,9 @@ impl Cpu {
         cpu.id_aa64mmfr1_el1 = 0;
         cpu.id_aa64isar0_el1 = 0;
         cpu.id_aa64mmfr3_el1 = 0;
+        cpu.id_aa64isar1_el1 = 0;
+        cpu.id_aa64isar2_el1 = 0;
+        cpu.id_aa64pfr1_el1 = 0x0000_0001_0000_0001;
         cpu.dczid_el0 = 0x14;
         cpu.ctr_el0 = 0x34448004;
 
@@ -540,6 +546,15 @@ impl Cpu {
             MrsRegisters::TcrEl1 => {
                 self.x_write(t.into(), self.mmu.tcr_el1, false);
             }
+            MrsRegisters::IdAa64isar1El1 => {
+                self.x_write(t.into(), self.id_aa64isar1_el1, false);
+            }
+            MrsRegisters::IdAa64isar2El1 => {
+                self.x_write(t.into(), self.id_aa64isar2_el1, false);
+            }
+            MrsRegisters::IdAa64pfr1El1 => {
+                self.x_write(t.into(), self.id_aa64pfr1_el1, false);
+            }
         }
     }
 
@@ -891,7 +906,10 @@ mrs_enum! {
     IdAa64mmfr0El1 = 12884903680,
     IdAa64mmfr1El1 = 12884903681,
     IdAa64mmfr3El1 = 12884903683,
-    IdAa64isar0El1=12884903424,
+    IdAa64isar0El1 = 2884903424,
+    IdAa64isar1El1 = 12884903425,
+    IdAa64isar2El1 = 12884903426,
+    IdAa64pfr1El1  = 12884902913,
 }
 
 pub fn sleep_ns(ns: u64) {

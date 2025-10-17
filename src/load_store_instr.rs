@@ -752,11 +752,11 @@ pub struct LdrbRegister {
 
 impl LdrbRegister {
     pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
-        if bits_get(self.option.try_into().unwrap(), 1, 1) == 0 {
+        if bits_get(self.option.into(), 1, 1) == 0 {
             panic!("Sub word index");
         }
         let extend_type = ExtendType::from_u8(self.option);
-        let offset = extend_register(cpu, self.rm.into(), extend_type, 0, 64);
+        let offset = extend_register(cpu, self.rm, extend_type, 0, 64);
 
         let mut address =
             if self.rn == 31 { cpu.sp_read() } else { cpu.x_read(self.rn.into(), 64) };
@@ -776,6 +776,78 @@ impl LdrbRegister {
     pub const LDRB_REGISTER: InstDesc = InstDesc {
         mask: 0b1111_1111_1110_0000_0000_1100_0000_0000,
         value: 0b0011_1000_0110_0000_0000_1000_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+/// Load register byte (unscaled)
+#[derive(Debug, Clone, Copy)]
+pub struct Ldurb {
+    imm9: u16,
+    rn: u8,
+    rt: u8,
+}
+
+impl Ldurb {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let offset = sign_extend(self.imm9.into(), 9);
+
+        let mut address =
+            if self.rn == 31 { cpu.sp_read() } else { cpu.x_read(self.rn.into(), 64) };
+
+        address = address.wrapping_add(offset);
+
+        let data = cpu.mmu.read_memory(address as usize, 1);
+        if cpu.mmu.faulted {
+            return;
+        }
+
+        cpu.x_write(self.rt.into(), data.1, false);
+    }
+    pub const fn decode(word: u32) -> Instruction {
+        let imm9 = get_bits_ct!(word, 12, 9) as u16;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rt = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::Ldurb(Self { imm9, rn, rt })
+    }
+    pub const LDURB: InstDesc = InstDesc {
+        mask: 0b1111_1111_1110_0000_0000_1100_0000_0000,
+        value: 0b0011_1000_0100_0000_0000_0000_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+/// Store register byte (unscaled)
+#[derive(Debug, Clone, Copy)]
+pub struct Sturb {
+    imm9: u16,
+    rn: u8,
+    rt: u8,
+}
+
+impl Sturb {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let offset = sign_extend(self.imm9.into(), 9);
+
+        let mut address =
+            if self.rn == 31 { cpu.sp_read() } else { cpu.x_read(self.rn.into(), 64) };
+
+        address = address.wrapping_add(offset);
+
+        let val = cpu.x_read(self.rt.into(), 8);
+        cpu.mmu.write_memory(address.try_into().unwrap(), 1, val);
+        if cpu.mmu.faulted {
+        }
+    }
+    pub const fn decode(word: u32) -> Instruction {
+        let imm9 = get_bits_ct!(word, 12, 9) as u16;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rt = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::Sturb(Self { imm9, rn, rt })
+    }
+    pub const STURB: InstDesc = InstDesc {
+        mask: 0b1111_1111_1110_0000_0000_1100_0000_0000,
+        value: 0b0011_1000_0000_0000_0000_0000_0000_0000,
         decode: Self::decode,
     };
 }

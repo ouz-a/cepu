@@ -9,12 +9,16 @@ use crate::{
     imm_instr::{AddImmediate, Movk, Movn, Movz, SubImmediate, Subs},
     load_store_instr::{
         LdpPostIndex, LdpPreIndex, LdpSignedOffset, LdrImmPostIdx, LdrImmPreIdx, LdrImmUnOffset,
-        LdrLit, LdrReg, LdrbPostIndex, LdrbRegister, LdrbUnsignedOff, Ldur, StpPreIndex,
+        LdrLit, LdrReg, LdrbPostIndex, LdrbRegister, LdrbUnsignedOff, Ldur, Ldurb, StpPreIndex,
         StpSignedOffset, StrImmUnOffset, StrRegister, StrbImmUnOffset, StrbRegister, StrhUnsigned,
-        Stur,
+        Stur, Sturb,
     },
     register_instr::{
-        AddExtendedRegister, AddShiftedReg, AddsImmediate, AddsShiftedReg, Adrp, AndImmediate, AndShiftedRegister, AndsImmediate, AndsShiftedReg, Bfm, BicShiftedReg, BicShiftedRegSet, CcmpRegister, Clz, Csel, Csneg, Dc, Dsb, EorShiftedReg, Isb, Lslv, Lsrv, Madd, Nop, OrShiftedRegister, OrrImmediate, Rev, Sbfm, Smaddl, SubShiftedRegister, SubsShiftedReg, Tlbi, Ubfx, Udiv
+        AddExtendedRegister, AddShiftedReg, AddsImmediate, AddsShiftedReg, Adrp, AndImmediate,
+        AndShiftedRegister, AndsImmediate, AndsShiftedReg, Bfm, BicShiftedReg, BicShiftedRegSet,
+        CcmpRegister, Clz, Csel, Csneg, Dc, Dsb, EorShiftedReg, Isb, Lslv, Lsrv, Madd, Nop,
+        OrShiftedRegister, OrrImmediate, Rev, Sbfm, Smaddl, SubShiftedRegister, SubsShiftedReg,
+        Tlbi, Ubfx, Udiv,
     },
 };
 
@@ -38,6 +42,8 @@ macro_rules! define_instructions {
 }
 
 define_instructions!(
+    Sturb(Sturb),
+    Ldurb(Ldurb),
     Smaddl(Smaddl),
     StrbRegister(StrbRegister),
     EorShiftedReg(EorShiftedReg),
@@ -131,6 +137,8 @@ pub struct InstDesc {
 static TABLES: OnceLock<Tables> = OnceLock::new();
 
 pub const DESCR: &[InstDesc] = &sort_by_specificity([
+    Sturb::STURB,
+    Ldurb::LDURB,
     Smaddl::SMADDL,
     LdpPreIndex::LDP_PRE_INDEX,
     StrbRegister::STRB_REGISTER,
