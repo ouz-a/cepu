@@ -63,7 +63,7 @@ pub fn run_block(cpu: &mut Cpu) {
                 cpu.branch_taken = false;
             }
 
-            if pc >= limit.try_into().unwrap() {
+            if !cpu.mmu.enabled && pc >= limit.try_into().unwrap() {
                 break;
             }
 

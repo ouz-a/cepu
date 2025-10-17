@@ -2,7 +2,7 @@ use std::sync::OnceLock;
 
 use crate::{
     branch_exc_sys_instr::{
-        Bcond, Bl, Blr, Branch, Bti, Cbnz, Cbz, Ccmpi, Csinc, Csinv, Dmb, Eret, Mrs, MsrImm,
+        Bcond, Bl, Blr, Br, Branch, Bti, Cbnz, Cbz, Ccmpi, Csinc, Csinv, Dmb, Eret, Mrs, MsrImm,
         MsrReg, Ret, Tbnz, Tbz, Wfi,
     },
     cpu::Cpu,
@@ -14,7 +14,7 @@ use crate::{
         Stur, Sturb,
     },
     register_instr::{
-        AddExtendedRegister, AddShiftedReg, AddsImmediate, AddsShiftedReg, Adrp, AndImmediate,
+        AddExtendedRegister, AddShiftedReg, AddsImmediate, AddsShiftedReg, Adr, Adrp, AndImmediate,
         AndShiftedRegister, AndsImmediate, AndsShiftedReg, Bfm, BicShiftedReg, BicShiftedRegSet,
         CcmpRegister, Clz, Csel, Csneg, Dc, Dsb, EorShiftedReg, Isb, Lslv, Lsrv, Madd, Nop,
         OrShiftedRegister, OrrImmediate, Rev, Sbfm, Smaddl, SubShiftedRegister, SubsShiftedReg,
@@ -42,6 +42,8 @@ macro_rules! define_instructions {
 }
 
 define_instructions!(
+    Br(Br),
+    Adr(Adr),
     Sturb(Sturb),
     Ldurb(Ldurb),
     Smaddl(Smaddl),
@@ -137,6 +139,8 @@ pub struct InstDesc {
 static TABLES: OnceLock<Tables> = OnceLock::new();
 
 pub const DESCR: &[InstDesc] = &sort_by_specificity([
+    Br::BR,
+    Adr::ADR,
     Sturb::STURB,
     Ldurb::LDURB,
     Smaddl::SMADDL,

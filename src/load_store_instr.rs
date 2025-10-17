@@ -836,8 +836,7 @@ impl Sturb {
 
         let val = cpu.x_read(self.rt.into(), 8);
         cpu.mmu.write_memory(address.try_into().unwrap(), 1, val);
-        if cpu.mmu.faulted {
-        }
+        if cpu.mmu.faulted {}
     }
     pub const fn decode(word: u32) -> Instruction {
         let imm9 = get_bits_ct!(word, 12, 9) as u16;

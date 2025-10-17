@@ -276,6 +276,28 @@ impl Branch {
 }
 
 #[derive(Debug, Clone, Copy)]
+pub struct Br {
+    pub rn: u8,
+}
+
+impl Br {
+    pub fn exec(self, cpu: &mut Cpu, old_pc: u64) {
+        let target = cpu.x_read(self.rn.into(), 64);
+        branch_to(cpu, target, false, old_pc);
+    }
+    pub fn decode(word: u32) -> Instruction {
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        Instruction::Br(Self { rn })
+    }
+
+    pub const BR: InstDesc = InstDesc {
+        mask: 0b1111_1111_1111_1111_1111_1100_0001_1111,
+        value: 0b1101_0110_0001_1111_0000_0000_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+#[derive(Debug, Clone, Copy)]
 pub struct MsrImm {
     pub op1: u8,
     pub crm: u8,
@@ -447,7 +469,7 @@ impl Csinv {
             let not = cpu.x_read(self.rm.into(), datasize).not();
             bits_get(not, 0, datasize)
         };
-        cpu.x_write(self.rd.into(), result, self.sf);
+        cpu.x_write(self.rd.into(), result, !self.sf);
     }
 
     pub const fn decode(word: u32) -> Instruction {
@@ -483,7 +505,7 @@ impl Csinc {
         } else {
             cpu.x_read(self.rm.into(), datasize) + 1
         };
-        cpu.x_write(self.rd.into(), result, self.sf);
+        cpu.x_write(self.rd.into(), result, !self.sf);
     }
 
     pub const fn decode(word: u32) -> Instruction {

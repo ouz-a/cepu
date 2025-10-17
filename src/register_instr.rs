@@ -782,6 +782,36 @@ impl Adrp {
     };
 }
 
+/// Form PC-relative address
+#[derive(Clone, Copy, Debug)]
+pub struct Adr {
+    pub immlo: u8,
+    pub immhi: u32,
+    pub rd: u8,
+}
+
+impl Adr {
+    pub fn exec(self, cpu: &mut Cpu, old_pc: u64) {
+        let imm: u64 = ((self.immhi as u64) << 2) | (self.immlo as u64);
+        let imm = sign_extend(imm, 21);
+        let base = old_pc;
+        cpu.x_write(self.rd.into(), base.wrapping_add(imm), false);
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let immlo = get_bits_ct!(word, 29, 2) as u8;
+        let immhi = get_bits_ct!(word, 5, 19);
+        let rd = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::Adr(Self { immlo, immhi, rd })
+    }
+
+    pub const ADR: InstDesc = InstDesc {
+        mask: 0b1001_1111_0000_0000_0000_0000_0000_0000,
+        value: 0b0001_0000_0000_0000_0000_0000_0000_0000,
+        decode: Self::decode,
+    };
+}
+
 #[derive(Clone, Copy, Debug)]
 pub struct Ubfx {
     pub sf: bool,
