@@ -295,7 +295,6 @@ impl AddExtendedRegister {
     };
 }
 
-
 #[derive(Clone, Copy, Debug)]
 pub struct AddsExtendedRegister {
     pub sf: bool,
@@ -341,7 +340,6 @@ impl AddsExtendedRegister {
         decode: Self::decode,
     };
 }
-
 
 #[derive(Debug, Clone, Copy)]
 pub struct SubShiftedRegister {
