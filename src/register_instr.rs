@@ -1237,3 +1237,39 @@ impl Smaddl {
         decode: Self::decode,
     };
 }
+
+#[derive(Debug, Clone, Copy)]
+pub struct PaciaSystem {}
+
+impl PaciaSystem {
+    pub fn exec(self, _cpu: &mut Cpu, _old_pc: u64) {
+        // NOOP
+    }
+    pub const fn decode(_word: u32) -> Instruction {
+        Instruction::PaciaSystem(Self {})
+    }
+
+    pub const PACIA_SYSTEM: InstDesc = InstDesc {
+        mask: 0b1111_1111_1111_1111_1111_1111_1111_1111,
+        value: 0b1101_0101_0000_0011_0010_0011_0011_1111,
+        decode: Self::decode,
+    };
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct AutiaspSystem {}
+
+impl AutiaspSystem {
+    pub fn exec(self, _cpu: &mut Cpu, _old_pc: u64) {
+        // NOOP
+    }
+    pub const fn decode(_word: u32) -> Instruction {
+        Instruction::AutiaspSystem(Self {})
+    }
+
+    pub const AUTIASP_SYSTEM: InstDesc = InstDesc {
+        mask: 0b1111_1111_1111_1111_1111_1111_1111_1111,
+        value: 0b1101_0101_0000_0011_0010_0011_1011_1111,
+        decode: Self::decode,
+    };
+}

@@ -15,10 +15,10 @@ use crate::{
     },
     register_instr::{
         AddExtendedRegister, AddShiftedReg, AddsImmediate, AddsShiftedReg, Adr, Adrp, AndImmediate,
-        AndShiftedRegister, AndsImmediate, AndsShiftedReg, Bfm, BicShiftedReg, BicShiftedRegSet,
-        CcmpRegister, Clz, Csel, Csneg, Dc, Dsb, EorShiftedReg, Isb, Lslv, Lsrv, Madd, Nop,
-        OrShiftedRegister, OrrImmediate, Rev, Sbfm, Smaddl, SubShiftedRegister, SubsShiftedReg,
-        Tlbi, Ubfx, Udiv,
+        AndShiftedRegister, AndsImmediate, AndsShiftedReg, AutiaspSystem, Bfm, BicShiftedReg,
+        BicShiftedRegSet, CcmpRegister, Clz, Csel, Csneg, Dc, Dsb, EorShiftedReg, Isb, Lslv, Lsrv,
+        Madd, Nop, OrShiftedRegister, OrrImmediate, PaciaSystem, Rev, Sbfm, Smaddl,
+        SubShiftedRegister, SubsShiftedReg, Tlbi, Ubfx, Udiv,
     },
 };
 
@@ -42,6 +42,8 @@ macro_rules! define_instructions {
 }
 
 define_instructions!(
+    AutiaspSystem(AutiaspSystem),
+    PaciaSystem(PaciaSystem),
     Br(Br),
     Adr(Adr),
     Sturb(Sturb),
@@ -139,6 +141,8 @@ pub struct InstDesc {
 static TABLES: OnceLock<Tables> = OnceLock::new();
 
 pub const DESCR: &[InstDesc] = &sort_by_specificity([
+    AutiaspSystem::AUTIASP_SYSTEM,
+    PaciaSystem::PACIA_SYSTEM,
     Br::BR,
     Adr::ADR,
     Sturb::STURB,

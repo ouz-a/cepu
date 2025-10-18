@@ -140,6 +140,7 @@ pub struct Cpu {
     /// Provides identification information for the PE, including an implementer
     /// code for the device and a device ID number.
     pub midr_el1: u64,
+    pub mpidr_el1: u64,
 
     mair_el1: u64,
 
@@ -188,6 +189,7 @@ impl Cpu {
         cpu.id_aa64pfr1_el1 = 0x0000_0001_0000_0001;
         cpu.dczid_el0 = 0x14;
         cpu.ctr_el0 = 0x34448004;
+        cpu.mpidr_el1 = 0x8000_0000;
 
         // Boot at EL1 (kernel mode)
         cpu.pstate.current_el = ExceptionLevel::EL1;
@@ -562,6 +564,12 @@ impl Cpu {
             MrsRegisters::IdAa64pfr1El1 => {
                 self.x_write(t.into(), self.id_aa64pfr1_el1, false);
             }
+            MrsRegisters::MpidrEl1 => {
+                self.x_write(t.into(), self.mpidr_el1, false);
+            }
+            MrsRegisters::SpEl0 => {
+                self.x_write(t.into(), self.sp_el0, false);
+            }
         }
     }
 
@@ -900,6 +908,8 @@ macro_rules! mrs_enum {
 }
 
 mrs_enum! {
+    SpEl0 = 12885164288,
+    MpidrEl1 = 12884901893,
     CntfrqEl0 = 12936151040,
     CntpctEl0 = 12936151041,
     CntpCtlEl0 = 12936151553,
