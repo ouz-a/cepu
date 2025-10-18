@@ -52,9 +52,6 @@ impl StrImmUnOffset {
         let offset = shift_lsl(self.imm12 as u64, self.size);
         let datasize = (8 << (self.size)) as u64;
         let tag_checked = self.rn != 31;
-        if self.rn == self.rt && self.rn != 31 {
-            panic!("Unpredictable");
-        }
         instruction_str_imm_un_off(
             cpu,
             self.rn,
@@ -847,6 +844,23 @@ impl Sturb {
     pub const STURB: InstDesc = InstDesc {
         mask: 0b1111_1111_1110_0000_0000_1100_0000_0000,
         value: 0b0011_1000_0000_0000_0000_0000_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+/// Prefetch memory (immediate)
+#[derive(Debug, Clone, Copy)]
+pub struct Prfm {}
+impl Prfm {
+    pub fn exec(self, _cpu: &mut Cpu, _old_pc: u64) {
+        // NOOP
+    }
+    pub const fn decode(_word: u32) -> Instruction {
+        Instruction::Prfm(Self {})
+    }
+    pub const PRFM: InstDesc = InstDesc {
+        mask: 0b1111_1111_1000_0000_0000_0000_0000_0000,
+        value: 0b1111_1001_1000_0000_0000_0000_0000_0000,
         decode: Self::decode,
     };
 }

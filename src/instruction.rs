@@ -8,17 +8,10 @@ use crate::{
     cpu::Cpu,
     imm_instr::{AddImmediate, Movk, Movn, Movz, SubImmediate, Subs},
     load_store_instr::{
-        LdpPostIndex, LdpPreIndex, LdpSignedOffset, LdrImmPostIdx, LdrImmPreIdx, LdrImmUnOffset,
-        LdrLit, LdrReg, LdrbPostIndex, LdrbRegister, LdrbUnsignedOff, Ldur, Ldurb, StpPreIndex,
-        StpSignedOffset, StrImmUnOffset, StrRegister, StrbImmUnOffset, StrbRegister, StrhUnsigned,
-        Stur, Sturb,
+        LdpPostIndex, LdpPreIndex, LdpSignedOffset, LdrImmPostIdx, LdrImmPreIdx, LdrImmUnOffset, LdrLit, LdrReg, LdrbPostIndex, LdrbRegister, LdrbUnsignedOff, Ldur, Ldurb, Prfm, StpPreIndex, StpSignedOffset, StrImmUnOffset, StrRegister, StrbImmUnOffset, StrbRegister, StrhUnsigned, Stur, Sturb
     },
     register_instr::{
-        AddExtendedRegister, AddShiftedReg, AddsImmediate, AddsShiftedReg, Adr, Adrp, AndImmediate,
-        AndShiftedRegister, AndsImmediate, AndsShiftedReg, AutiaspSystem, Bfm, BicShiftedReg,
-        BicShiftedRegSet, CcmpRegister, Clz, Csel, Csneg, Dc, Dsb, EorShiftedReg, Isb, Lslv, Lsrv,
-        Madd, Nop, OrShiftedRegister, OrrImmediate, PaciaSystem, Rev, Sbfm, Smaddl,
-        SubShiftedRegister, SubsShiftedReg, Tlbi, Ubfx, Udiv,
+        AddExtendedRegister, AddShiftedReg, AddsExtendedRegister, AddsImmediate, AddsShiftedReg, Adr, Adrp, AndImmediate, AndShiftedRegister, AndsImmediate, AndsShiftedReg, AutiaspSystem, Bfm, BicShiftedReg, BicShiftedRegSet, CcmpRegister, Clz, Csel, Csneg, Dc, Dsb, EorShiftedReg, Isb, Lslv, Lsrv, Madd, Nop, OrShiftedRegister, OrrImmediate, PaciaSystem, Rev, Sbfm, Smaddl, SubShiftedRegister, SubsShiftedReg, Tlbi, Ubfx, Udiv
     },
 };
 
@@ -42,6 +35,8 @@ macro_rules! define_instructions {
 }
 
 define_instructions!(
+    Prfm(Prfm),
+    AddsExtendedRegister(AddsExtendedRegister),
     AutiaspSystem(AutiaspSystem),
     PaciaSystem(PaciaSystem),
     Br(Br),
@@ -141,6 +136,8 @@ pub struct InstDesc {
 static TABLES: OnceLock<Tables> = OnceLock::new();
 
 pub const DESCR: &[InstDesc] = &sort_by_specificity([
+    Prfm::PRFM,
+    AddsExtendedRegister::ADDS_EXTENDED_REGISTER,
     AutiaspSystem::AUTIASP_SYSTEM,
     PaciaSystem::PACIA_SYSTEM,
     Br::BR,

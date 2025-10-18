@@ -295,6 +295,54 @@ impl AddExtendedRegister {
     };
 }
 
+
+#[derive(Clone, Copy, Debug)]
+pub struct AddsExtendedRegister {
+    pub sf: bool,
+    pub rm: u8,
+    pub option: u8,
+    pub imm3: u8,
+    pub rn: u8,
+    pub rd: u8,
+}
+
+impl AddsExtendedRegister {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        if let 0b101..=0b111 = self.imm3 {
+            panic!("UNDEFINED")
+        }
+        let datasize = if self.sf { 64 } else { 32 };
+        let extend_type = ExtendType::from_u8(self.option);
+        let op1 = if self.rn == 31 { cpu.sp_read() } else { cpu.x_read(self.rn.into(), datasize) };
+        let op2 = extend_register(cpu, self.rm, extend_type, self.imm3, datasize);
+
+        let res = add_with_carry(op1, op2, 0);
+
+        if self.rd == 31 {
+            cpu.sp_write(zero_extend(res.result, datasize));
+        } else {
+            cpu.x_write(self.rd.into(), res.result, !self.sf);
+        }
+        cpu.pstate.set_flags_from_bits(res.flag_to_bits());
+    }
+    pub const fn decode(word: u32) -> Instruction {
+        let sf = get_bits_ct!(word, 31, 1) == 1;
+        let rm = get_bits_ct!(word, 16, 5) as u8;
+        let option = get_bits_ct!(word, 13, 3) as u8;
+        let imm3 = get_bits_ct!(word, 10, 3) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rd = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::AddsExtendedRegister(Self { sf, rm, option, imm3, rn, rd })
+    }
+
+    pub const ADDS_EXTENDED_REGISTER: InstDesc = InstDesc {
+        mask: 0b0111_1111_1110_0000_0000_0000_0000_0000,
+        value: 0b0010_1011_0010_0000_0000_0000_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+
 #[derive(Debug, Clone, Copy)]
 pub struct SubShiftedRegister {
     pub sf: bool,
@@ -1163,6 +1211,7 @@ impl CcmpRegister {
     };
 }
 
+/// Exclusive OR shifted register
 #[derive(Debug, Clone, Copy)]
 pub struct EorShiftedReg {
     pub sf: bool,
@@ -1238,6 +1287,7 @@ impl Smaddl {
     };
 }
 
+/// Pacia system - Pointer authentication code
 #[derive(Debug, Clone, Copy)]
 pub struct PaciaSystem {}
 
@@ -1256,6 +1306,7 @@ impl PaciaSystem {
     };
 }
 
+/// Autiasp system
 #[derive(Debug, Clone, Copy)]
 pub struct AutiaspSystem {}
 
