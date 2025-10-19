@@ -2,7 +2,8 @@
 
 use crate::{
     cpu::{Cpu, SP_REGISTER},
-    memory::AccessDescriptor, utils::sign_extend,
+    memory::AccessDescriptor,
+    utils::{sign_extend, zero_extend},
 };
 
 #[repr(u8)]
@@ -500,6 +501,43 @@ pub fn instruction_ldrsw_imm(
             cpu.sp_write(address);
         } else {
             cpu.x_write(rn.into(), address, false);
+        }
+    }
+}
+
+pub fn instruction_ldrh_imm(
+    cpu: &mut Cpu,
+    rn: u8,
+    rt: u8,
+    offset: u64,
+    post_index: bool,
+    wback: bool,
+) {
+    if wback && rn == rt && rn != 31 {
+        panic!("Unpredictable: LDRH wback with rn==rt");
+    }
+    let mut address = if rn == 31 { cpu.sp_read() } else { cpu.x_read(rn.into(), 64) };
+
+    if !post_index {
+        address = address.wrapping_add(offset);
+    }
+
+    let data = cpu.mmu.read_memory(address.try_into().unwrap(), 2).1;
+    if cpu.mmu.faulted {
+        return;
+    }
+
+    let zero_extended_data = zero_extend(data, 32);
+    cpu.x_write(rt.into(), zero_extended_data, true);
+
+    if wback {
+        if post_index {
+            address = address.wrapping_add(offset);
+        }
+        if rn == 31 {
+            cpu.sp_write(address);
+        } else {
+            cpu.x_write(rn.into(), address, true);
         }
     }
 }
