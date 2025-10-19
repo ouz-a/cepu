@@ -63,20 +63,37 @@ impl AddResult {
     }
 }
 
-pub fn add_with_carry(x: u64, y: u64, carry_in: u64) -> AddResult {
+pub fn add_with_carry(x: u64, y: u64, carry_in: u64, datasize: u8) -> AddResult {
     assert!(carry_in <= 1, "carry_in must be 0 or 1");
+    assert!(datasize == 32 || datasize == 64);
 
-    let wide_u = x as u128 + y as u128 + carry_in as u128;
-    let result = wide_u as u64;
-    let c = wide_u > u64::MAX as u128;
+    if datasize == 64 {
+        let wide_u = x as u128 + y as u128 + carry_in as u128;
+        let result = wide_u as u64;
+        let c = wide_u > u64::MAX as u128;
 
-    let wide_s = (x as i64) as i128 + (y as i64) as i128 + carry_in as i128;
-    let v = wide_s < i64::MIN as i128 || wide_s > i64::MAX as i128;
+        let wide_s = (x as i64) as i128 + (y as i64) as i128 + carry_in as i128;
+        let v = wide_s < i64::MIN as i128 || wide_s > i64::MAX as i128;
 
-    let n = (result as i64) < 0;
-    let z = result == 0;
+        let n = (result as i64) < 0;
+        let z = result == 0;
 
-    AddResult { result, n, z, c, v }
+        AddResult { result, n, z, c, v }
+    } else {
+        let x = (x as u32) as u64;
+        let y = (y as u32) as u64;
+        let wide_u = x + y + carry_in;
+        let result = wide_u as u32 as u64;
+        let c = wide_u > u32::MAX as u64;
+
+        let wide_s = (x as i32) as i64 + (y as i32) as i64 + carry_in as i64;
+        let v = wide_s < i32::MIN as i64 || wide_s > i32::MAX as i64;
+
+        let n = (result as i32) < 0;
+        let z = result == 0;
+
+        AddResult { result, n, z, c, v }
+    }
 }
 
 pub fn instruction_add_immediate(cpu: &mut Cpu, d: u8, n: u8, imm12: u32, is_32b: bool) {
@@ -85,7 +102,7 @@ pub fn instruction_add_immediate(cpu: &mut Cpu, d: u8, n: u8, imm12: u32, is_32b
     } else {
         cpu.x_read(n as usize, if is_32b { 32 } else { 64 })
     };
-    let result = add_with_carry(operand1, imm12 as u64, 0);
+    let result = add_with_carry(operand1, imm12 as u64, 0, if is_32b { 32 } else { 64 });
 
     if d == SP_REGISTER as u8 {
         cpu.sp_write(result.result);
@@ -98,7 +115,7 @@ pub fn instruction_imm_sub(cpu: &mut Cpu, d: u8, n: u8, imm24: u32, datasize: u8
     let op1 = if n == SP_REGISTER as u8 { cpu.sp_read() } else { cpu.x_read(n as usize, datasize) };
     let op2 = imm24 as u64;
 
-    let res = add_with_carry(op1, !op2, 1);
+    let res = add_with_carry(op1, !op2, 1, datasize);
     if d == SP_REGISTER as u8 {
         cpu.sp_write(res.result);
     } else {
@@ -110,7 +127,7 @@ pub fn instruction_imm_subs(cpu: &mut Cpu, d: u8, n: u8, imm24: u32, datasize: u
     let op1 = if n == SP_REGISTER as u8 { cpu.sp_read() } else { cpu.x_read(n as usize, datasize) };
     let op2 = zero_extend(imm24 as u64, datasize);
 
-    let res = add_with_carry(op1, !op2, 1);
+    let res = add_with_carry(op1, !op2, 1, datasize);
     cpu.pstate.c = res.c;
     cpu.pstate.n = res.n;
     cpu.pstate.z = res.z;
@@ -210,7 +227,7 @@ pub fn instruction_adds_shifted_register(
 ) {
     let op1 = cpu.x_read(n as usize, datasize);
     let op2 = shift_reg(cpu, m, s_type, shift_amount, datasize);
-    let res = add_with_carry(op1, op2, 0);
+    let res = add_with_carry(op1, op2, 0, datasize);
     cpu.pstate.set_flags_from_bits(res.flag_to_bits());
     cpu.x_write(d as usize, res.result, is_32b);
 }
@@ -227,7 +244,7 @@ pub fn instruction_subs_shifted_reg(
 ) {
     let op1 = cpu.x_read(n as usize, datasize);
     let op2 = shift_reg(cpu, m, s_type, shift_amount, datasize).not();
-    let res = add_with_carry(op1, op2, 1);
+    let res = add_with_carry(op1, op2, 1, datasize);
     if d != 31 {
         cpu.x_write(d as usize, res.result, is_32b);
     }
@@ -246,7 +263,7 @@ pub fn instruction_add_shifted_register(
 ) {
     let op1 = cpu.x_read(n as usize, datasize);
     let op2 = shift_reg(cpu, m, s_type, shift_amount, datasize);
-    let res = add_with_carry(op1, op2, 0);
+    let res = add_with_carry(op1, op2, 0, datasize);
     cpu.x_write(d as usize, res.result, is_32b);
 }
 
@@ -262,7 +279,7 @@ pub fn instruction_sub_shifted_register(
 ) {
     let op1 = cpu.x_read(n as usize, datasize);
     let op2 = !shift_reg(cpu, m, s_type, shift_amount, datasize);
-    let res = add_with_carry(op1, op2, 1);
+    let res = add_with_carry(op1, op2, 1, datasize);
     cpu.x_write(d as usize, res.result, is_32b);
 }
 

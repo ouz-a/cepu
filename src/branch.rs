@@ -109,7 +109,7 @@ pub fn instruction_ccmpi(cpu: &mut Cpu, datasize: u8, rn: u8, imm: u64, cond: u8
     if condition_holds(cpu, cond) {
         let op1 = cpu.x_read(rn.into(), datasize);
         let op2 = imm;
-        let res = add_with_carry(op1, op2.not(), 1);
+        let res = add_with_carry(op1, op2.not(), 1, datasize);
         flags = res.flag_to_bits();
     }
     cpu.pstate.set_flags_from_bits(flags);

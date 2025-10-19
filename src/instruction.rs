@@ -19,8 +19,9 @@ use crate::{
         AddExtendedRegister, AddShiftedReg, AddsExtendedRegister, AddsImmediate, AddsShiftedReg,
         Adr, Adrp, AndImmediate, AndShiftedRegister, AndsImmediate, AndsShiftedReg, AutiaspSystem,
         Bfm, BicShiftedReg, BicShiftedRegSet, CcmpRegister, Clz, Csel, Csneg, Dc, Dsb,
-        EorShiftedReg, Isb, Lslv, Lsrv, Madd, Nop, OrShiftedRegister, OrrImmediate, PaciaSystem,
-        Rev, Sbfm, Smaddl, SubShiftedRegister, SubsShiftedReg, Tlbi, Ubfx, Udiv,
+        EorShiftedReg, Isb, Lslv, Lsrv, Madd, Nop, OrNotShiftedRegister, OrShiftedRegister,
+        OrrImmediate, PaciaSystem, Rev, Sbfm, Smaddl, SubShiftedRegister, SubsShiftedReg, Tlbi,
+        Ubfx, Udiv,
     },
 };
 
@@ -44,6 +45,7 @@ macro_rules! define_instructions {
 }
 
 define_instructions!(
+    OrNotShiftedRegister(OrNotShiftedRegister),
     StrImmPostIndex(StrImmPostIndex),
     Ldxr(Ldxr),
     StlrNoOffset(StlrNoOffset),
@@ -158,6 +160,7 @@ pub struct InstDesc {
 static TABLES: OnceLock<Tables> = OnceLock::new();
 
 pub const DESCR: &[InstDesc] = &sort_by_specificity([
+    OrNotShiftedRegister::OR_NOT_SHIFTED_REGISTER,
     StrImmPostIndex::STR_IMM_POST_INDEX,
     Stlxr::STLXR,
     Ldxr::LDXR,

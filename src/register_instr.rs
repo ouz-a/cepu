@@ -183,7 +183,7 @@ impl AddsImmediate {
         let op1 = if self.rn == 31 { cpu.sp_read() } else { cpu.x_read(self.rn.into(), datasize) };
         let op2 = zero_extend(imm.into(), datasize);
 
-        let res = add_with_carry(op1, op2, 0);
+        let res = add_with_carry(op1, op2, 0, datasize);
         cpu.x_write(self.rd.into(), res.result, !self.sf);
         cpu.pstate.set_flags_from_bits(res.flag_to_bits());
     }
@@ -270,7 +270,7 @@ impl AddExtendedRegister {
         let op1 = if self.rn == 31 { cpu.sp_read() } else { cpu.x_read(self.rn.into(), datasize) };
         let op2 = extend_register(cpu, self.rm, extend_type, self.imm3, datasize);
 
-        let res = add_with_carry(op1, op2, 0).result;
+        let res = add_with_carry(op1, op2, 0, datasize).result;
 
         if self.rd == 31 {
             cpu.sp_write(zero_extend(res, datasize));
@@ -315,7 +315,7 @@ impl AddsExtendedRegister {
         let op1 = if self.rn == 31 { cpu.sp_read() } else { cpu.x_read(self.rn.into(), datasize) };
         let op2 = extend_register(cpu, self.rm, extend_type, self.imm3, datasize);
 
-        let res = add_with_carry(op1, op2, 0);
+        let res = add_with_carry(op1, op2, 0, datasize);
 
         if self.rd == 31 {
             cpu.sp_write(zero_extend(res.result, datasize));
@@ -640,6 +640,47 @@ impl OrShiftedRegister {
     pub const OR_SHIFTED_REGISTER: InstDesc = InstDesc {
         mask: 0b0111_1111_0010_0000_0000_0000_0000_0000,
         value: 0b0010_1010_0000_0000_0000_0000_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+/// Bitwise OR NOT (shifted register)
+#[derive(Debug, Clone, Copy)]
+pub struct OrNotShiftedRegister {
+    pub sf: bool,
+    pub shift: ShiftTypes,
+    pub rm: u8,
+    pub imm6: u8,
+    pub rn: u8,
+    pub rd: u8,
+}
+
+impl OrNotShiftedRegister {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let width = if self.sf { 64 } else { 32 };
+        let op1 = cpu.x_read(self.rn.into(), width);
+        let op2 = shift_reg(cpu, self.rm, self.shift, self.imm6, width);
+
+        cpu.x_write(self.rd.into(), op1 | (op2.not()), !self.sf);
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let sf = get_bits_ct!(word, 31, 1) == 1;
+        let shift = decode_shift(get_bits_ct!(word, 22, 2) as u8);
+        let rm = get_bits_ct!(word, 16, 5) as u8;
+        let imm6 = get_bits_ct!(word, 10, 6) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rd = get_bits_ct!(word, 0, 5) as u8;
+        if !sf && get_bits_ct!(imm6, 5, 1) == 1 {
+            panic!("Undefined, end of decode");
+        }
+
+        Instruction::OrNotShiftedRegister(Self { sf, shift, rm, imm6, rn, rd })
+    }
+
+    pub const OR_NOT_SHIFTED_REGISTER: InstDesc = InstDesc {
+        mask: 0b0111_1111_0010_0000_0000_0000_0000_0000,
+        value: 0b0010_1010_0010_0000_0000_0000_0000_0000,
         decode: Self::decode,
     };
 }
@@ -1188,7 +1229,7 @@ impl CcmpRegister {
         if condition_holds(cpu, self.cond) {
             let op1 = cpu.x_read(self.rn.into(), datasize);
             let op2 = cpu.x_read(self.rm.into(), datasize).not();
-            flags = add_with_carry(op1, op2, 1).flag_to_bits();
+            flags = add_with_carry(op1, op2, 1, datasize).flag_to_bits();
         }
         cpu.pstate.set_flags_from_bits(flags);
     }
