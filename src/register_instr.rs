@@ -1301,8 +1301,8 @@ pub struct Smaddl {
 
 impl Smaddl {
     pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
-        let op1 = cpu.x_read(self.rn.into(), 32);
-        let op2 = cpu.x_read(self.rm.into(), 32);
+        let op1 = sign_extend(cpu.x_read(self.rn.into(), 32), 32);
+        let op2 = sign_extend(cpu.x_read(self.rm.into(), 32), 32);
         let op3 = cpu.x_read(self.ra.into(), 64);
 
         let mult = op1.wrapping_mul(op2);
@@ -1322,6 +1322,42 @@ impl Smaddl {
     pub const SMADDL: InstDesc = InstDesc {
         mask: 0b1111_1111_1110_0000_1000_0000_0000_0000,
         value: 0b1001_1011_0010_0000_0000_0000_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+/// Unsigned multiply-add long
+#[derive(Debug, Copy, Clone)]
+pub struct Umaddl {
+    pub rm: u8,
+    pub ra: u8,
+    pub rn: u8,
+    pub rd: u8,
+}
+
+impl Umaddl {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let op1 = cpu.x_read(self.rn.into(), 32);
+        let op2 = cpu.x_read(self.rm.into(), 32);
+        let op3 = cpu.x_read(self.ra.into(), 64);
+
+        let mult = op1.wrapping_mul(op2);
+        let res = op3.wrapping_add(mult);
+
+        cpu.x_write(self.rd.into(), res, false);
+    }
+
+    pub fn decode(word: u32) -> Instruction {
+        let rm = get_bits_ct!(word, 16, 5) as u8;
+        let ra = get_bits_ct!(word, 10, 5) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rd = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::Umaddl(Self { rm, ra, rn, rd })
+    }
+
+    pub const UMADDL: InstDesc = InstDesc {
+        mask: 0b1111_1111_1110_0000_1000_0000_0000_0000,
+        value: 0b1001_1011_1010_0000_0000_0000_0000_0000,
         decode: Self::decode,
     };
 }

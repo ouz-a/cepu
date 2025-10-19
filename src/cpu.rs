@@ -591,6 +591,9 @@ impl Cpu {
             MrsRegisters::SpEl0 => {
                 self.x_write(t.into(), self.sp_el0, false);
             }
+            MrsRegisters::Daif => {
+                self.x_write(t.into(), self.pstate.daif_to_64bit(), false);
+            }
         }
     }
 
@@ -785,6 +788,28 @@ impl PState {
         self.v = (bits & 1) != 0;
     }
 
+    pub fn daif_to_bits(&self) -> u8 {
+        let mut bits: u8 = 0;
+        if self.masked_d {
+            bits |= 1 << 3;
+        }
+        if self.masked_a {
+            bits |= 1 << 2;
+        }
+        if self.masked_i {
+            bits |= 1 << 1;
+        }
+        if self.masked_f {
+            bits |= 1;
+        }
+        bits
+    }
+
+    pub fn daif_to_64bit(&self) -> u64 {
+        let bits = self.daif_to_bits() as u64;
+        bits << 6
+    }
+
     #[inline]
     fn irq_masked(&self) -> bool {
         self.masked_i
@@ -929,6 +954,7 @@ macro_rules! mrs_enum {
 }
 
 mrs_enum! {
+    Daif = 12935496193,
     SpEl0 = 12885164288,
     MpidrEl1 = 12884901893,
     CntfrqEl0 = 12936151040,
