@@ -9,9 +9,10 @@ use crate::{
     imm_instr::{AddImmediate, Movk, Movn, Movz, SubImmediate, Subs},
     load_store_instr::{
         Ldaxr, LdpPostIndex, LdpPreIndex, LdpSignedOffset, LdrImmPostIdx, LdrImmPreIdx,
-        LdrImmUnOffset, LdrLit, LdrReg, LdrbPostIndex, LdrbRegister, LdrbUnsignedOff, Ldur, Ldurb,
-        Prfm, StpPreIndex, StpSignedOffset, StrImmPreIndex, StrImmUnOffset, StrRegister,
-        StrbImmUnOffset, StrbRegister, StrhUnsigned, Stur, Sturb, Stxr,
+        LdrImmUnOffset, LdrLit, LdrReg, LdrbPostIndex, LdrbRegister, LdrbUnsignedOff,
+        LdrswImmPostIndex, LdrswImmPreIndex, LdrswImmUnOffset, Ldur, Ldurb, Prfm, StpPreIndex,
+        StpSignedOffset, StrImmPreIndex, StrImmUnOffset, StrRegister, StrbImmUnOffset,
+        StrbRegister, StrhUnsigned, Stur, Sturb, Stxr,
     },
     register_instr::{
         AddExtendedRegister, AddShiftedReg, AddsExtendedRegister, AddsImmediate, AddsShiftedReg,
@@ -42,6 +43,9 @@ macro_rules! define_instructions {
 }
 
 define_instructions!(
+    LdrswImmPostIndex(LdrswImmPostIndex),
+    LdrswImmPreIndex(LdrswImmPreIndex),
+    LdrswImmUnOffset(LdrswImmUnOffset),
     StrImmPreIndex(StrImmPreIndex),
     Strx(Stxr),
     Ldaxr(Ldaxr),
@@ -146,6 +150,9 @@ pub struct InstDesc {
 static TABLES: OnceLock<Tables> = OnceLock::new();
 
 pub const DESCR: &[InstDesc] = &sort_by_specificity([
+    LdrswImmPostIndex::LDRSW_IMM_POST_INDEX,
+    LdrswImmPreIndex::LDRSW_IMM_PRE_INDEX,
+    LdrswImmUnOffset::LDRSW_IMM_UN_OFFSET,
     StrImmPreIndex::STR_IMM_PRE_INDEX,
     Stxr::STXR,
     Ldaxr::LDAXR,
