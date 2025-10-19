@@ -72,6 +72,23 @@ pub struct Timer {
     pub cntp_expiry_ns: AtomicU64,
 }
 
+#[derive(Default, Debug, Clone, Copy)]
+pub struct ExclusiveMonitor {
+    pub address_size: Option<(u64, u8)>,
+}
+
+impl ExclusiveMonitor {
+    pub fn off(&mut self) {
+        self.address_size = None;
+    }
+    pub fn set(&mut self, address: u64, size: u8) {
+        self.address_size = Some((address, size));
+    }
+    pub fn safe(self, address: u64, size: u8) -> bool {
+        self.address_size.is_some_and(|a| address == a.0 && size == a.1)
+    }
+}
+
 #[derive(Default, Debug)]
 pub struct Cpu {
     /// 64-Bit General Purpose Register
@@ -162,6 +179,8 @@ pub struct Cpu {
     pub pending_irq: AtomicU32,
     pub sleeping: AtomicBool,
 
+    pub monitor: ExclusiveMonitor,
+
     pub mmu: Mmu,
     tpidr_el1: u64,
 }
@@ -196,6 +215,8 @@ impl Cpu {
 
         // System Control Register - MMU off, caches configured for boot
         cpu.sctlr_el1 = 0x00C50838;
+
+        cpu.monitor.off();
         cpu
     }
 
