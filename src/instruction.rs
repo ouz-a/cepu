@@ -10,8 +10,8 @@ use crate::{
     load_store_instr::{
         Ldaxr, LdpPostIndex, LdpPreIndex, LdpSignedOffset, LdrImmPostIdx, LdrImmPreIdx,
         LdrImmUnOffset, LdrLit, LdrReg, LdrbPostIndex, LdrbRegister, LdrbUnsignedOff, Ldur, Ldurb,
-        Prfm, StpPreIndex, StpSignedOffset, StrImmUnOffset, StrRegister, StrbImmUnOffset,
-        StrbRegister, StrhUnsigned, Stur, Sturb, Stxr,
+        Prfm, StpPreIndex, StpSignedOffset, StrImmPreIndex, StrImmUnOffset, StrRegister,
+        StrbImmUnOffset, StrbRegister, StrhUnsigned, Stur, Sturb, Stxr,
     },
     register_instr::{
         AddExtendedRegister, AddShiftedReg, AddsExtendedRegister, AddsImmediate, AddsShiftedReg,
@@ -42,6 +42,7 @@ macro_rules! define_instructions {
 }
 
 define_instructions!(
+    StrImmPreIndex(StrImmPreIndex),
     Strx(Stxr),
     Ldaxr(Ldaxr),
     Prfm(Prfm),
@@ -145,6 +146,7 @@ pub struct InstDesc {
 static TABLES: OnceLock<Tables> = OnceLock::new();
 
 pub const DESCR: &[InstDesc] = &sort_by_specificity([
+    StrImmPreIndex::STR_IMM_PRE_INDEX,
     Stxr::STXR,
     Ldaxr::LDAXR,
     Prfm::PRFM,
