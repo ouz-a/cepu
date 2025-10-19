@@ -11,9 +11,9 @@ use crate::{
         Ldaxr, LdpPostIndex, LdpPreIndex, LdpSignedOffset, LdrImmPostIdx, LdrImmPreIdx,
         LdrImmUnOffset, LdrLit, LdrReg, LdrbPostIndex, LdrbRegister, LdrbUnsignedOff,
         LdrhImmPostIndex, LdrhImmPreIndex, LdrhImmUnOffset, LdrswImmPostIndex, LdrswImmPreIndex,
-        LdrswImmUnOffset, Ldur, Ldurb, Prfm, StpPreIndex, StpSignedOffset, StrImmPreIndex,
-        StrImmUnOffset, StrRegister, StrbImmUnOffset, StrbRegister, StrhUnsigned, Stur, Sturb,
-        Stxr,
+        LdrswImmUnOffset, Ldur, Ldurb, Ldxr, Prfm, StlrNoOffset, Stlxr, StpPreIndex,
+        StpSignedOffset, StrImmPreIndex, StrImmUnOffset, StrRegister, StrbImmUnOffset,
+        StrbRegister, StrhUnsigned, Stur, Sturb, Stxr,
     },
     register_instr::{
         AddExtendedRegister, AddShiftedReg, AddsExtendedRegister, AddsImmediate, AddsShiftedReg,
@@ -44,6 +44,8 @@ macro_rules! define_instructions {
 }
 
 define_instructions!(
+    Ldxr(Ldxr),
+    StlrNoOffset(StlrNoOffset),
     LdrhImmPostIndex(LdrhImmPostIndex),
     LdrhImmPreIndex(LdrhImmPreIndex),
     LdrhImmUnOffset(LdrhImmUnOffset),
@@ -51,7 +53,8 @@ define_instructions!(
     LdrswImmPreIndex(LdrswImmPreIndex),
     LdrswImmUnOffset(LdrswImmUnOffset),
     StrImmPreIndex(StrImmPreIndex),
-    Strx(Stxr),
+    Stxr(Stxr),
+    Stlxr(Stlxr),
     Ldaxr(Ldaxr),
     Prfm(Prfm),
     AddsExtendedRegister(AddsExtendedRegister),
@@ -154,6 +157,9 @@ pub struct InstDesc {
 static TABLES: OnceLock<Tables> = OnceLock::new();
 
 pub const DESCR: &[InstDesc] = &sort_by_specificity([
+    Stlxr::STLXR,
+    Ldxr::LDXR,
+    StlrNoOffset::STLR_NO_OFFSET,
     LdrhImmPostIndex::LDRH_IMM_POST_INDEX,
     LdrhImmPreIndex::LDRH_IMM_PRE_INDEX,
     LdrhImmUnOffset::LDRH_IMM_UN_OFFSET,

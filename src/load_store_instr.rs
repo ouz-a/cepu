@@ -946,6 +946,45 @@ impl Ldaxr {
     };
 }
 
+/// Load exclusive register
+#[derive(Debug, Clone, Copy)]
+pub struct Ldxr {
+    pub size: u8,
+    pub rn: u8,
+    pub rt: u8,
+}
+
+impl Ldxr {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let elsize = 8 << self.size;
+        let regsize = if elsize == 64 { 64 } else { 32 };
+
+        let dbytes = elsize / 8;
+
+        let address = if self.rn == 31 { cpu.sp_read() } else { cpu.x_read(self.rn.into(), 64) };
+
+        let data = cpu.mmu.read_memory(address.try_into().unwrap(), dbytes);
+        if cpu.mmu.faulted {
+            return;
+        }
+        cpu.x_write(self.rt.into(), data.1, regsize == 32);
+        cpu.monitor.set(address, dbytes as u8);
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let size = get_bits_ct!(word, 30, 2) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rt = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::Ldxr(Self { size, rn, rt })
+    }
+
+    pub const LDXR: InstDesc = InstDesc {
+        mask: 0b1011_1111_1111_1111_1111_1100_0000_0000,
+        value: 0b1000_1000_0101_1111_0111_1100_0000_0000,
+        decode: Self::decode,
+    };
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct Stxr {
     size: u8,
@@ -987,7 +1026,7 @@ impl Stxr {
         let rs = get_bits_ct!(word, 16, 5) as u8;
         let rn = get_bits_ct!(word, 5, 5) as u8;
         let rt = get_bits_ct!(word, 0, 5) as u8;
-        Instruction::Strx(Self { size, rs, rn, rt })
+        Instruction::Stxr(Self { size, rs, rn, rt })
     }
 
     pub const STXR: InstDesc = InstDesc {
@@ -1169,6 +1208,95 @@ impl LdrhImmUnOffset {
     pub const LDRH_IMM_UN_OFFSET: InstDesc = InstDesc {
         mask: 0b1111_1111_1100_0000_0000_0000_0000_0000,
         value: 0b0111_1001_0100_0000_0000_0000_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+/// Store-release register - No offset
+#[derive(Debug, Clone, Copy)]
+pub struct StlrNoOffset {
+    pub size: u8,
+    pub rn: u8,
+    pub rt: u8,
+}
+
+impl StlrNoOffset {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let elsize = 8 << self.size;
+        let dbytres = elsize / 8;
+
+        let address = if self.rn == 31 { cpu.sp_read() } else { cpu.x_read(self.rn.into(), 64) };
+
+        let data = cpu.x_read(self.rt.into(), elsize);
+
+        cpu.mmu.write_memory(address.try_into().unwrap(), dbytres.into(), data);
+        if cpu.mmu.faulted {
+            return;
+        }
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let size = get_bits_ct!(word, 30, 2) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rt = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::StlrNoOffset(Self { size, rn, rt })
+    }
+
+    pub const STLR_NO_OFFSET: InstDesc = InstDesc {
+        mask: 0b1011_1111_1111_1111_1111_1100_0000_0000,
+        value: 0b1000_1000_1001_1111_1111_1100_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+/// Store-release exclusive register
+#[derive(Debug, Clone, Copy)]
+pub struct Stlxr {
+    pub size: u8,
+    pub rs: u8,
+    pub rn: u8,
+    pub rt: u8,
+}
+
+impl Stlxr {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let elsize = 8 << self.size;
+        let dbytes = elsize / 8;
+
+        if self.rs == self.rt {
+            panic!("Oh no");
+        } else if self.rn == self.rs && self.rn != 31 {
+            panic!("Oh no");
+        }
+
+        let address = if self.rn == 31 { cpu.sp_read() } else { cpu.x_read(self.rn.into(), 64) };
+
+        let data = cpu.x_read(self.rt.into(), elsize);
+
+        let status = if cpu.monitor.safe(address, dbytes) {
+            cpu.mmu.write_memory(address as usize, dbytes.into(), data);
+            0u64
+        } else {
+            1u64
+        };
+        if cpu.mmu.faulted {
+            return;
+        }
+        cpu.monitor.off();
+        cpu.x_write(self.rs.into(), status, true);
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let size = get_bits_ct!(word, 30, 2) as u8;
+        let rs = get_bits_ct!(word, 16, 5) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rt = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::Stlxr(Self { size, rs, rn, rt })
+    }
+
+    pub const STLXR: InstDesc = InstDesc {
+        mask: 0b1011_1111_1110_0000_1111_1100_0000_0000,
+        value: 0b1000_1000_0000_0000_1111_1100_0000_0000,
         decode: Self::decode,
     };
 }
