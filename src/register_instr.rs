@@ -1099,6 +1099,52 @@ impl Lsrv {
     };
 }
 
+/// Subtract extended and scaled register, setting flags
+#[derive(Debug, Clone, Copy)]
+pub struct SubsExtendedReg {
+    pub sf: bool,
+    pub rm: u8,
+    pub option: u8,
+    pub imm3: u8,
+    pub rn: u8,
+    pub rd: u8,
+}
+
+impl SubsExtendedReg {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        match self.imm3 {
+            0b101 | 0b110 | 0b111 => panic!("Oh no"),
+            _ => (),
+        }
+        let datasize = self.sf.datasize_sf();
+        let extend_type = ExtendType::from_u8(self.option);
+
+        let op1 = if self.rn == 31 { cpu.sp_read() } else { cpu.x_read(self.rn.into(), datasize) };
+        let extended = extend_register(cpu, self.rm.into(), extend_type, self.imm3, datasize);
+        let op2 = bits_get(extended.not(), 0, datasize);
+
+        let result = add_with_carry(op1, op2, 1, datasize);
+        cpu.x_write(self.rd.into(), result.result, datasize == 32);
+        cpu.pstate.set_flags_from_bits(result.flag_to_bits());
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let sf = get_bits_ct!(word, 31, 1) == 1;
+        let rm = get_bits_ct!(word, 16, 5) as u8;
+        let option = get_bits_ct!(word, 13, 3) as u8;
+        let imm3 = get_bits_ct!(word, 10, 3) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rd = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::SubsExtendedReg(Self { sf, rm, option, imm3, rn, rd })
+    }
+
+    pub const SUBS_EXTENDED_REG: InstDesc = InstDesc {
+        mask: 0b0111_1111_1110_0000_0000_0000_0000_0000,
+        value: 0b0110_1011_0010_0000_0000_0000_0000_0000,
+        decode: Self::decode,
+    };
+}
+
 /// Subtract optionally-shifted register, setting flags
 #[derive(Clone, Copy, Debug)]
 pub struct SubsShiftedReg {
