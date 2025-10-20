@@ -7,7 +7,7 @@ use crate::{
     get_bits_ct,
     instruction::*,
     load_and_store::{ExtendType, extend_register},
-    utils::{bits_get, decode_bit_mask, replicate_bits_u64, sign_extend, zero_extend},
+    utils::{Utils, bits_get, decode_bit_mask, replicate_bits_u64, sign_extend, zero_extend},
 };
 
 // Temp NOOP instructions
@@ -1014,7 +1014,7 @@ impl Sbfm {
         let imms = get_bits_ct!(word, 10, 6) as u8;
         let rn = get_bits_ct!(word, 5, 5) as u8;
         let rd = get_bits_ct!(word, 0, 5) as u8;
-        if !sf && !n {
+        if sf && !n {
             panic!("Undefined, end of decode");
         }
         Instruction::Sbfm(Self { sf, n, immr, imms, rn, rd })
@@ -1396,6 +1396,46 @@ impl AutiaspSystem {
     pub const AUTIASP_SYSTEM: InstDesc = InstDesc {
         mask: 0b1111_1111_1111_1111_1111_1111_1111_1111,
         value: 0b1101_0101_0000_0011_0010_0011_1011_1111,
+        decode: Self::decode,
+    };
+}
+
+/// Arithmetic shift right variable
+#[derive(Debug, Clone, Copy)]
+pub struct Asrv {
+    pub sf: bool,
+    pub rm: u8,
+    pub rn: u8,
+    pub rd: u8,
+}
+
+impl Asrv {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let datasize = self.sf.datasize_sf();
+        let shift = decode_shift(0b10);
+
+        let op2 = cpu.x_read(self.rm.into(), datasize);
+        let shifted_reg = shift_reg(
+            cpu,
+            self.rn.into(),
+            shift,
+            (op2 % datasize as u64).try_into().unwrap(),
+            datasize,
+        );
+        cpu.x_write(self.rd.into(), shifted_reg, datasize == 32);
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let sf = get_bits_ct!(word, 31, 1) == 1;
+        let rm = get_bits_ct!(word, 16, 5) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rd = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::Asrv(Self { sf, rm, rn, rd })
+    }
+
+    pub const ASRV: InstDesc = InstDesc {
+        mask: 0b0111_1111_1110_0000_1111_1100_0000_0000,
+        value: 0b0001_1010_1100_0000_0010_1000_0000_0000,
         decode: Self::decode,
     };
 }

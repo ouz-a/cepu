@@ -189,3 +189,13 @@ fn ones_masked(n: u32, width: u8) -> u64 {
     };
     zero_extend(ones, width)
 }
+
+pub trait Utils {
+    fn datasize_sf(self) -> u8;
+}
+
+impl Utils for bool {
+    fn datasize_sf(self) -> u8 {
+        if self { 64 } else { 32 }
+    }
+}
