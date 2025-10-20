@@ -969,7 +969,7 @@ impl Bfm {
         let imms = get_bits_ct!(word, 10, 6) as u8;
         let rn = get_bits_ct!(word, 5, 5) as u8;
         let rd = get_bits_ct!(word, 0, 5) as u8;
-        if !sf && !n {
+        if sf && !n {
             panic!("Undefined, end of decode");
         }
         Instruction::Bfm(Self { sf, n, immr, imms, rn, rd })

@@ -477,6 +477,9 @@ impl Cpu {
             MsrRegisters::TpidrEl1 => {
                 self.tpidr_el1 = self.x_read(t.into(), 64);
             }
+            MsrRegisters::Daif => {
+                self.pstate.daif_from_spsr(self.x_read(t.into(), 64));
+            }
         }
     }
 
@@ -593,6 +596,9 @@ impl Cpu {
             }
             MrsRegisters::Daif => {
                 self.x_write(t.into(), self.pstate.daif_to_64bit(), false);
+            }
+            MrsRegisters::TpidrEl1 => {
+                self.x_write(t.into(), self.tpidr_el1, false);
             }
         }
     }
@@ -907,6 +913,7 @@ macro_rules! msr_enum {
 }
 
 msr_enum! {
+    Daif = 12935496193,
     ElrEl3  = 12985827329,
     SpsrEl3 = 12985827328,
     ScrEl3  = 12985630976,
@@ -954,6 +961,7 @@ macro_rules! mrs_enum {
 }
 
 mrs_enum! {
+    TpidrEl1 = 12885753860,
     Daif = 12935496193,
     SpEl0 = 12885164288,
     MpidrEl1 = 12884901893,
