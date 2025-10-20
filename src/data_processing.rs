@@ -335,11 +335,7 @@ pub fn shift_asr(x: u64, amount: u8, datasize: u8) -> u64 {
         return x;
     }
 
-    let value_to_shift = if datasize == 32 {
-        sign_extend(x, 32)
-    } else {
-        x
-    };
+    let value_to_shift = if datasize == 32 { sign_extend(x, 32) } else { x };
 
     ((value_to_shift as i64) >> (amount as u32)) as u64
 }

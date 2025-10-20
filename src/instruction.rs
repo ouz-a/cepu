@@ -9,7 +9,7 @@ use crate::{
     imm_instr::{AddImmediate, Movk, Movn, Movz, SubImmediate, Subs},
     load_store_instr::{
         Ldaxr, LdpPostIndex, LdpPreIndex, LdpSignedOffset, LdrImmPostIdx, LdrImmPreIdx,
-        LdrImmUnOffset, LdrLit, LdrReg, LdrbPostIndex, LdrbRegister, LdrbUnsignedOff,
+        LdrImmUnOffset, LdrLit, LdrReg, LdrbPostIndex, LdrbPreIndex, LdrbRegister, LdrbUnsignedOff,
         LdrhImmPostIndex, LdrhImmPreIndex, LdrhImmUnOffset, LdrswImmPostIndex, LdrswImmPreIndex,
         LdrswImmUnOffset, Ldur, Ldurb, Ldxr, Prfm, StlrNoOffset, Stlxr, StpPreIndex,
         StpSignedOffset, StrImmPostIndex, StrImmPreIndex, StrImmUnOffset, StrRegister,
@@ -144,6 +144,7 @@ define_instructions!(
     LdpSignedOffset(LdpSignedOffset),
     LdrbUnsignedOff(LdrbUnsignedOff),
     LdrbPostIndex(LdrbPostIndex),
+    LdrbPreIndex(LdrbPreIndex),
     Csinv(Csinv),
     Csinc(Csinc),
     Blr(Blr),
@@ -161,6 +162,7 @@ pub struct InstDesc {
 static TABLES: OnceLock<Tables> = OnceLock::new();
 
 pub const DESCR: &[InstDesc] = &sort_by_specificity([
+    LdrbPreIndex::LDRB_PRE_INDEX,
     Umaddl::UMADDL,
     OrNotShiftedRegister::OR_NOT_SHIFTED_REGISTER,
     StrImmPostIndex::STR_IMM_POST_INDEX,
