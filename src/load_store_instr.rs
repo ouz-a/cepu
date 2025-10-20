@@ -985,7 +985,7 @@ impl Prfm {
         Instruction::Prfm(Self {})
     }
     pub const PRFM: InstDesc = InstDesc {
-        mask: 0b1111_1111_1000_0000_0000_0000_0000_0000,
+        mask: 0b1111_1111_1100_0000_0000_0000_0000_0000,
         value: 0b1111_1001_1000_0000_0000_0000_0000_0000,
         decode: Self::decode,
     };
