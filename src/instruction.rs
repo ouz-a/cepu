@@ -8,7 +8,7 @@ use crate::{
     cpu::Cpu,
     imm_instr::{AddImmediate, Movk, Movn, Movz, SubImmediate, Subs},
     load_store_instr::{
-        Ldaxr, LdpPostIndex, LdpPreIndex, LdpSignedOffset, LdrImmPostIdx, LdrImmPreIdx,
+        Ldar, Ldaxr, LdpPostIndex, LdpPreIndex, LdpSignedOffset, LdrImmPostIdx, LdrImmPreIdx,
         LdrImmUnOffset, LdrLit, LdrReg, LdrbPostIndex, LdrbPreIndex, LdrbRegister, LdrbUnsignedOff,
         LdrhImmPostIndex, LdrhImmPreIndex, LdrhImmUnOffset, LdrswImmPostIndex, LdrswImmPreIndex,
         LdrswImmUnOffset, Ldur, Ldurb, Ldxr, Prfm, StlrNoOffset, Stlxr, StpPreIndex,
@@ -45,6 +45,7 @@ macro_rules! define_instructions {
 }
 
 define_instructions!(
+    Ldar(Ldar),
     SubsExtendedReg(SubsExtendedReg),
     Asrv(Asrv),
     Umaddl(Umaddl),
@@ -164,6 +165,7 @@ pub struct InstDesc {
 static TABLES: OnceLock<Tables> = OnceLock::new();
 
 pub const DESCR: &[InstDesc] = &sort_by_specificity([
+    Ldar::LDAR,
     SubsExtendedReg::SUBS_EXTENDED_REG,
     Asrv::ASRV,
     LdrbPreIndex::LDRB_PRE_INDEX,

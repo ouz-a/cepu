@@ -826,6 +826,7 @@ impl LdrbPostIndex {
     };
 }
 
+/// Load register byte (immediate)
 #[derive(Debug, Clone, Copy)]
 pub struct LdrbPreIndex {
     imm9: u16,
@@ -839,13 +840,14 @@ impl LdrbPreIndex {
 
         let mut address =
             if self.rn == 31 { cpu.sp_read() } else { cpu.x_read(self.rn.into(), 64) };
+        address = address.wrapping_add(offset);
         let data = cpu.mmu.read_memory(address as usize, 1);
         if cpu.mmu.faulted {
             return;
         }
-        address = address.wrapping_add(offset);
         cpu.x_write(self.rt.into(), zero_extend(data.1, 32), true);
 
+        // Write back the incremented address
         if self.rn == 31 {
             cpu.sp_write(address);
         } else {
@@ -1065,6 +1067,44 @@ impl Ldxr {
     pub const LDXR: InstDesc = InstDesc {
         mask: 0b1011_1111_1111_1111_1111_1100_0000_0000,
         value: 0b1000_1000_0101_1111_0111_1100_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+/// Load-acquire register
+#[derive(Debug, Clone, Copy)]
+pub struct Ldar {
+    pub size: u8,
+    pub rn: u8,
+    pub rt: u8,
+}
+
+impl Ldar {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let elsize = 8 << self.size;
+        let regsize = if elsize == 64 { 64 } else { 32 };
+
+        let dbytes = elsize / 8;
+
+        let address = if self.rn == 31 { cpu.sp_read() } else { cpu.x_read(self.rn.into(), 64) };
+
+        let data = cpu.mmu.read_memory(address.try_into().unwrap(), dbytes);
+        if cpu.mmu.faulted {
+            return;
+        }
+        cpu.x_write(self.rt.into(), data.1, regsize == 32);
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let size = get_bits_ct!(word, 30, 2) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rt = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::Ldar(Self { size, rn, rt })
+    }
+
+    pub const LDAR: InstDesc = InstDesc {
+        mask: 0b1011_1111_1111_1111_1111_1100_0000_0000,
+        value: 0b1000_1000_1101_1111_1111_1100_0000_0000,
         decode: Self::decode,
     };
 }
