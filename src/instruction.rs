@@ -26,6 +26,16 @@ use crate::{
 };
 
 const PRIME_SIZE: usize = 1 << 12;
+type DecodeFn = fn(u32) -> Instruction;
+
+#[derive(Clone, Copy)]
+pub struct InstDesc {
+    pub mask: u32,
+    pub value: u32,
+    pub decode: DecodeFn,
+}
+
+static TABLES: OnceLock<Tables> = OnceLock::new();
 
 macro_rules! define_instructions {
     ($($variant:ident($inner:ty)),* $(,)?) => {
@@ -45,232 +55,305 @@ macro_rules! define_instructions {
 }
 
 define_instructions!(
-    Ldar(Ldar),
+    // ============================================================
+    // BRANCH
+    // ============================================================
+    // ----- Return -----
+    Ret(Ret),
+    // ----- Conditional -----
+    BCond(Bcond),
+    // ----- Test Branch -----
+    Cbnz(Cbnz),
+    Cbz(Cbz),
+    Tbnz(Tbnz),
+    Tbz(Tbz),
+    // ----- Unconditional -----
+    Bl(Bl),
+    Blr(Blr),
+    Br(Br),
+    Branch(Branch),
+    // ============================================================
+    // DATA PROCESSING
+    // ============================================================
+    // ----- Add Subtract -----
+    AddsExtendedRegister(AddsExtendedRegister),
+    AddsImmediate(AddsImmediate),
+    AddsShiftedReg(AddsShiftedReg),
+    AddExtendedRegister(AddExtendedRegister),
+    AddImmediate(AddImmediate),
+    AddShiftedReg(AddShiftedReg),
+    Ccmpi(Ccmpi),
+    CcmpRegister(CcmpRegister),
+    Subs(Subs),
     SubsExtendedReg(SubsExtendedReg),
-    Asrv(Asrv),
+    SubsShiftedReg(SubsShiftedReg),
+    SubImmediate(SubImmediate),
+    SubShiftedRegister(SubShiftedRegister),
+    // ----- Conditional Select -----
+    Csel(Csel),
+    Csinc(Csinc),
+    Csinv(Csinv),
+    Csneg(Csneg),
+    // ----- Move -----
+    Movk(Movk),
+    Movn(Movn),
+    Movz(Movz),
+    // ----- Multiply -----
+    Madd(Madd),
+    Smaddl(Smaddl),
     Umaddl(Umaddl),
+    // ----- Divide -----
+    Udiv(Udiv),
+    // ----- Logical And -----
+    AndsImmediate(AndsImmediate),
+    AndsShiftedReg(AndsShiftedReg),
+    AndImmediate(AndImmediate),
+    AndShiftedRegister(AndShiftedRegister),
+    BicShiftedReg(BicShiftedReg),
+    BicShiftedRegSet(BicShiftedRegSet),
+    // ----- Logical Or -----
+    OrrImmediate(OrrImmediate),
     OrNotShiftedRegister(OrNotShiftedRegister),
-    StrImmPostIndex(StrImmPostIndex),
-    Ldxr(Ldxr),
+    OrShiftedRegister(OrShiftedRegister),
+    // ----- Address Calculation -----
+    Adr(Adr),
+    Adrp(Adrp),
+    // ----- Bitfield -----
+    Bfm(Bfm),
+    Sbfm(Sbfm),
+    Ubfx(Ubfx),
+    // ----- Shift -----
+    Asrv(Asrv),
+    Lslv(Lslv),
+    Lsrv(Lsrv),
+    // ----- Count -----
+    Clz(Clz),
+    // ----- Bit Reversal -----
+    Rev(Rev),
+    // ----- Logical Xor -----
+    EorShiftedReg(EorShiftedReg),
+    // ============================================================
+    // SYSTEM
+    // ============================================================
+    // ----- Exceptions -----
+    Eret(Eret),
+    // ----- Flag Manipulation -----
+    MsrImm(MsrImm),
+    // ----- Registers -----
+    Mrs(Mrs),
+    MsrReg(MsrReg),
+    // ----- Hints -----
+    Bti(Bti),
+    Nop(Nop),
+    Wfi(Wfi),
+    // ----- Barriers -----
+    Dmb(Dmb),
+    Dsb(Dsb),
+    Isb(Isb),
+    // ----- Cache Tlb -----
+    Dc(Dc),
+    Tlbi(Tlbi),
+    // ----- Pointer Authentication -----
+    AutiaspSystem(AutiaspSystem),
+    PaciaSystem(PaciaSystem),
+    // ============================================================
+    // LOAD STORE
+    // ============================================================
+    // ----- Store Single -----
+    Prfm(Prfm),
     StlrNoOffset(StlrNoOffset),
+    StrbImmUnOffset(StrbImmUnOffset),
+    StrbRegister(StrbRegister),
+    StrhUnsigned(StrhUnsigned),
+    StrImmPostIndex(StrImmPostIndex),
+    StrImmPreIndex(StrImmPreIndex),
+    StrImmUnOffset(StrImmUnOffset),
+    StrRegister(StrRegister),
+    Stur(Stur),
+    Sturb(Sturb),
+    // ----- Load Single -----
+    Ldar(Ldar),
+    LdrbPostIndex(LdrbPostIndex),
+    LdrbPreIndex(LdrbPreIndex),
+    LdrbRegister(LdrbRegister),
+    LdrbUnsignedOff(LdrbUnsignedOff),
     LdrhImmPostIndex(LdrhImmPostIndex),
     LdrhImmPreIndex(LdrhImmPreIndex),
     LdrhImmUnOffset(LdrhImmUnOffset),
     LdrswImmPostIndex(LdrswImmPostIndex),
     LdrswImmPreIndex(LdrswImmPreIndex),
     LdrswImmUnOffset(LdrswImmUnOffset),
-    StrImmPreIndex(StrImmPreIndex),
-    Stxr(Stxr),
-    Stlxr(Stlxr),
-    Ldaxr(Ldaxr),
-    Prfm(Prfm),
-    AddsExtendedRegister(AddsExtendedRegister),
-    AutiaspSystem(AutiaspSystem),
-    PaciaSystem(PaciaSystem),
-    Br(Br),
-    Adr(Adr),
-    Sturb(Sturb),
-    Ldurb(Ldurb),
-    Smaddl(Smaddl),
-    StrbRegister(StrbRegister),
-    EorShiftedReg(EorShiftedReg),
-    Tlbi(Tlbi),
-    Isb(Isb),
-    Nop(Nop),
-    Dc(Dc),
-    Dsb(Dsb),
-    Madd(Madd),
-    AddsShiftedReg(AddsShiftedReg),
-    AddsImmediate(AddsImmediate),
-    AddShiftedReg(AddShiftedReg),
-    AddExtendedRegister(AddExtendedRegister),
-    SubShiftedRegister(SubShiftedRegister),
-    SubsShiftedReg(SubsShiftedReg),
-    AndShiftedRegister(AndShiftedRegister),
-    AndsImmediate(AndsImmediate),
-    OrrImmediate(OrrImmediate),
-    AndsShiftedReg(AndsShiftedReg),
-    AndImmediate(AndImmediate),
-    Lslv(Lslv),
-    Lsrv(Lsrv),
-    Csel(Csel),
-    CcmpRegister(CcmpRegister),
-    Adrp(Adrp),
-    Csneg(Csneg),
-    Ubfx(Ubfx),
-    Bfm(Bfm),
-    OrShiftedRegister(OrShiftedRegister),
-    BicShiftedReg(BicShiftedReg),
-    BicShiftedRegSet(BicShiftedRegSet),
-    Rev(Rev),
-    Udiv(Udiv),
-    AddImmediate(AddImmediate),
-    Movz(Movz),
-    Movk(Movk),
-    Movn(Movn),
-    Subs(Subs),
-    SubImmediate(SubImmediate),
-    Ret(Ret),
-    Eret(Eret),
-    Bcond(Bcond),
-    Tbnz(Tbnz),
-    Tbz(Tbz),
-    Cbnz(Cbnz),
-    Cbz(Cbz),
-    Ccmpi(Ccmpi),
-    Bl(Bl),
-    Branch(Branch),
-    MsrImm(MsrImm),
-    MsrReg(MsrReg),
-    Mrs(Mrs),
-    StrImmUnOffset(StrImmUnOffset),
-    StrRegister(StrRegister),
-    StrhUnsigned(StrhUnsigned),
-    StrbImmUnOffset(StrbImmUnOffset),
-    LdrImmUnOffset(LdrImmUnOffset),
     LdrImmPostIdx(LdrImmPostIdx),
     LdrImmPreIdx(LdrImmPreIdx),
-    LdrReg(LdrReg),
-    LdrbRegister(LdrbRegister),
+    LdrImmUnOffset(LdrImmUnOffset),
     LdrLit(LdrLit),
+    LdrReg(LdrReg),
     Ldur(Ldur),
-    Stur(Stur),
-    StpSignedOffset(StpSignedOffset),
+    Ldurb(Ldurb),
+    // ----- Store Pair -----
     StpPreIndex(StpPreIndex),
+    StpSignedOffset(StpSignedOffset),
+    // ----- Load Pair -----
     LdpPostIndex(LdpPostIndex),
     LdpPreIndex(LdpPreIndex),
-    Wfi(Wfi),
-    Dmb(Dmb),
-    Bti(Bti),
-    Sbfm(Sbfm),
-    Clz(Clz),
     LdpSignedOffset(LdpSignedOffset),
-    LdrbUnsignedOff(LdrbUnsignedOff),
-    LdrbPostIndex(LdrbPostIndex),
-    LdrbPreIndex(LdrbPreIndex),
-    Csinv(Csinv),
-    Csinc(Csinc),
-    Blr(Blr),
+    // ----- Load Exclusive -----
+    Ldaxr(Ldaxr),
+    Ldxr(Ldxr),
+    // ----- Store Exclusive -----
+    Stlxr(Stlxr),
+    Stxr(Stxr),
 );
 
-type DecodeFn = fn(u32) -> Instruction;
-
-#[derive(Clone, Copy)]
-pub struct InstDesc {
-    pub mask: u32,
-    pub value: u32,
-    pub decode: DecodeFn,
-}
-
-static TABLES: OnceLock<Tables> = OnceLock::new();
-
 pub const DESCR: &[InstDesc] = &sort_by_specificity([
-    Ldar::LDAR,
+    // ============================================================
+    // BRANCH
+    // ============================================================
+    // ----- Return -----
+    Ret::RET,
+    // ----- Conditional -----
+    Bcond::B_COND,
+    // ----- Test Branch -----
+    Cbnz::CBNZ,
+    Cbz::CBZ,
+    Tbnz::TBNZ,
+    Tbz::TBZ,
+    // ----- Unconditional -----
+    Bl::BL,
+    Blr::BLR,
+    Br::BR,
+    Branch::BRANCH,
+    // ============================================================
+    // DATA PROCESSING
+    // ============================================================
+    // ----- Add Subtract -----
+    AddsExtendedRegister::ADDS_EXTENDED_REGISTER,
+    AddsImmediate::ADDS_IMMEDIATE,
+    AddsShiftedReg::ADDS_SHIFTED_REG,
+    AddExtendedRegister::ADD_EXTENDED_REGISTER,
+    AddImmediate::ADD_IMMEDIATE,
+    AddShiftedReg::ADD_SHIFTED_REG,
+    Ccmpi::CCMPI,
+    CcmpRegister::CCMP_REGISTER,
+    Subs::SUBS,
     SubsExtendedReg::SUBS_EXTENDED_REG,
-    Asrv::ASRV,
-    LdrbPreIndex::LDRB_PRE_INDEX,
+    SubsShiftedReg::SUBS_SHIFTED_REG,
+    SubImmediate::SUB_IMMEDIATE,
+    SubShiftedRegister::SUB_SHIFTED_REGISTER,
+    // ----- Conditional Select -----
+    Csel::CSEL,
+    Csinc::CSINC,
+    Csinv::CSINV,
+    Csneg::CSNEG,
+    // ----- Move -----
+    Movk::MOVK,
+    Movn::MOVN,
+    Movz::MOVZ,
+    // ----- Multiply -----
+    Madd::MADD,
+    Smaddl::SMADDL,
     Umaddl::UMADDL,
+    // ----- Divide -----
+    Udiv::UDIV,
+    // ----- Logical And -----
+    AndsImmediate::ANDS_IMMEDIATE,
+    AndsShiftedReg::ANDS_SHIFTED_REG,
+    AndImmediate::AND_IMMEDIATE,
+    AndShiftedRegister::AND_SHIFTED_REGISTER,
+    BicShiftedReg::BIC_SHIFTED_REG,
+    BicShiftedRegSet::BIC_SHIFTED_REG_SET,
+    // ----- Logical Or -----
+    OrrImmediate::ORR_IMMEDIATE,
     OrNotShiftedRegister::OR_NOT_SHIFTED_REGISTER,
-    StrImmPostIndex::STR_IMM_POST_INDEX,
-    Stlxr::STLXR,
-    Ldxr::LDXR,
+    OrShiftedRegister::OR_SHIFTED_REGISTER,
+    // ----- Address Calculation -----
+    Adr::ADR,
+    Adrp::ADRP,
+    // ----- Bitfield -----
+    Bfm::BFM,
+    Sbfm::SBFM,
+    Ubfx::UBFX,
+    // ----- Shift -----
+    Asrv::ASRV,
+    Lslv::LSLV,
+    Lsrv::LSRV,
+    // ----- Count -----
+    Clz::CLZ,
+    // ----- Bit Reversal -----
+    Rev::REV,
+    // ----- Logical Xor -----
+    EorShiftedReg::EOR_SHIFTED_REG,
+    // ============================================================
+    // SYSTEM
+    // ============================================================
+    // ----- Exceptions -----
+    Eret::ERET,
+    // ----- Flag Manipulation -----
+    MsrImm::MSR_IMM,
+    // ----- Registers -----
+    Mrs::MRS,
+    MsrReg::MSR_REG,
+    // ----- Hints -----
+    Bti::BTI,
+    Nop::NOP,
+    Wfi::WFI,
+    // ----- Barriers -----
+    Dmb::DMB,
+    Dsb::DSB,
+    Isb::ISB,
+    // ----- Cache Tlb -----
+    Dc::DC,
+    Tlbi::TLBI,
+    // ----- Pointer Authentication -----
+    AutiaspSystem::AUTIASP_SYSTEM,
+    PaciaSystem::PACIA_SYSTEM,
+    // ============================================================
+    // LOAD STORE
+    // ============================================================
+    // ----- Store Single -----
+    Prfm::PRFM,
     StlrNoOffset::STLR_NO_OFFSET,
+    StrbImmUnOffset::STRB_IMM_UN_OFFSET,
+    StrbRegister::STRB_REGISTER,
+    StrhUnsigned::STRH_UNSIGNED,
+    StrImmPostIndex::STR_IMM_POST_INDEX,
+    StrImmPreIndex::STR_IMM_PRE_INDEX,
+    StrImmUnOffset::STR_IMM_UN_OFFSET,
+    StrRegister::STR_REGISTER,
+    Stur::STUR,
+    Sturb::STURB,
+    // ----- Load Single -----
+    Ldar::LDAR,
+    LdrbPostIndex::LDRB_POST_INDEX,
+    LdrbPreIndex::LDRB_PRE_INDEX,
+    LdrbRegister::LDRB_REGISTER,
+    LdrbUnsignedOff::LDRB_UNSIGNED_OFF,
     LdrhImmPostIndex::LDRH_IMM_POST_INDEX,
     LdrhImmPreIndex::LDRH_IMM_PRE_INDEX,
     LdrhImmUnOffset::LDRH_IMM_UN_OFFSET,
     LdrswImmPostIndex::LDRSW_IMM_POST_INDEX,
     LdrswImmPreIndex::LDRSW_IMM_PRE_INDEX,
     LdrswImmUnOffset::LDRSW_IMM_UN_OFFSET,
-    StrImmPreIndex::STR_IMM_PRE_INDEX,
-    Stxr::STXR,
-    Ldaxr::LDAXR,
-    Prfm::PRFM,
-    AddsExtendedRegister::ADDS_EXTENDED_REGISTER,
-    AutiaspSystem::AUTIASP_SYSTEM,
-    PaciaSystem::PACIA_SYSTEM,
-    Br::BR,
-    Adr::ADR,
-    Sturb::STURB,
-    Ldurb::LDURB,
-    Smaddl::SMADDL,
-    LdpPreIndex::LDP_PRE_INDEX,
-    StrbRegister::STRB_REGISTER,
-    EorShiftedReg::EOR_SHIFTED_REG,
-    Tlbi::TLBI,
-    Isb::ISB,
-    Nop::NOP,
-    Dc::DC,
-    Dsb::DSB,
-    Madd::MADD,
-    AddsShiftedReg::ADDS_SHIFTED_REG,
-    AddShiftedReg::ADD_SHIFTED_REG,
-    AddsImmediate::ADDS_IMMEDIATE,
-    AddExtendedRegister::ADD_EXTENDED_REGISTER,
-    SubShiftedRegister::SUB_SHIFTED_REGISTER,
-    SubsShiftedReg::SUBS_SHIFTED_REG,
-    AndShiftedRegister::AND_SHIFTED_REGISTER,
-    AndsImmediate::ANDS_IMMEDIATE,
-    OrrImmediate::ORR_IMMEDIATE,
-    AndsShiftedReg::ANDS_SHIFTED_REG,
-    AndImmediate::AND_IMMEDIATE,
-    Csel::CSEL,
-    CcmpRegister::CCMP_REGISTER,
-    Csneg::CSNEG,
-    Adrp::ADRP,
-    OrShiftedRegister::OR_SHIFTED_REGISTER,
-    BicShiftedReg::BIC_SHIFTED_REG,
-    BicShiftedRegSet::BIC_SHIFTED_REG_SET,
-    Udiv::UDIV,
-    AddImmediate::ADD_IMMEDIATE,
-    Movz::MOVZ,
-    Movk::MOVK,
-    Movn::MOVN,
-    Subs::SUBS,
-    SubImmediate::SUB_IMMEDIATE,
-    Ret::RET,
-    Eret::ERET,
-    Bcond::B_COND,
-    Tbnz::TBNZ,
-    Tbz::TBZ,
-    Cbnz::CBNZ,
-    Cbz::CBZ,
-    Ccmpi::CCMPI,
-    Bl::BL,
-    Branch::BRANCH,
-    MsrImm::MSR_IMM,
-    MsrReg::MSR_REG,
-    Mrs::MRS,
-    StrImmUnOffset::STR_IMM_UN_OFFSET,
-    StrRegister::STR_REGISTER,
-    StrhUnsigned::STRH_UNSIGNED,
-    StrbImmUnOffset::STRB_IMM_UN_OFFSET,
-    LdrImmUnOffset::LDR_IMM_UN_OFFSET,
     LdrImmPostIdx::LDR_IMM_POST_IDX,
     LdrImmPreIdx::LDR_IMM_PRE_IDX,
-    LdrReg::LDR_REG,
-    LdrbRegister::LDRB_REGISTER,
+    LdrImmUnOffset::LDR_IMM_UN_OFFSET,
     LdrLit::LDR_LIT,
-    StpSignedOffset::STP_SIGNED_OFFSET,
-    StpPreIndex::STP_PRE_INDEX,
-    LdpPostIndex::LDP_POST_INDEX,
-    LdpSignedOffset::LDP_SIGNED_OFFSET,
-    Wfi::WFI,
-    Dmb::DMB,
-    Bti::BTI,
-    Ubfx::UBFX,
-    Bfm::BFM,
-    Sbfm::SBFM,
-    Lslv::LSLV,
-    Lsrv::LSRV,
-    Clz::CLZ,
-    Rev::REV,
+    LdrReg::LDR_REG,
     Ldur::LDUR,
-    Stur::STUR,
-    LdrbUnsignedOff::LDRB_UNSIGNED_OFF,
-    LdrbPostIndex::LDRB_POST_INDEX,
-    Csinv::CSINV,
-    Csinc::CSINC,
-    Blr::BLR,
+    Ldurb::LDURB,
+    // ----- Store Pair -----
+    StpPreIndex::STP_PRE_INDEX,
+    StpSignedOffset::STP_SIGNED_OFFSET,
+    // ----- Load Pair -----
+    LdpPostIndex::LDP_POST_INDEX,
+    LdpPreIndex::LDP_PRE_INDEX,
+    LdpSignedOffset::LDP_SIGNED_OFFSET,
+    // ----- Load Exclusive -----
+    Ldaxr::LDAXR,
+    Ldxr::LDXR,
+    // ----- Store Exclusive -----
+    Stlxr::STLXR,
+    Stxr::STXR,
 ]);
 
 const fn sort_by_specificity<const N: usize>(mut arr: [InstDesc; N]) -> [InstDesc; N] {
