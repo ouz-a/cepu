@@ -61,7 +61,7 @@ define_instructions!(
     // ----- Return -----
     Ret(Ret),
     // ----- Conditional -----
-    BCond(Bcond),
+    Bcond(Bcond),
     // ----- Test Branch -----
     Cbnz(Cbnz),
     Cbz(Cbz),
