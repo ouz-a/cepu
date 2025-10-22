@@ -372,6 +372,33 @@ const fn sort_by_specificity<const N: usize>(mut arr: [InstDesc; N]) -> [InstDes
     arr
 }
 
+pub fn validate_tables(table: &[InstDesc]) {
+    let mut clash = Vec::new();
+
+    let mut index = 1;
+    for start in table.iter() {
+        for end in table[index..].iter().rev(){
+            let overlap = start.mask & end.mask;
+            if (start.value & overlap) == (end.value & overlap){
+                clash.push((start,end));
+            }
+        }
+        index +=1;
+    }
+
+    if !clash.is_empty(){
+        println!("FATAL ERROR!");
+        println!("THERE ARE COLLIDING ENTRIES IN INSTRUCTION TABLE");
+        clash.iter().for_each(
+            |e|
+            println!("These two are colliding.\r\n-> {:032b}\r\n-> {:032b}",e.0.value,e.1.value)
+        );
+        println!("Aborting the execution");
+        std::process::exit(0);
+    }
+
+}
+
 #[derive(Clone, Copy)]
 struct Bucket {
     first: u32,

@@ -6,7 +6,7 @@ use crate::{
     branch::branch_addr,
     cpu::{BATCH, Cpu, INSTRUCTION_SIZE, monotonic_ns},
     image::{load_device_blob, load_kernel_image},
-    instruction::decode,
+    instruction::{DESCR, decode, validate_tables},
     memory::{MEMORY_SIZE, read_32},
 };
 
@@ -104,6 +104,7 @@ pub fn run_block(cpu: &mut Cpu) {
 }
 
 fn main() {
+    validate_tables(DESCR);
     let mut cpu = Cpu::init();
     //validate_and_load_elf_header(&mut cpu, Path::new("./.executables/boot.elf"));
     load_device_blob(&mut cpu, &PathBuf::from_str("/Users/ouz/code/cepu_now/cepu.dtb").unwrap());
