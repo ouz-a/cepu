@@ -867,6 +867,51 @@ impl LdrbPreIndex {
     };
 }
 
+/// Load register signed word (register)
+#[derive(Debug, Clone, Copy)]
+pub struct LdrswRegister {
+    pub rm: u8,
+    pub option: u8,
+    pub s: bool,
+    pub rn: u8,
+    pub rt: u8,
+}
+
+impl LdrswRegister {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        if bits_get(self.option.into(), 1, 1) == 0 {
+            panic!("Sub word index");
+        }
+        let extend_type = ExtendType::from_u8(self.option);
+        let shift = if self.s { 2 } else { 0 };
+        let offset = extend_register(cpu, self.rm, extend_type, shift, 64);
+
+        let mut address =
+            if self.rn == 31 { cpu.sp_read() } else { cpu.x_read(self.rn.into(), 64) };
+        address = address.wrapping_add(offset);
+
+        let data = cpu.mmu.read_memory(address.try_into().unwrap(), 4);
+        if cpu.mmu.faulted {
+            return;
+        }
+        cpu.x_write(self.rt.into(), data.1, false);
+    }
+    pub fn decode(word: u32) -> Instruction {
+        let rm = get_bits_ct!(word, 16, 5) as u8;
+        let option = get_bits_ct!(word, 13, 3) as u8;
+        let s = get_bits_ct!(word, 12, 1) == 1;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rt = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::LdrswRegister(Self { rm, option, s, rn, rt })
+    }
+
+    pub const LDRSW_REGISTER: InstDesc = InstDesc {
+        mask: 0b1111_1111_1110_0000_0000_1100_0000_0000,
+        value: 0b1011_1000_1010_0000_0000_1000_0000_0000,
+        decode: Self::decode,
+    };
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct LdrbRegister {
     pub rm: u8,
@@ -888,6 +933,9 @@ impl LdrbRegister {
         address = address.wrapping_add(offset);
 
         let data = cpu.mmu.read_memory(address.try_into().unwrap(), 1);
+        if cpu.mmu.faulted {
+            return;
+        }
         cpu.x_write(self.rt.into(), data.1, true);
     }
     pub fn decode(word: u32) -> Instruction {
