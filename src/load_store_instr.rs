@@ -172,6 +172,90 @@ impl StrImmPostIndex {
 
 /// Store register byte (immediate)
 #[derive(Debug, Clone, Copy)]
+pub struct StrbPostIndex {
+    pub imm9: u16,
+    pub rn: u8,
+    pub rt: u8,
+}
+
+impl StrbPostIndex {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let offset = sign_extend(self.imm9.into(), 9);
+        let tag_checked = self.rn != 31;
+        if self.rn == self.rt && self.rn != 31 {
+            panic!("Unpredictable");
+        }
+        instruction_strb_imm_un_off(
+            cpu,
+            self.rn,
+            self.rt,
+            offset,
+            true,
+            true,
+            false,
+            tag_checked,
+            false,
+        );
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let imm9 = get_bits_ct!(word, 12, 9) as u16;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rt = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::StrbPostIndex(Self { imm9, rn, rt })
+    }
+
+    pub const STRB_POST_INDEX: InstDesc = InstDesc {
+        mask: 0b1111_1111_1110_0000_0000_1100_0000_0000,
+        value: 0b0011_1000_0000_0000_0000_0100_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+/// Store register byte (immediate)
+#[derive(Debug, Clone, Copy)]
+pub struct StrbPreIndex {
+    pub imm9: u16,
+    pub rn: u8,
+    pub rt: u8,
+}
+
+impl StrbPreIndex {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let offset = sign_extend(self.imm9.into(), 9);
+        let tag_checked = self.rn != 31;
+        if self.rn == self.rt && self.rn != 31 {
+            panic!("Unpredictable");
+        }
+        instruction_strb_imm_un_off(
+            cpu,
+            self.rn,
+            self.rt,
+            offset,
+            false,
+            true,
+            false,
+            tag_checked,
+            false,
+        );
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let imm9 = get_bits_ct!(word, 12, 9) as u16;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rt = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::StrbPreIndex(Self { imm9, rn, rt })
+    }
+
+    pub const STRB_PRE_INDEX: InstDesc = InstDesc {
+        mask: 0b1111_1111_1110_0000_0000_1100_0000_0000,
+        value: 0b0011_1000_0000_0000_0000_1100_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+/// Store register byte (immediate)
+#[derive(Debug, Clone, Copy)]
 pub struct StrbImmUnOffset {
     pub imm12: u16,
     pub rn: u8,
@@ -1005,7 +1089,7 @@ impl LdrhRegister {
             panic!("Sub word index");
         }
         let extend_type = ExtendType::from_u8(self.option);
-        let shift = if self.s { 1} else { 0};
+        let shift = if self.s { 1 } else { 0 };
         let offset = extend_register(cpu, self.rm, extend_type, shift, 64);
 
         let mut address =

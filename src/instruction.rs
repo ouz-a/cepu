@@ -3,7 +3,7 @@ use std::sync::OnceLock;
 use crate::{
     branch_exc_sys_instr::{
         Bcond, Bl, Blr, Br, Branch, Bti, Cbnz, Cbz, Ccmpi, Csinc, Csinv, Dmb, Eret, Mrs, MsrImm,
-        MsrReg, Ret, Tbnz, Tbz, Wfi,
+        MsrReg, Ret, Tbnz, Tbz, Wfi, Xpaclri,
     },
     cpu::Cpu,
     imm_instr::{AddImmediate, Movk, Movn, Movz, SubImmediate, Subs},
@@ -15,7 +15,8 @@ use crate::{
         LdrshImmUnsignedOffset, LdrswImmPostIndex, LdrswImmPreIndex, LdrswImmUnOffset,
         LdrswRegister, Ldur, Ldurb, Ldxr, Prfm, StlrNoOffset, Stlxr, StpPostIndex, StpPreIndex,
         StpSignedOffset, StrImmPostIndex, StrImmPreIndex, StrImmUnOffset, StrRegister,
-        StrbImmUnOffset, StrbRegister, StrhUnsigned, Stur, Sturb, Stxr,
+        StrbImmUnOffset, StrbPostIndex, StrbPreIndex, StrbRegister, StrhUnsigned, Stur, Sturb,
+        Stxr,
     },
     register_instr::{
         AddExtendedRegister, AddShiftedReg, AddsExtendedRegister, AddsImmediate, AddsShiftedReg,
@@ -150,6 +151,7 @@ define_instructions!(
     Bti(Bti),
     Nop(Nop),
     Wfi(Wfi),
+    Xpaclri(Xpaclri),
     // ----- Barriers -----
     Dmb(Dmb),
     Dsb(Dsb),
@@ -166,6 +168,8 @@ define_instructions!(
     // ----- Store Single -----
     Prfm(Prfm),
     StlrNoOffset(StlrNoOffset),
+    StrbPostIndex(StrbPostIndex),
+    StrbPreIndex(StrbPreIndex),
     StrbImmUnOffset(StrbImmUnOffset),
     StrbRegister(StrbRegister),
     StrhUnsigned(StrhUnsigned),
@@ -312,6 +316,7 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     Bti::BTI,
     Nop::NOP,
     Wfi::WFI,
+    Xpaclri::XPACLRI,
     // ----- Barriers -----
     Dmb::DMB,
     Dsb::DSB,
@@ -328,6 +333,8 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     // ----- Store Single -----
     Prfm::PRFM,
     StlrNoOffset::STLR_NO_OFFSET,
+    StrbPostIndex::STRB_POST_INDEX,
+    StrbPreIndex::STRB_PRE_INDEX,
     StrbImmUnOffset::STRB_IMM_UN_OFFSET,
     StrbRegister::STRB_REGISTER,
     StrhUnsigned::STRH_UNSIGNED,
