@@ -600,6 +600,15 @@ impl Cpu {
             MrsRegisters::TpidrEl1 => {
                 self.x_write(t.into(), self.tpidr_el1, false);
             }
+            MrsRegisters::ElrEl1 => {
+                self.x_write(t.into(), self.elr_el1, false);
+            }
+            MrsRegisters::SpsrEl1 => {
+                self.x_write(t.into(), self.spsr_el1, false);
+            }
+            MrsRegisters::EsrEl1 => {
+                self.x_write(t.into(), self.elr_el1, false);
+            }
         }
     }
 
@@ -964,6 +973,9 @@ mrs_enum! {
     TpidrEl1 = 12885753860,
     Daif = 12935496193,
     SpEl0 = 12885164288,
+    SpsrEl1 = 12885164032,
+    ElrEl1 = 12885164033,
+    EsrEl1 = 12885230080,
     MpidrEl1 = 12884901893,
     CntfrqEl0 = 12936151040,
     CntpctEl0 = 12936151041,
