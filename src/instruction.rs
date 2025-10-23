@@ -10,11 +10,12 @@ use crate::{
     load_store_instr::{
         Ldar, Ldaxr, LdpPostIndex, LdpPreIndex, LdpSignedOffset, LdrImmPostIdx, LdrImmPreIdx,
         LdrImmUnOffset, LdrLit, LdrReg, LdrbPostIndex, LdrbPreIndex, LdrbRegister, LdrbUnsignedOff,
-        LdrhImmPostIndex, LdrhImmPreIndex, LdrhImmUnOffset, LdrshImmPostIndex, LdrshImmPreIndex,
-        LdrshImmUnsignedOffset, LdrswImmPostIndex, LdrswImmPreIndex, LdrswImmUnOffset,
-        LdrswRegister, Ldur, Ldurb, Ldxr, Prfm, StlrNoOffset, Stlxr, StpPreIndex, StpSignedOffset,
-        StrImmPostIndex, StrImmPreIndex, StrImmUnOffset, StrRegister, StrbImmUnOffset,
-        StrbRegister, StrhUnsigned, Stur, Sturb, Stxr,
+        LdrhImmPostIndex, LdrhImmPreIndex, LdrhImmUnOffset, LdrsbImmPostIndex, LdrsbImmPreIndex,
+        LdrsbImmUnsignedOffset, LdrshImmPostIndex, LdrshImmPreIndex, LdrshImmUnsignedOffset,
+        LdrswImmPostIndex, LdrswImmPreIndex, LdrswImmUnOffset, LdrswRegister, Ldur, Ldurb, Ldxr,
+        Prfm, StlrNoOffset, Stlxr, StpPostIndex, StpPreIndex, StpSignedOffset, StrImmPostIndex,
+        StrImmPreIndex, StrImmUnOffset, StrRegister, StrbImmUnOffset, StrbRegister, StrhUnsigned,
+        Stur, Sturb, Stxr,
     },
     register_instr::{
         AddExtendedRegister, AddShiftedReg, AddsExtendedRegister, AddsImmediate, AddsShiftedReg,
@@ -183,6 +184,9 @@ define_instructions!(
     LdrhImmPostIndex(LdrhImmPostIndex),
     LdrhImmPreIndex(LdrhImmPreIndex),
     LdrhImmUnOffset(LdrhImmUnOffset),
+    LdrsbImmPostIndex(LdrsbImmPostIndex),
+    LdrsbImmPreIndex(LdrsbImmPreIndex),
+    LdrsbImmUnsignedOffset(LdrsbImmUnsignedOffset),
     LdrshImmPostIndex(LdrshImmPostIndex),
     LdrshImmPreIndex(LdrshImmPreIndex),
     LdrshImmUnsignedOffset(LdrshImmUnsignedOffset),
@@ -198,6 +202,7 @@ define_instructions!(
     Ldur(Ldur),
     Ldurb(Ldurb),
     // ----- Store Pair -----
+    StpPostIndex(StpPostIndex),
     StpPreIndex(StpPreIndex),
     StpSignedOffset(StpSignedOffset),
     // ----- Load Pair -----
@@ -339,6 +344,9 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     LdrbUnsignedOff::LDRB_UNSIGNED_OFF,
     LdrhImmPostIndex::LDRH_IMM_POST_INDEX,
     LdrhImmPreIndex::LDRH_IMM_PRE_INDEX,
+    LdrsbImmPostIndex::LDRSB_IMM_POST_INDEX,
+    LdrsbImmPreIndex::LDRSB_IMM_PRE_INDEX,
+    LdrsbImmUnsignedOffset::LDRSB_IMM_UNSIGNED_OFFSET,
     LdrhImmUnOffset::LDRH_IMM_UN_OFFSET,
     LdrshImmPostIndex::LDRSH_IMM_POST_INDEX,
     LdrshImmPreIndex::LDRSH_IMM_PRE_INDEX,
@@ -355,6 +363,7 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     Ldur::LDUR,
     Ldurb::LDURB,
     // ----- Store Pair -----
+    StpPostIndex::STP_POST_INDEX,
     StpPreIndex::STP_PRE_INDEX,
     StpSignedOffset::STP_SIGNED_OFFSET,
     // ----- Load Pair -----

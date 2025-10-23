@@ -8,7 +8,7 @@ use crate::{
     load_and_store::{
         ExtendType, extend_register, instruction_ldp, instruction_ldr_imm_base,
         instruction_ldr_literal, instruction_ldr_register, instruction_ldrh_imm,
-        instruction_ldrsh_imm, instruction_ldrsw_imm, instruction_stp,
+        instruction_ldrsb_imm, instruction_ldrsh_imm, instruction_ldrsw_imm, instruction_stp,
         instruction_str_halfword_imm, instruction_str_imm_un_off, instruction_str_register,
         instruction_strb_imm_un_off,
     },
@@ -576,6 +576,39 @@ impl StpPreIndex {
     pub const STP_PRE_INDEX: InstDesc = InstDesc {
         mask: 0b0111_1111_1100_0000_0000_0000_0000_0000,
         value: 0b0010_1001_1000_0000_0000_0000_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct StpPostIndex {
+    opc: u8,
+    imm7: u8,
+    rt2: u8,
+    rn: u8,
+    rt: u8,
+}
+
+impl StpPostIndex {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let scale = 2 + self.opc;
+        let datasize = 8 << scale;
+        let offset = shift_lsl(sign_extend(self.imm7.into(), 7), scale);
+        instruction_stp(cpu, self.rt, self.rt2, self.rn, datasize, offset, true, true);
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let opc = get_bits_ct!(word, 31, 1) as u8;
+        let imm7 = get_bits_ct!(word, 15, 7) as u8;
+        let rt2 = get_bits_ct!(word, 10, 5) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rt = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::StpPostIndex(Self { opc, imm7, rt2, rn, rt })
+    }
+
+    pub const STP_POST_INDEX: InstDesc = InstDesc {
+        mask: 0b0111_1111_1100_0000_0000_0000_0000_0000,
+        value: 0b0010_1000_1000_0000_0000_0000_0000_0000,
         decode: Self::decode,
     };
 }
@@ -1568,6 +1601,104 @@ impl LdrshImmUnsignedOffset {
     pub const LDRSH_IMM_UNSIGNED_OFFSET: InstDesc = InstDesc {
         mask: 0b1111_1111_1000_0000_0000_0000_0000_0000,
         value: 0b0111_1001_1000_0000_0000_0000_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+// ------------------------------
+
+/// Load register signed byte (immediate) - Post-index
+#[derive(Debug, Clone, Copy)]
+pub struct LdrsbImmPostIndex {
+    pub opc: bool,
+    pub imm9: u16,
+    pub rn: u8,
+    pub rt: u8,
+}
+
+impl LdrsbImmPostIndex {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let post_index = true;
+        let wback = true;
+        let offset = sign_extend(self.imm9.into(), 9);
+        let regsize = 64 >> (self.opc as u8);
+        instruction_ldrsb_imm(cpu, self.rn, self.rt, regsize, offset, post_index, wback);
+    }
+    pub const fn decode(word: u32) -> Instruction {
+        let opc = get_bits_ct!(word, 22, 1) == 1;
+        let imm9 = get_bits_ct!(word, 12, 9) as u16;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rt = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::LdrsbImmPostIndex(Self { opc, imm9, rn, rt })
+    }
+
+    pub const LDRSB_IMM_POST_INDEX: InstDesc = InstDesc {
+        mask: 0b1111_1111_1010_0000_0000_1100_0000_0000,
+        value: 0b0011_1000_1000_0000_0000_0100_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+/// Load register signed byte (immediate) - Pre-index
+#[derive(Debug, Clone, Copy)]
+pub struct LdrsbImmPreIndex {
+    pub opc: bool,
+    pub imm9: u16,
+    pub rn: u8,
+    pub rt: u8,
+}
+
+impl LdrsbImmPreIndex {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let post_index = false;
+        let wback = true;
+        let offset = sign_extend(self.imm9.into(), 9);
+        let regsize = 64 >> (self.opc as u8);
+        instruction_ldrsb_imm(cpu, self.rn, self.rt, regsize, offset, post_index, wback);
+    }
+    pub const fn decode(word: u32) -> Instruction {
+        let opc = get_bits_ct!(word, 22, 1) == 1;
+        let imm9 = get_bits_ct!(word, 12, 9) as u16;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rt = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::LdrsbImmPreIndex(Self { opc, imm9, rn, rt })
+    }
+
+    pub const LDRSB_IMM_PRE_INDEX: InstDesc = InstDesc {
+        mask: 0b1111_1111_1010_0000_0000_1100_0000_0000,
+        value: 0b0011_1000_1000_0000_0000_1100_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+/// Load register signed byte (immediate) - Pre-index
+#[derive(Debug, Clone, Copy)]
+pub struct LdrsbImmUnsignedOffset {
+    pub opc: bool,
+    pub imm12: u16,
+    pub rn: u8,
+    pub rt: u8,
+}
+
+impl LdrsbImmUnsignedOffset {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let post_index = false;
+        let wback = false;
+        let offset = zero_extend(self.imm12.into(), 64);
+        let regsize = 64 >> (self.opc as u8);
+        instruction_ldrsb_imm(cpu, self.rn, self.rt, regsize, offset, post_index, wback);
+    }
+    pub const fn decode(word: u32) -> Instruction {
+        let opc = get_bits_ct!(word, 22, 1) == 1;
+        let imm12 = get_bits_ct!(word, 10, 12) as u16;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rt = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::LdrsbImmUnsignedOffset(Self { opc, imm12, rn, rt })
+    }
+
+    pub const LDRSB_IMM_UNSIGNED_OFFSET: InstDesc = InstDesc {
+        mask: 0b1111_1111_1000_0000_0000_0000_0000_0000,
+        value: 0b0011_1001_1000_0000_0000_0000_0000_0000,
         decode: Self::decode,
     };
 }
