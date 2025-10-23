@@ -541,3 +541,41 @@ pub fn instruction_ldrh_imm(
         }
     }
 }
+
+pub fn instruction_ldrsh_imm(
+    cpu: &mut Cpu,
+    rn: u8,
+    rt: u8,
+    regsize: u8,
+    offset: u64,
+    post_index: bool,
+    wback: bool,
+) {
+    if wback && rn == rt && rn != 31 {
+        panic!("Unpredictable: LDRH wback with rn==rt");
+    }
+    let mut address = if rn == 31 { cpu.sp_read() } else { cpu.x_read(rn.into(), 64) };
+
+    if !post_index {
+        address = address.wrapping_add(offset);
+    }
+
+    let data = cpu.mmu.read_memory(address.try_into().unwrap(), 2).1;
+    if cpu.mmu.faulted {
+        return;
+    }
+
+    let sign_extended = sign_extend(data, 16);
+    cpu.x_write(rt.into(), sign_extended, regsize == 32);
+
+    if wback {
+        if post_index {
+            address = address.wrapping_add(offset);
+        }
+        if rn == 31 {
+            cpu.sp_write(address);
+        } else {
+            cpu.x_write(rn.into(), address, false);
+        }
+    }
+}

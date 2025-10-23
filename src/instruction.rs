@@ -10,18 +10,19 @@ use crate::{
     load_store_instr::{
         Ldar, Ldaxr, LdpPostIndex, LdpPreIndex, LdpSignedOffset, LdrImmPostIdx, LdrImmPreIdx,
         LdrImmUnOffset, LdrLit, LdrReg, LdrbPostIndex, LdrbPreIndex, LdrbRegister, LdrbUnsignedOff,
-        LdrhImmPostIndex, LdrhImmPreIndex, LdrhImmUnOffset, LdrswImmPostIndex, LdrswImmPreIndex,
-        LdrswImmUnOffset, LdrswRegister, Ldur, Ldurb, Ldxr, Prfm, StlrNoOffset, Stlxr, StpPreIndex,
-        StpSignedOffset, StrImmPostIndex, StrImmPreIndex, StrImmUnOffset, StrRegister,
-        StrbImmUnOffset, StrbRegister, StrhUnsigned, Stur, Sturb, Stxr,
+        LdrhImmPostIndex, LdrhImmPreIndex, LdrhImmUnOffset, LdrshImmPostIndex, LdrshImmPreIndex,
+        LdrshImmUnsignedOffset, LdrswImmPostIndex, LdrswImmPreIndex, LdrswImmUnOffset,
+        LdrswRegister, Ldur, Ldurb, Ldxr, Prfm, StlrNoOffset, Stlxr, StpPreIndex, StpSignedOffset,
+        StrImmPostIndex, StrImmPreIndex, StrImmUnOffset, StrRegister, StrbImmUnOffset,
+        StrbRegister, StrhUnsigned, Stur, Sturb, Stxr,
     },
     register_instr::{
         AddExtendedRegister, AddShiftedReg, AddsExtendedRegister, AddsImmediate, AddsShiftedReg,
         Adr, Adrp, AndImmediate, AndShiftedRegister, AndsImmediate, AndsShiftedReg, Asrv,
         AutiaspSystem, Bfm, BicShiftedReg, BicShiftedRegSet, CcmpRegister, Clz, Csel, Csneg, Dc,
-        Dsb, EorShiftedReg, Isb, Lslv, Lsrv, Madd, Nop, OrNotShiftedRegister, OrShiftedRegister,
-        OrrImmediate, PaciaSystem, Rev, Sbfm, Smaddl, SubExtendedReg, SubShiftedRegister,
-        SubsExtendedReg, SubsShiftedReg, Tlbi, Ubfx, Udiv, Umaddl,
+        Dsb, EorImmediate, EorShiftedReg, Isb, Lslv, Lsrv, Madd, Nop, OrNotShiftedRegister,
+        OrShiftedRegister, OrrImmediate, PaciaSystem, Rev, Sbfm, Smaddl, SubExtendedReg,
+        SubShiftedRegister, SubsExtendedReg, SubsShiftedReg, Tlbi, Ubfx, Udiv, Umaddl,
     },
 };
 
@@ -132,6 +133,7 @@ define_instructions!(
     // ----- Bit Reversal -----
     Rev(Rev),
     // ----- Logical Xor -----
+    EorImmediate(EorImmediate),
     EorShiftedReg(EorShiftedReg),
     // ============================================================
     // SYSTEM
@@ -181,6 +183,9 @@ define_instructions!(
     LdrhImmPostIndex(LdrhImmPostIndex),
     LdrhImmPreIndex(LdrhImmPreIndex),
     LdrhImmUnOffset(LdrhImmUnOffset),
+    LdrshImmPostIndex(LdrshImmPostIndex),
+    LdrshImmPreIndex(LdrshImmPreIndex),
+    LdrshImmUnsignedOffset(LdrshImmUnsignedOffset),
     LdrswImmPostIndex(LdrswImmPostIndex),
     LdrswImmPreIndex(LdrswImmPreIndex),
     LdrswImmUnOffset(LdrswImmUnOffset),
@@ -286,6 +291,7 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     Rev::REV,
     // ----- Logical Xor -----
     EorShiftedReg::EOR_SHIFTED_REG,
+    EorImmediate::EOR_IMMEDIATE,
     // ============================================================
     // SYSTEM
     // ============================================================
@@ -334,6 +340,9 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     LdrhImmPostIndex::LDRH_IMM_POST_INDEX,
     LdrhImmPreIndex::LDRH_IMM_PRE_INDEX,
     LdrhImmUnOffset::LDRH_IMM_UN_OFFSET,
+    LdrshImmPostIndex::LDRSH_IMM_POST_INDEX,
+    LdrshImmPreIndex::LDRSH_IMM_PRE_INDEX,
+    LdrshImmUnsignedOffset::LDRSH_IMM_UNSIGNED_OFFSET,
     LdrswImmPostIndex::LDRSW_IMM_POST_INDEX,
     LdrswImmPreIndex::LDRSW_IMM_PRE_INDEX,
     LdrswImmUnOffset::LDRSW_IMM_UN_OFFSET,

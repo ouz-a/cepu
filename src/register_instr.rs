@@ -1341,6 +1341,52 @@ impl CcmpRegister {
     };
 }
 
+/// Btiwise exclusive-OR (immediate)
+#[derive(Debug, Clone, Copy)]
+pub struct EorImmediate {
+    pub sf: bool,
+    pub n: bool,
+    pub immr: u8,
+    pub imms: u8,
+    pub rn: u8,
+    pub rd: u8,
+}
+
+impl EorImmediate {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        if !self.sf && self.n {
+            panic!("Undef");
+        }
+        let datasize = self.sf.datasize_sf();
+        let (imm, _) = decode_bit_mask(self.n, self.imms, self.immr, true, datasize);
+
+        let op1 = cpu.x_read(self.rn.into(), datasize);
+        let result = op1 ^ imm;
+
+        if self.rd == 31 {
+            cpu.sp_write(result);
+        } else {
+            cpu.x_write(self.rd.into(), result, datasize == 32);
+        }
+    }
+
+    pub fn decode(word: u32) -> Instruction {
+        let sf = get_bits_ct!(word, 31, 1) == 1;
+        let n = get_bits_ct!(word, 22, 1) == 1;
+        let immr = get_bits_ct!(word, 16, 6) as u8;
+        let imms = get_bits_ct!(word, 10, 6) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rd = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::EorImmediate(Self { sf, n, immr, imms, rn, rd })
+    }
+
+    pub const EOR_IMMEDIATE: InstDesc = InstDesc {
+        mask: 0b0111_1111_1000_0000_0000_0000_0000_0000,
+        value: 0b0101_0010_0000_0000_0000_0000_0000_0000,
+        decode: Self::decode,
+    };
+}
+
 /// Exclusive OR shifted register
 #[derive(Debug, Clone, Copy)]
 pub struct EorShiftedReg {
