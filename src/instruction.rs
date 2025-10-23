@@ -20,8 +20,8 @@ use crate::{
         Adr, Adrp, AndImmediate, AndShiftedRegister, AndsImmediate, AndsShiftedReg, Asrv,
         AutiaspSystem, Bfm, BicShiftedReg, BicShiftedRegSet, CcmpRegister, Clz, Csel, Csneg, Dc,
         Dsb, EorShiftedReg, Isb, Lslv, Lsrv, Madd, Nop, OrNotShiftedRegister, OrShiftedRegister,
-        OrrImmediate, PaciaSystem, Rev, Sbfm, Smaddl, SubShiftedRegister, SubsExtendedReg,
-        SubsShiftedReg, Tlbi, Ubfx, Udiv, Umaddl,
+        OrrImmediate, PaciaSystem, Rev, Sbfm, Smaddl, SubExtendedReg, SubShiftedRegister,
+        SubsExtendedReg, SubsShiftedReg, Tlbi, Ubfx, Udiv, Umaddl,
     },
 };
 
@@ -86,6 +86,7 @@ define_instructions!(
     CcmpRegister(CcmpRegister),
     Subs(Subs),
     SubsExtendedReg(SubsExtendedReg),
+    SubExtendedReg(SubExtendedReg),
     SubsShiftedReg(SubsShiftedReg),
     SubImmediate(SubImmediate),
     SubShiftedRegister(SubShiftedRegister),
@@ -237,6 +238,7 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     CcmpRegister::CCMP_REGISTER,
     Subs::SUBS,
     SubsExtendedReg::SUBS_EXTENDED_REG,
+    SubExtendedReg::SUB_EXTENDED_REG,
     SubsShiftedReg::SUBS_SHIFTED_REG,
     SubImmediate::SUB_IMMEDIATE,
     SubShiftedRegister::SUB_SHIFTED_REGISTER,
@@ -377,26 +379,24 @@ pub fn validate_tables(table: &[InstDesc]) {
 
     let mut index = 1;
     for start in table.iter() {
-        for end in table[index..].iter().rev(){
+        for end in table[index..].iter().rev() {
             let overlap = start.mask & end.mask;
-            if (start.value & overlap) == (end.value & overlap){
-                clash.push((start,end));
+            if (start.value & overlap) == (end.value & overlap) {
+                clash.push((start, end));
             }
         }
-        index +=1;
+        index += 1;
     }
 
-    if !clash.is_empty(){
+    if !clash.is_empty() {
         println!("FATAL ERROR!");
         println!("THERE ARE COLLIDING ENTRIES IN INSTRUCTION TABLE");
-        clash.iter().for_each(
-            |e|
-            println!("These two are colliding.\r\n-> {:032b}\r\n-> {:032b}",e.0.value,e.1.value)
-        );
+        clash.iter().for_each(|e| {
+            println!("These two are colliding.\r\n-> {:032b}\r\n-> {:032b}", e.0.value, e.1.value)
+        });
         println!("Aborting the execution");
         std::process::exit(0);
     }
-
 }
 
 #[derive(Clone, Copy)]

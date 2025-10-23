@@ -33,7 +33,7 @@ impl StrhUnsigned {
         Instruction::StrhUnsigned(Self { imm12, rn, rt })
     }
     pub const STRH_UNSIGNED: InstDesc = InstDesc {
-        mask: 0b0111_1111_1100_0000_0000_0000_0000_0000,
+        mask: 0b1111_1111_1100_0000_0000_0000_0000_0000,
         value: 0b0111_1001_0000_0000_0000_0000_0000_0000,
         decode: Self::decode,
     };
