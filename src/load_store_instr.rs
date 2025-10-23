@@ -972,7 +972,7 @@ impl LdrbRegister {
         if cpu.mmu.faulted {
             return;
         }
-        cpu.x_write(self.rt.into(), data.1, true);
+        cpu.x_write(self.rt.into(), zero_extend(data.1, 32), true);
     }
     pub fn decode(word: u32) -> Instruction {
         let rm = get_bits_ct!(word, 16, 5) as u8;
@@ -985,6 +985,51 @@ impl LdrbRegister {
     pub const LDRB_REGISTER: InstDesc = InstDesc {
         mask: 0b1111_1111_1110_0000_0000_1100_0000_0000,
         value: 0b0011_1000_0110_0000_0000_1000_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+/// Load register halfword (register)
+#[derive(Debug, Clone, Copy)]
+pub struct LdrhRegister {
+    pub rm: u8,
+    pub option: u8,
+    pub s: bool,
+    pub rn: u8,
+    pub rt: u8,
+}
+
+impl LdrhRegister {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        if bits_get(self.option.into(), 1, 1) == 0 {
+            panic!("Sub word index");
+        }
+        let extend_type = ExtendType::from_u8(self.option);
+        let shift = if self.s { 1} else { 0};
+        let offset = extend_register(cpu, self.rm, extend_type, shift, 64);
+
+        let mut address =
+            if self.rn == 31 { cpu.sp_read() } else { cpu.x_read(self.rn.into(), 64) };
+        address = address.wrapping_add(offset);
+
+        let data = cpu.mmu.read_memory(address.try_into().unwrap(), 2);
+        if cpu.mmu.faulted {
+            return;
+        }
+        cpu.x_write(self.rt.into(), zero_extend(data.1, 32), true);
+    }
+    pub fn decode(word: u32) -> Instruction {
+        let rm = get_bits_ct!(word, 16, 5) as u8;
+        let option = get_bits_ct!(word, 13, 3) as u8;
+        let s = get_bits_ct!(word, 12, 1) == 1;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rt = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::LdrhRegister(Self { rm, option, s, rn, rt })
+    }
+
+    pub const LDRH_REGISTER: InstDesc = InstDesc {
+        mask: 0b1111_1111_1110_0000_0000_1100_0000_0000,
+        value: 0b0111_1000_0110_0000_0000_1000_0000_0000,
         decode: Self::decode,
     };
 }
