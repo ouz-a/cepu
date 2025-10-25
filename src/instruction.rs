@@ -3,20 +3,12 @@ use std::sync::OnceLock;
 use crate::{
     branch_exc_sys_instr::{
         Bcond, Bl, Blr, Br, Branch, Bti, Cbnz, Cbz, Ccmpi, Csinc, Csinv, Dmb, Eret, Mrs, MsrImm,
-        MsrReg, Ret, Tbnz, Tbz, Wfi, Xpaclri,
+        MsrReg, Ret, Tbnz, Tbz, Wfi, Xpaclri, Yield,
     },
     cpu::Cpu,
     imm_instr::{AddImmediate, Movk, Movn, Movz, SubImmediate, Subs},
     load_store_instr::{
-        Ldar, Ldaxr, LdpPostIndex, LdpPreIndex, LdpSignedOffset, LdrImmPostIdx, LdrImmPreIdx,
-        LdrImmUnOffset, LdrLit, LdrReg, LdrbPostIndex, LdrbPreIndex, LdrbRegister, LdrbUnsignedOff,
-        LdrhImmPostIndex, LdrhImmPreIndex, LdrhImmUnOffset, LdrhRegister, LdrsbImmPostIndex,
-        LdrsbImmPreIndex, LdrsbImmUnsignedOffset, LdrshImmPostIndex, LdrshImmPreIndex,
-        LdrshImmUnsignedOffset, LdrswImmPostIndex, LdrswImmPreIndex, LdrswImmUnOffset,
-        LdrswRegister, Ldur, Ldurb, Ldxr, Prfm, StlrNoOffset, Stlxr, StpPostIndex, StpPreIndex,
-        StpSignedOffset, StrImmPostIndex, StrImmPreIndex, StrImmUnOffset, StrRegister,
-        StrbImmUnOffset, StrbPostIndex, StrbPreIndex, StrbRegister, StrhUnsigned, Stur, Sturb,
-        Stxr,
+        Ldar, Ldaxr, LdpPostIndex, LdpPreIndex, LdpSignedOffset, LdrImmPostIdx, LdrImmPreIdx, LdrImmUnOffset, LdrLit, LdrReg, LdrbPostIndex, LdrbPreIndex, LdrbRegister, LdrbUnsignedOff, LdrhImmPostIndex, LdrhImmPreIndex, LdrhImmUnOffset, LdrhRegister, LdrsbImmPostIndex, LdrsbImmPreIndex, LdrsbImmUnsignedOffset, LdrshImmPostIndex, LdrshImmPreIndex, LdrshImmUnsignedOffset, LdrswImmPostIndex, LdrswImmPreIndex, LdrswImmUnOffset, LdrswRegister, Ldur, Ldurb, Ldurh, Ldxr, Prfm, StlrNoOffset, Stlxr, StpPostIndex, StpPreIndex, StpSignedOffset, StrImmPostIndex, StrImmPreIndex, StrImmUnOffset, StrRegister, StrbImmUnOffset, StrbPostIndex, StrbPreIndex, StrbRegister, StrhUnsigned, Stur, Sturb, Stxr
     },
     register_instr::{
         AddExtendedRegister, AddShiftedReg, AddsExtendedRegister, AddsImmediate, AddsShiftedReg,
@@ -152,6 +144,7 @@ define_instructions!(
     Nop(Nop),
     Wfi(Wfi),
     Xpaclri(Xpaclri),
+    Yield(Yield),
     // ----- Barriers -----
     Dmb(Dmb),
     Dsb(Dsb),
@@ -205,6 +198,7 @@ define_instructions!(
     LdrLit(LdrLit),
     LdrReg(LdrReg),
     Ldur(Ldur),
+    Ldurh(Ldurh),
     Ldurb(Ldurb),
     // ----- Store Pair -----
     StpPostIndex(StpPostIndex),
@@ -317,6 +311,7 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     Nop::NOP,
     Wfi::WFI,
     Xpaclri::XPACLRI,
+    Yield::YIELD,
     // ----- Barriers -----
     Dmb::DMB,
     Dsb::DSB,
@@ -369,6 +364,7 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     LdrImmUnOffset::LDR_IMM_UN_OFFSET,
     LdrLit::LDR_LIT,
     LdrReg::LDR_REG,
+    Ldurh::LDURH,
     Ldur::LDUR,
     Ldurb::LDURB,
     // ----- Store Pair -----

@@ -414,6 +414,23 @@ impl Wfi {
     };
 }
 
+/// YIELD - Yield hint
+#[derive(Debug, Clone, Copy)]
+pub struct Yield;
+
+impl Yield {
+    pub fn exec(self, _cpu: &mut Cpu, _old_pc: u64) {
+    }
+    pub const fn decode(_word: u32) -> Instruction {
+        Instruction::Yield(Self)
+    }
+    pub const YIELD: InstDesc = InstDesc {
+        mask: 0b1111_1111_1111_1111_1111_1111_1111_1111,
+        value: 0b1101_0101_0000_0011_0010_0000_0011_1111,
+        decode: Self::decode,
+    };
+}
+
 /// XPACLRI - Strip Pointer Authentication Code
 #[derive(Debug, Clone, Copy)]
 pub struct Xpaclri;

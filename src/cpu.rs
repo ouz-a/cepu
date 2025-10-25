@@ -14,7 +14,7 @@ pub const MEM_TOP: usize = crate::memory::MEMORY_SIZE;
 static START: OnceLock<Instant> = OnceLock::new();
 pub const MAX_SLEEP_NS: u64 = 80 * 1000 * 1000;
 pub const CNTFRQ: u64 = 24_000_000;
-pub const BATCH: u32 = 1;
+pub const BATCH: u32 = 100;
 
 pub const INSTRUCTION_SIZE: u64 = 4;
 
@@ -512,7 +512,7 @@ impl Cpu {
             }
             MrsRegisters::CntpctEl0 => {
                 if !self.pstate.current_el.is_el0() && !self.pstate.current_el.is_el2() {
-                    self.x_write(t.into(), cntpct_now(), false);
+                    self.x_write(t.into(), self.timer.cntp_ct_el0, false);
                 } else {
                     panic!("Please implement CntpctEl0 access for EL0");
                 }
@@ -608,6 +608,9 @@ impl Cpu {
             }
             MrsRegisters::EsrEl1 => {
                 self.x_write(t.into(), self.elr_el1, false);
+            }
+            MrsRegisters::CntvctEl0 => {
+                self.x_write(t.into(), self.timer.cntp_ct_el0, false);
             }
         }
     }
@@ -988,6 +991,7 @@ mrs_enum! {
     MidrEl1 = 12884901888,
     DczidEl0 = 12935233543,
     TcrEl1 = 12885032962,
+    CntvctEl0 = 12936151042,
 
     IdAa64mmfr0El1 = 12884903680,
     IdAa64mmfr1El1 = 12884903681,
