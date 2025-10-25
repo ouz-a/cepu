@@ -419,8 +419,7 @@ impl Wfi {
 pub struct Yield;
 
 impl Yield {
-    pub fn exec(self, _cpu: &mut Cpu, _old_pc: u64) {
-    }
+    pub fn exec(self, _cpu: &mut Cpu, _old_pc: u64) {}
     pub const fn decode(_word: u32) -> Instruction {
         Instruction::Yield(Self)
     }
@@ -436,8 +435,7 @@ impl Yield {
 pub struct Xpaclri;
 
 impl Xpaclri {
-    pub fn exec(self, _cpu: &mut Cpu, _old_pc: u64) {
-    }
+    pub fn exec(self, _cpu: &mut Cpu, _old_pc: u64) {}
     pub const fn decode(_word: u32) -> Instruction {
         Instruction::Xpaclri(Self)
     }

@@ -169,6 +169,7 @@ pub struct Cpu {
 
     pub far_el1: u64,
     pub esr_el1: u64,
+    pub par_el1: u64,
 
     event_register: bool,
     pub pstate: PState,
@@ -480,6 +481,14 @@ impl Cpu {
             MsrRegisters::Daif => {
                 self.pstate.daif_from_spsr(self.x_read(t.into(), 64));
             }
+            MsrRegisters::FarEl1 => {
+                // AArch64-far_el1.xml: allow software writes
+                self.far_el1 = self.x_read(t.into(), 64);
+            }
+            MsrRegisters::ParEl1 => {
+                // AArch64-par_el1.xml: allow software writes
+                self.par_el1 = self.x_read(t.into(), 64);
+            }
         }
     }
 
@@ -511,8 +520,8 @@ impl Cpu {
                 }
             }
             MrsRegisters::CntpctEl0 => {
-                if !self.pstate.current_el.is_el0() && !self.pstate.current_el.is_el2() {
-                    self.x_write(t.into(), self.timer.cntp_ct_el0, false);
+                if !self.pstate.current_el.is_el0() {
+                    self.x_write(t.into(), cntpct_now(), false);
                 } else {
                     panic!("Please implement CntpctEl0 access for EL0");
                 }
@@ -607,10 +616,16 @@ impl Cpu {
                 self.x_write(t.into(), self.spsr_el1, false);
             }
             MrsRegisters::EsrEl1 => {
-                self.x_write(t.into(), self.elr_el1, false);
+                self.x_write(t.into(), self.esr_el1, false);
+            }
+            MrsRegisters::FarEl1 => {
+                self.x_write(t.into(), self.far_el1, false);
+            }
+            MrsRegisters::ParEl1 => {
+                self.x_write(t.into(), self.par_el1, false);
             }
             MrsRegisters::CntvctEl0 => {
-                self.x_write(t.into(), self.timer.cntp_ct_el0, false);
+                self.x_write(t.into(), cntpct_now(), false);
             }
         }
     }
@@ -944,6 +959,8 @@ msr_enum! {
     Ttbr1El1 = 12885032961,
     SpEl0 = 12885164288,
     TpidrEl1 = 12885753860,
+    FarEl1   = 12885295104,
+    ParEl1   = 12885361664,
 }
 
 macro_rules! mrs_enum {
@@ -1000,6 +1017,8 @@ mrs_enum! {
     IdAa64isar1El1 = 12884903425,
     IdAa64isar2El1 = 12884903426,
     IdAa64pfr1El1  = 12884902913,
+    FarEl1 = 12885295104,
+    ParEl1 = 12885361664,
 }
 
 pub fn sleep_ns(ns: u64) {
