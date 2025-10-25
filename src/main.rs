@@ -49,7 +49,7 @@ pub fn run_block(cpu: &mut Cpu) {
             }
             pc = pc.wrapping_add(INSTRUCTION_SIZE);
             let dec = decode(word);
-            println!("Instruction is {dec:?} raw: {:08X}", word.to_be());
+            println!("Executing instruction at {old_pc:x}\r\nInstruction is {dec:?} raw: {:08X}", word.to_be());
             dec.exec(cpu, old_pc);
             if cpu.mmu.faulted {
                 cpu.handle_data_abort(&mut pc);
