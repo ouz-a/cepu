@@ -630,14 +630,13 @@ impl Sys {
                 cpu.par_el1 |= fst << 1; // FS
                 cpu.par_el1 |= 1u64 << 11; // RES1 for 64-bit PAR
             } else {
-               let mut par: u64 = 0;
+                let mut par: u64 = 0;
                 par |= (pa as u64) & !0xFFFu64;
                 par |= 1u64 << 11;
                 cpu.par_el1 = par;
             }
         } else if (word & dc_mask) == dc_value {
             // NO OP
-            
         } else {
             panic!("Sys instruction not covered")
         }

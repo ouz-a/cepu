@@ -1604,8 +1604,7 @@ impl StlrNoOffset {
         let data = cpu.x_read(self.rt.into(), elsize);
 
         cpu.mmu.write_memory(address.try_into().unwrap(), dbytres.into(), data);
-        if cpu.mmu.faulted {
-        }
+        if cpu.mmu.faulted {}
     }
 
     pub const fn decode(word: u32) -> Instruction {
@@ -1636,8 +1635,7 @@ impl Stlrb {
         let data = cpu.x_read(self.rt.into(), 8);
 
         cpu.mmu.write_memory(address.try_into().unwrap(), 1, data);
-        if cpu.mmu.faulted {
-        }
+        if cpu.mmu.faulted {}
     }
 
     pub const fn decode(word: u32) -> Instruction {

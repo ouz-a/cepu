@@ -1081,7 +1081,9 @@ pub struct SubsExtendedReg {
 
 impl SubsExtendedReg {
     pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
-        if let 0b101..=0b111 = self.imm3 { panic!("Oh no") }
+        if let 0b101..=0b111 = self.imm3 {
+            panic!("Oh no")
+        }
         let datasize = self.sf.datasize_sf();
         let extend_type = ExtendType::from_u8(self.option);
 
@@ -1124,7 +1126,9 @@ pub struct SubExtendedReg {
 
 impl SubExtendedReg {
     pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
-        if let 0b101..=0b111 = self.imm3 { panic!("Oh no") }
+        if let 0b101..=0b111 = self.imm3 {
+            panic!("Oh no")
+        }
         let datasize = self.sf.datasize_sf();
         let extend_type = ExtendType::from_u8(self.option);
 
@@ -1515,13 +1519,8 @@ impl Asrv {
         let shift = decode_shift(0b10);
 
         let op2 = cpu.x_read(self.rm.into(), datasize);
-        let shifted_reg = shift_reg(
-            cpu,
-            self.rn,
-            shift,
-            (op2 % datasize as u64).try_into().unwrap(),
-            datasize,
-        );
+        let shifted_reg =
+            shift_reg(cpu, self.rn, shift, (op2 % datasize as u64).try_into().unwrap(), datasize);
         cpu.x_write(self.rd.into(), shifted_reg, datasize == 32);
     }
 

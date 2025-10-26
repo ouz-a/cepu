@@ -185,7 +185,7 @@ pub struct Cpu {
     pub mmu: Mmu,
     tpidr_el1: u64,
     tpidr_el0: u64,
-    tpidrro_el0:u64,
+    tpidrro_el0: u64,
 }
 
 impl Cpu {
@@ -483,9 +483,7 @@ impl Cpu {
             MsrRegisters::TpidrEl0 => {
                 self.tpidr_el0 = self.x_read(t.into(), 64);
             }
-            MsrRegisters::TpidrroEl0 => {
-                self.tpidrro_el0 = self.x_read(t.into(), 64)
-            }
+            MsrRegisters::TpidrroEl0 => self.tpidrro_el0 = self.x_read(t.into(), 64),
             MsrRegisters::Daif => {
                 self.pstate.daif_from_spsr(self.x_read(t.into(), 64));
             }
