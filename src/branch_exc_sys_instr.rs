@@ -579,3 +579,211 @@ impl Blr {
         decode: Self::decode,
     };
 }
+
+// TODO: SYS requires organization
+
+#[derive(Clone, Copy, Debug)]
+pub struct Sys {
+    pub word: u32,
+}
+
+impl Sys {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let word = self.word;
+        let dc_mask = 0b1111_1111_1111_1000_1111_0000_0000_0000;
+        let dc_value = 0b1101_0101_0000_1000_0111_0000_0000_0000;
+        let at_mask = 0b1111_1111_1111_1000_1111_1110_0000_0000;
+        let at_value = 0b1101_0101_0000_1000_0111_1000_0000_0000;
+        let tlbi_mask: u32 = 0b1111_1111_1111_1000_1110_0000_0000_0000;
+        let tlbi_value: u32 = 0b1101_0101_0000_1000_1000_0000_0000_0000;
+
+        if (word & tlbi_mask) == tlbi_value {
+        } else if (word & at_mask) == at_value {
+            let op1 = get_bits_ct!(word, 16, 3);
+            let crn = get_bits_ct!(word, 12, 4);
+            let crm = get_bits_ct!(word, 8, 4);
+            let op2 = get_bits_ct!(word, 5, 3);
+            let pattern = ((op1 << 11) | (crn << 7) | (crm << 3) | op2) as u16;
+
+            let at_op = compute_sys_op_at(pattern);
+
+            let rt = get_bits_ct!(word, 0, 5) as u8;
+            let va = cpu.x_read(rt.into(), 64);
+
+            if matches!(at_op.stage, TranslationStage::Stage12) {
+                panic!("Stage 2 translation not implemented");
+            }
+
+            cpu.mmu.faulted = false;
+            let pa = cpu.mmu.page_walk(va as usize);
+
+            if cpu.mmu.faulted {
+                let level = match cpu.mmu.fault_level {
+                    0 => 0,
+                    1 => 1,
+                    2 => 2,
+                    _ => 3,
+                } as u64;
+                let fst = 0b0001_00u64 | level;
+                cpu.par_el1 = 0;
+                cpu.par_el1 |= 1; // F
+                cpu.par_el1 |= fst << 1; // FS
+                cpu.par_el1 |= 1u64 << 11; // RES1 for 64-bit PAR
+            } else {
+               let mut par: u64 = 0;
+                par |= (pa as u64) & !0xFFFu64;
+                par |= 1u64 << 11;
+                cpu.par_el1 = par;
+            }
+        } else if (word & dc_mask) == dc_value {
+            // NO OP
+            
+        } else {
+            panic!("Sys instruction not covered")
+        }
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        Instruction::Sys(Self { word })
+    }
+
+    pub const SYS: InstDesc = InstDesc {
+        mask: 0b1111_1111_1111_1000_0000_0000_0000_0000,
+        value: 0b1101_0101_0000_1000_0000_0000_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum AtaAccess {
+    Read,
+    Write,
+    Any,
+    ReadPan,
+    WritePan,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum TranslationStage {
+    Stage1,
+    Stage12,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct SysOpAt {
+    pub access: AtaAccess,
+    pub stage: TranslationStage,
+    pub el: ExceptionLevel,
+}
+
+fn compute_sys_op_at(pat: u16) -> SysOpAt {
+    let access;
+    let stage;
+    let el;
+    match pat {
+        // S1E1R
+        960 => {
+            access = AtaAccess::Read;
+            el = ExceptionLevel::EL1;
+            stage = TranslationStage::Stage1;
+        }
+        // S1E1W
+        961 => {
+            access = AtaAccess::Write;
+            el = ExceptionLevel::EL1;
+            stage = TranslationStage::Stage1;
+        }
+        // S1E0R
+        962 => {
+            access = AtaAccess::Read;
+            el = ExceptionLevel::EL0;
+            stage = TranslationStage::Stage1;
+        }
+        // S1E0W
+        963 => {
+            access = AtaAccess::Write;
+            el = ExceptionLevel::EL0;
+            stage = TranslationStage::Stage1;
+        }
+        // S1E1RP
+        968 => {
+            access = AtaAccess::ReadPan;
+            el = ExceptionLevel::EL1;
+            stage = TranslationStage::Stage1;
+        }
+        // S1E1WP
+        969 => {
+            access = AtaAccess::WritePan;
+            el = ExceptionLevel::EL1;
+            stage = TranslationStage::Stage1;
+        }
+        // S1E1A
+        970 => {
+            access = AtaAccess::Any;
+            el = ExceptionLevel::EL1;
+            stage = TranslationStage::Stage1;
+        }
+        // S1E2R
+        9152 => {
+            access = AtaAccess::Read;
+            el = ExceptionLevel::EL2;
+            stage = TranslationStage::Stage1;
+        }
+        // S1E2W
+        9153 => {
+            access = AtaAccess::Write;
+            el = ExceptionLevel::EL2;
+            stage = TranslationStage::Stage1;
+        }
+        // S1E2A
+        9162 => {
+            access = AtaAccess::Any;
+            el = ExceptionLevel::EL2;
+            stage = TranslationStage::Stage1;
+        }
+        // S12E1R
+        9156 => {
+            access = AtaAccess::Read;
+            el = ExceptionLevel::EL1;
+            stage = TranslationStage::Stage12;
+        }
+        // S12E1W
+        9157 => {
+            access = AtaAccess::Write;
+            el = ExceptionLevel::EL1;
+            stage = TranslationStage::Stage12;
+        }
+        // S12E0R
+        9158 => {
+            access = AtaAccess::Read;
+            el = ExceptionLevel::EL0;
+            stage = TranslationStage::Stage12;
+        }
+        // S12E0W
+        9159 => {
+            access = AtaAccess::Write;
+            el = ExceptionLevel::EL0;
+            stage = TranslationStage::Stage12;
+        }
+        // S1E3R
+        13248 => {
+            access = AtaAccess::Read;
+            el = ExceptionLevel::EL3;
+            stage = TranslationStage::Stage1;
+        }
+        // S1E3W
+        13249 => {
+            access = AtaAccess::Write;
+            el = ExceptionLevel::EL3;
+            stage = TranslationStage::Stage1;
+        }
+        // S1E3A
+        13258 => {
+            access = AtaAccess::Any;
+            el = ExceptionLevel::EL3;
+            stage = TranslationStage::Stage1;
+        }
+        _ => panic!("Wrong SysOP for AT: {pat}"),
+    }
+    SysOpAt { access, stage, el }
+}

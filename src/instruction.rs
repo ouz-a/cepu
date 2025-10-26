@@ -3,7 +3,7 @@ use std::sync::OnceLock;
 use crate::{
     branch_exc_sys_instr::{
         Bcond, Bl, Blr, Br, Branch, Bti, Cbnz, Cbz, Ccmpi, Csinc, Csinv, Dmb, Eret, Mrs, MsrImm,
-        MsrReg, Ret, Tbnz, Tbz, Wfi, Xpaclri, Yield,
+        MsrReg, Ret, Sys, Tbnz, Tbz, Wfi, Xpaclri, Yield,
     },
     cpu::Cpu,
     imm_instr::{AddImmediate, Movk, Movn, Movz, SubImmediate, Subs},
@@ -13,7 +13,7 @@ use crate::{
         LdrhImmPostIndex, LdrhImmPreIndex, LdrhImmUnOffset, LdrhRegister, LdrsbImmPostIndex,
         LdrsbImmPreIndex, LdrsbImmUnsignedOffset, LdrshImmPostIndex, LdrshImmPreIndex,
         LdrshImmUnsignedOffset, LdrswImmPostIndex, LdrswImmPreIndex, LdrswImmUnOffset,
-        LdrswRegister, Ldur, Ldurb, Ldurh, Ldxr, Prfm, StlrNoOffset, Stlxr, StpPostIndex,
+        LdrswRegister, Ldur, Ldurb, Ldurh, Ldxr, Prfm, StlrNoOffset, Stlrb, Stlxr, StpPostIndex,
         StpPreIndex, StpSignedOffset, StrImmPostIndex, StrImmPreIndex, StrImmUnOffset, StrRegister,
         StrbImmUnOffset, StrbPostIndex, StrbPreIndex, StrbRegister, StrhUnsigned, Stur, Sturb,
         Stxr,
@@ -21,10 +21,10 @@ use crate::{
     register_instr::{
         AddExtendedRegister, AddShiftedReg, AddsExtendedRegister, AddsImmediate, AddsShiftedReg,
         Adr, Adrp, AndImmediate, AndShiftedRegister, AndsImmediate, AndsShiftedReg, Asrv,
-        AutiaspSystem, Bfm, BicShiftedReg, BicShiftedRegSet, CcmpRegister, Clz, Csel, Csneg, Dc,
-        Dsb, EorImmediate, EorShiftedReg, Isb, Lslv, Lsrv, Madd, Nop, OrNotShiftedRegister,
+        AutiaspSystem, Bfm, BicShiftedReg, BicShiftedRegSet, CcmpRegister, Clz, Csel, Csneg, Dsb,
+        EorImmediate, EorShiftedReg, Isb, Lslv, Lsrv, Madd, Nop, OrNotShiftedRegister,
         OrShiftedRegister, OrrImmediate, PaciaSystem, Rev, Sbfm, Smaddl, SubExtendedReg,
-        SubShiftedRegister, SubsExtendedReg, SubsShiftedReg, Tlbi, Ubfx, Udiv, Umaddl,
+        SubShiftedRegister, SubsExtendedReg, SubsShiftedReg, Ubfx, Udiv, Umaddl,
     },
 };
 
@@ -158,8 +158,7 @@ define_instructions!(
     Dsb(Dsb),
     Isb(Isb),
     // ----- Cache Tlb -----
-    Dc(Dc),
-    Tlbi(Tlbi),
+    Sys(Sys),
     // ----- Pointer Authentication -----
     AutiaspSystem(AutiaspSystem),
     PaciaSystem(PaciaSystem),
@@ -178,6 +177,7 @@ define_instructions!(
     StrImmPreIndex(StrImmPreIndex),
     StrImmUnOffset(StrImmUnOffset),
     StrRegister(StrRegister),
+    Stlrb(Stlrb),
     Stur(Stur),
     Sturb(Sturb),
     // ----- Load Single -----
@@ -325,8 +325,7 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     Dsb::DSB,
     Isb::ISB,
     // ----- Cache Tlb -----
-    Dc::DC,
-    Tlbi::TLBI,
+    Sys::SYS,
     // ----- Pointer Authentication -----
     AutiaspSystem::AUTIASP_SYSTEM,
     PaciaSystem::PACIA_SYSTEM,
@@ -347,6 +346,7 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     StrRegister::STR_REGISTER,
     Stur::STUR,
     Sturb::STURB,
+    Stlrb::STLRB,
     // ----- Load Single -----
     Ldar::LDAR,
     LdrbPostIndex::LDRB_POST_INDEX,

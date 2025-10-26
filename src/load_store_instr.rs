@@ -1605,7 +1605,6 @@ impl StlrNoOffset {
 
         cpu.mmu.write_memory(address.try_into().unwrap(), dbytres.into(), data);
         if cpu.mmu.faulted {
-            return;
         }
     }
 
@@ -1619,6 +1618,37 @@ impl StlrNoOffset {
     pub const STLR_NO_OFFSET: InstDesc = InstDesc {
         mask: 0b1011_1111_1111_1111_1111_1100_0000_0000,
         value: 0b1000_1000_1001_1111_1111_1100_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+/// Store-release register byte
+#[derive(Debug, Clone, Copy)]
+pub struct Stlrb {
+    pub rn: u8,
+    pub rt: u8,
+}
+
+impl Stlrb {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let address = if self.rn == 31 { cpu.sp_read() } else { cpu.x_read(self.rn.into(), 64) };
+
+        let data = cpu.x_read(self.rt.into(), 8);
+
+        cpu.mmu.write_memory(address.try_into().unwrap(), 1, data);
+        if cpu.mmu.faulted {
+        }
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rt = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::Stlrb(Self { rn, rt })
+    }
+
+    pub const STLRB: InstDesc = InstDesc {
+        mask: 0b1111_1111_1111_1111_1111_1100_0000_0000,
+        value: 0b0000_1000_1001_1111_1111_1100_0000_0000,
         decode: Self::decode,
     };
 }

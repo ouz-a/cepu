@@ -13,22 +13,6 @@ use crate::{
 // Temp NOOP instructions
 
 // ------------------------
-
-#[derive(Debug, Clone, Copy)]
-pub struct Tlbi;
-impl Tlbi {
-    pub fn exec(self, _cpu: &mut Cpu, _old_pc: u64) {}
-    pub const fn decode(_word: u32) -> Instruction {
-        Instruction::Tlbi(Self)
-    }
-
-    pub const TLBI: InstDesc = InstDesc {
-        mask: 0b1111_1111_1111_1000_1110_0000_0000_0000,
-        value: 0b1101_0101_0000_1000_1000_0000_0000_0000,
-        decode: Self::decode,
-    };
-}
-
 #[derive(Clone, Copy, Debug)]
 pub struct Nop;
 impl Nop {
@@ -56,21 +40,6 @@ impl Isb {
     pub const ISB: InstDesc = InstDesc {
         mask: 0b1111_1111_1111_1111_1111_0000_1111_1111,
         value: 0b1101_0101_0000_0011_0011_0000_1101_1111,
-        decode: Self::decode,
-    };
-}
-
-#[derive(Clone, Copy, Debug)]
-pub struct Dc;
-
-impl Dc {
-    pub fn exec(self, _cpu: &mut Cpu, _old_pc: u64) {}
-    pub const fn decode(_word: u32) -> Instruction {
-        Instruction::Dc(Self)
-    }
-    pub const DC: InstDesc = InstDesc {
-        mask: 0b1111_1111_1111_1000_1111_0000_0000_0000,
-        value: 0b1101_0101_0000_1000_0111_0000_0000_0000,
         decode: Self::decode,
     };
 }
@@ -1112,15 +1081,12 @@ pub struct SubsExtendedReg {
 
 impl SubsExtendedReg {
     pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
-        match self.imm3 {
-            0b101 | 0b110 | 0b111 => panic!("Oh no"),
-            _ => (),
-        }
+        if let 0b101..=0b111 = self.imm3 { panic!("Oh no") }
         let datasize = self.sf.datasize_sf();
         let extend_type = ExtendType::from_u8(self.option);
 
         let op1 = if self.rn == 31 { cpu.sp_read() } else { cpu.x_read(self.rn.into(), datasize) };
-        let extended = extend_register(cpu, self.rm.into(), extend_type, self.imm3, datasize);
+        let extended = extend_register(cpu, self.rm, extend_type, self.imm3, datasize);
         let op2 = bits_get(extended.not(), 0, datasize);
 
         let result = add_with_carry(op1, op2, 1, datasize);
@@ -1158,15 +1124,12 @@ pub struct SubExtendedReg {
 
 impl SubExtendedReg {
     pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
-        match self.imm3 {
-            0b101 | 0b110 | 0b111 => panic!("Oh no"),
-            _ => (),
-        }
+        if let 0b101..=0b111 = self.imm3 { panic!("Oh no") }
         let datasize = self.sf.datasize_sf();
         let extend_type = ExtendType::from_u8(self.option);
 
         let op1 = if self.rn == 31 { cpu.sp_read() } else { cpu.x_read(self.rn.into(), datasize) };
-        let extended = extend_register(cpu, self.rm.into(), extend_type, self.imm3, datasize);
+        let extended = extend_register(cpu, self.rm, extend_type, self.imm3, datasize);
         let op2 = bits_get(extended.not(), 0, datasize);
 
         let result = add_with_carry(op1, op2, 1, datasize);
@@ -1554,7 +1517,7 @@ impl Asrv {
         let op2 = cpu.x_read(self.rm.into(), datasize);
         let shifted_reg = shift_reg(
             cpu,
-            self.rn.into(),
+            self.rn,
             shift,
             (op2 % datasize as u64).try_into().unwrap(),
             datasize,
