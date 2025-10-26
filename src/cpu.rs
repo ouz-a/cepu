@@ -184,6 +184,8 @@ pub struct Cpu {
 
     pub mmu: Mmu,
     tpidr_el1: u64,
+    tpidr_el0: u64,
+    tpidrro_el0:u64,
 }
 
 impl Cpu {
@@ -478,6 +480,12 @@ impl Cpu {
             MsrRegisters::TpidrEl1 => {
                 self.tpidr_el1 = self.x_read(t.into(), 64);
             }
+            MsrRegisters::TpidrEl0 => {
+                self.tpidr_el0 = self.x_read(t.into(), 64);
+            }
+            MsrRegisters::TpidrroEl0 => {
+                self.tpidrro_el0 = self.x_read(t.into(), 64)
+            }
             MsrRegisters::Daif => {
                 self.pstate.daif_from_spsr(self.x_read(t.into(), 64));
             }
@@ -609,6 +617,9 @@ impl Cpu {
             MrsRegisters::TpidrEl1 => {
                 self.x_write(t.into(), self.tpidr_el1, false);
             }
+            MrsRegisters::TpidrEl0 => {
+                self.x_write(t.into(), self.tpidr_el0, false);
+            }
             MrsRegisters::ElrEl1 => {
                 self.x_write(t.into(), self.elr_el1, false);
             }
@@ -626,6 +637,9 @@ impl Cpu {
             }
             MrsRegisters::CntvctEl0 => {
                 self.x_write(t.into(), cntpct_now(), false);
+            }
+            MrsRegisters::TpidrroEl0 => {
+                self.x_write(t.into(), self.tpidrro_el0, false);
             }
         }
     }
@@ -959,6 +973,8 @@ msr_enum! {
     Ttbr1El1 = 12885032961,
     SpEl0 = 12885164288,
     TpidrEl1 = 12885753860,
+    TpidrEl0 = 12936085506,
+    TpidrroEl0 = 12936085507,
     FarEl1   = 12885295104,
     ParEl1   = 12885361664,
 }
@@ -991,6 +1007,8 @@ macro_rules! mrs_enum {
 
 mrs_enum! {
     TpidrEl1 = 12885753860,
+    TpidrEl0 = 12936085506,
+    TpidrroEl0 = 12936085507,
     Daif = 12935496193,
     SpEl0 = 12885164288,
     SpsrEl1 = 12885164032,
