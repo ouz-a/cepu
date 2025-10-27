@@ -179,7 +179,7 @@ impl SubImmediate {
         Instruction::SubImmediate(Self { sf, sh, imm12, rn, rd })
     }
     pub const SUB_IMMEDIATE: InstDesc = InstDesc {
-        mask: 0b0111_1111_1100_0000_0000_0000_0000_0000,
+        mask: 0b0111_1111_1000_0000_0000_0000_0000_0000,
         value: 0b0101_0001_0000_0000_0000_0000_0000_0000,
         decode: Self::decode,
     };

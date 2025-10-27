@@ -46,7 +46,7 @@ impl Eret {
     }
 
     pub const ERET: InstDesc = InstDesc {
-        mask: 0b1101_0110_1001_1111_0000_0011_1110_0000,
+        mask: 0b1111_1111_1111_1111_1111_1111_1111_1111,
         value: 0b1101_0110_1001_1111_0000_0011_1110_0000,
         decode: Self::decode,
     };
@@ -96,7 +96,7 @@ impl Tbnz {
 
     pub const fn decode(word: u32) -> Instruction {
         let b5 = get_bits_ct!(word, 31, 1) as u8 == 1;
-        let b40 = get_bits_ct!(word, 19, 4) as u8;
+        let b40 = get_bits_ct!(word, 19, 5) as u8;
         let imm14 = get_bits_ct!(word, 5, 14) as u16;
         let rt = get_bits_ct!(word, 0, 5) as u8;
         Instruction::Tbnz(Self { b5, b40, imm14, rt })
@@ -127,7 +127,7 @@ impl Tbz {
 
     pub const fn decode(word: u32) -> Instruction {
         let b5 = get_bits_ct!(word, 31, 1) as u8 == 1;
-        let b40 = get_bits_ct!(word, 19, 4) as u8;
+        let b40 = get_bits_ct!(word, 19, 5) as u8;
         let imm14 = get_bits_ct!(word, 5, 14) as u16;
         let rt = get_bits_ct!(word, 0, 5) as u8;
         Instruction::Tbz(Self { b5, b40, imm14, rt })

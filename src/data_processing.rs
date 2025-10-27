@@ -187,7 +187,7 @@ pub fn instruction_orr_imm(cpu: &mut Cpu, rn: u8, rd: u8, datasize: u8, imm: u64
     let is_32b = datasize == 32;
 
     if rd == 31 {
-        cpu.sp_write(result);
+        cpu.sp_write(zero_extend(result, 64))
     } else {
         cpu.x_write(rd.into(), result, is_32b);
     }

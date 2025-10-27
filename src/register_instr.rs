@@ -126,6 +126,12 @@ impl AddsShiftedReg {
         let imm6 = get_bits_ct!(word, 10, 6) as u8;
         let rn = get_bits_ct!(word, 5, 5) as u8;
         let rd = get_bits_ct!(word, 0, 5) as u8;
+        if let ShiftTypes::StRor = shift {
+            panic!("Undefined");
+        }
+        if !sf && get_bits_ct!(imm6, 5, 1) == 1 {
+            panic!("Undefined")
+        }
         Instruction::AddsShiftedReg(Self { sf, shift, rm, imm6, rn, rd })
     }
 
@@ -286,11 +292,7 @@ impl AddsExtendedRegister {
 
         let res = add_with_carry(op1, op2, 0, datasize);
 
-        if self.rd == 31 {
-            cpu.sp_write(zero_extend(res.result, datasize));
-        } else {
-            cpu.x_write(self.rd.into(), res.result, !self.sf);
-        }
+        cpu.x_write(self.rd.into(), res.result, !self.sf);
         cpu.pstate.set_flags_from_bits(res.flag_to_bits());
     }
     pub const fn decode(word: u32) -> Instruction {
@@ -401,7 +403,7 @@ impl AndShiftedRegister {
         let imm6 = get_bits_ct!(word, 10, 6) as u8;
         let rn = get_bits_ct!(word, 5, 5) as u8;
         let rd = get_bits_ct!(word, 0, 5) as u8;
-        if !sf && get_bits_ct!(imm6, 4, 1) == 1 {
+        if !sf && get_bits_ct!(imm6, 5, 1) == 1 {
             panic!("Undefined, end of decode");
         }
         Instruction::AndShiftedRegister(Self { sf, shift, rm, imm6, rn, rd })
@@ -514,7 +516,7 @@ impl AndsShiftedReg {
         let imm6 = get_bits_ct!(word, 10, 6) as u8;
         let rn = get_bits_ct!(word, 5, 5) as u8;
         let rd = get_bits_ct!(word, 0, 5) as u8;
-        if !sf && get_bits_ct!(imm6, 4, 1) == 1 {
+        if !sf && get_bits_ct!(imm6, 5, 1) == 1 {
             panic!("Undefined, end of decode");
         }
 
@@ -681,7 +683,7 @@ impl BicShiftedReg {
         let imm6 = get_bits_ct!(word, 10, 6) as u8;
         let rn = get_bits_ct!(word, 5, 5) as u8;
         let rd = get_bits_ct!(word, 0, 5) as u8;
-        if !sf && get_bits_ct!(imm6, 4, 1) == 1 {
+        if !sf && get_bits_ct!(imm6, 5, 1) == 1 {
             panic!("Undefined, end of decode");
         }
 
@@ -725,7 +727,7 @@ impl BicShiftedRegSet {
         let imm6 = get_bits_ct!(word, 10, 6) as u8;
         let rn = get_bits_ct!(word, 5, 5) as u8;
         let rd = get_bits_ct!(word, 0, 5) as u8;
-        if !sf && get_bits_ct!(imm6, 4, 1) == 1 {
+        if !sf && get_bits_ct!(imm6, 5, 1) == 1 {
             panic!("Undefined, end of decode");
         }
 
@@ -1137,7 +1139,11 @@ impl SubExtendedReg {
         let op2 = bits_get(extended.not(), 0, datasize);
 
         let result = add_with_carry(op1, op2, 1, datasize);
-        cpu.x_write(self.rd.into(), result.result, datasize == 32);
+        if self.rd == 31 {
+            cpu.sp_write(zero_extend(result.result, 64));
+        } else {
+            cpu.x_write(self.rd.into(), result.result, datasize == 32);
+        }
     }
 
     pub const fn decode(word: u32) -> Instruction {
@@ -1188,7 +1194,7 @@ impl SubsShiftedReg {
         let imm6 = get_bits_ct!(word, 10, 6) as u8;
         let rn = get_bits_ct!(word, 5, 5) as u8;
         let rd = get_bits_ct!(word, 0, 5) as u8;
-        if !sf && get_bits_ct!(imm6, 4, 1) == 1 {
+        if !sf && get_bits_ct!(imm6, 5, 1) == 1 {
             panic!("Undefined, end of decode");
         }
         Instruction::SubsShiftedReg(Self { sf, shift, rm, imm6, rn, rd })
@@ -1331,7 +1337,7 @@ impl EorImmediate {
         let result = op1 ^ imm;
 
         if self.rd == 31 {
-            cpu.sp_write(result);
+            cpu.sp_write(zero_extend(result, 64));
         } else {
             cpu.x_write(self.rd.into(), result, datasize == 32);
         }

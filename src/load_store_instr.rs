@@ -541,6 +541,8 @@ impl LdrReg {
                 true,
             );
         } else {
+            let extend_type = ExtendType::from_u8(self.option);
+            let shift = if self.s == 1 { self.size } else { 0 };
             instruction_ldr_register(
                 cpu,
                 self.rt,
@@ -548,8 +550,8 @@ impl LdrReg {
                 self.rm,
                 datasize,
                 if datasize == 64 { 64 } else { 32 },
-                0,
-                ExtendType::UxTx,
+                shift as u64,
+                extend_type,
                 false,
                 true,
             );
@@ -1014,7 +1016,8 @@ impl LdrswRegister {
         if cpu.mmu.faulted {
             return;
         }
-        cpu.x_write(self.rt.into(), data.1, false);
+        let extended = sign_extend(data.1, 32);
+        cpu.x_write(self.rt.into(), extended, false);
     }
     pub fn decode(word: u32) -> Instruction {
         let rm = get_bits_ct!(word, 16, 5) as u8;
