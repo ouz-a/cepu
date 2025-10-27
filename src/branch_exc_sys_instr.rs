@@ -614,11 +614,17 @@ impl Sys {
                 panic!("Stage 2 translation not implemented");
             }
 
+            let prev_faulted = cpu.mmu.faulted;
+            let prev_fault_va = cpu.mmu.fault_va;
+            let prev_fault_level = cpu.mmu.fault_level;
+
             cpu.mmu.faulted = false;
             let pa = cpu.mmu.page_walk(va as usize);
+            let at_faulted = cpu.mmu.faulted;
+            let at_fault_level = cpu.mmu.fault_level;
 
-            if cpu.mmu.faulted {
-                let level = match cpu.mmu.fault_level {
+            if at_faulted {
+                let level = match at_fault_level {
                     0 => 0,
                     1 => 1,
                     2 => 2,
@@ -635,6 +641,10 @@ impl Sys {
                 par |= 1u64 << 11;
                 cpu.par_el1 = par;
             }
+
+            cpu.mmu.faulted = prev_faulted;
+            cpu.mmu.fault_va = prev_fault_va;
+            cpu.mmu.fault_level = prev_fault_level;
         } else if (word & dc_mask) == dc_value {
             // NO OP
         } else {
