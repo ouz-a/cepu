@@ -154,7 +154,7 @@ pub fn decode_bit_mask(immn: bool, imms: u8, immr: u8, immediate: bool, m: u8) -
 ///
 /// # Panics
 /// Panics if `width` is 0 or greater than 64
-fn rot_right_width(bits: u64, width: u32, amount: u32) -> u64 {
+pub fn rot_right_width(bits: u64, width: u32, amount: u32) -> u64 {
     assert!(width > 0 && width <= 64);
     let amount = amount % width;
     let mask = if width == 64 { u64::MAX } else { (1u64 << width) - 1 };

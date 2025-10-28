@@ -7,7 +7,10 @@ use crate::{
     get_bits_ct,
     instruction::*,
     load_and_store::{ExtendType, extend_register},
-    utils::{Utils, bits_get, decode_bit_mask, replicate_bits_u64, sign_extend, zero_extend},
+    utils::{
+        Utils, bits_get, decode_bit_mask, replicate_bits_u64, rot_right_width, sign_extend,
+        zero_extend,
+    },
 };
 
 // Temp NOOP instructions
@@ -885,7 +888,8 @@ impl Ubfx {
         let width = if self.sf { 64 } else { 32 };
         let (wmask, tmask) = decode_bit_mask(self.n, self.imms, self.immr, false, width);
         let src = cpu.x_read(self.rn.into(), width);
-        let bot = shift_ror(src, self.immr) & wmask;
+        let rotated = rot_right_width(src, width as u32, self.immr as u32);
+        let bot = rotated & wmask;
 
         cpu.x_write(self.rd.into(), bot & tmask, !self.sf);
     }
@@ -927,7 +931,8 @@ impl Bfm {
         let (wmask, tmask) = decode_bit_mask(self.n, self.imms, self.immr, false, width);
         let dst = cpu.x_read(self.rd.into(), width);
         let src = cpu.x_read(self.rn.into(), width);
-        let bot = (dst & wmask.not()) | (shift_ror(src, self.immr) & wmask);
+        let rotated = rot_right_width(src, width as u32, self.immr as u32);
+        let bot = (dst & wmask.not()) | (rotated & wmask);
         let val = (dst & tmask.not()) | (bot & tmask);
 
         cpu.x_write(self.rd.into(), val, !self.sf);
@@ -970,7 +975,8 @@ impl Sbfm {
         let (wmask, tmask) = decode_bit_mask(self.n, self.imms, self.immr, false, width);
 
         let src = cpu.x_read(self.rn.into(), width);
-        let bot = shift_ror(src, self.immr) & wmask;
+        let rotated = rot_right_width(src, width as u32, self.immr as u32);
+        let bot = rotated & wmask;
         let our_bit = bits_get(src, self.imms, 1);
         let top = replicate_bits_u64(our_bit, 1, width.into());
         let value = (top & tmask.not()) | (bot & tmask);

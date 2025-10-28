@@ -4,7 +4,7 @@ use std::ops::Not;
 
 use crate::{
     cpu::{Cpu, SP_REGISTER},
-    utils::{bits_get, insert_16bit_field, sign_extend, zero_extend},
+    utils::{bits_get, insert_16bit_field, rot_right_width, zero_extend},
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -331,19 +331,26 @@ pub fn shift_lsr(x: u64, amount: u8) -> u64 {
 /// Arithmetic shift-right (ASR) – sign-extending
 #[inline]
 pub fn shift_asr(x: u64, amount: u8, datasize: u8) -> u64 {
+    debug_assert!(datasize == 32 || datasize == 64);
+    let value = zero_extend(x, datasize);
     if amount == 0 {
-        return x;
+        return value;
     }
-
-    let value_to_shift = if datasize == 32 { sign_extend(x, 32) } else { x };
-
-    ((value_to_shift as i64) >> (amount as u32)) as u64
+    if datasize == 32 {
+        let shifted = ((value as u32) as i32) >> (amount as u32);
+        shifted as u32 as u64
+    } else {
+        ((value as i64) >> (amount as u32)) as u64
+    }
 }
 
 /// Rotate-right (ROR)
 #[inline]
-pub fn shift_ror(x: u64, amount: u8) -> u64 {
-    if amount == 0 { x } else { x.rotate_right(amount as u32) }
+pub fn shift_ror(x: u64, amount: u8, datasize: u8) -> u64 {
+    if amount == 0 {
+        return x;
+    }
+    rot_right_width(x, datasize as u32, amount as u32)
 }
 
 pub fn shift_reg(cpu: &Cpu, m: u8, s_type: ShiftTypes, shift_amount: u8, datasize: u8) -> u64 {
@@ -352,6 +359,6 @@ pub fn shift_reg(cpu: &Cpu, m: u8, s_type: ShiftTypes, shift_amount: u8, datasiz
         ShiftTypes::StLsl => shift_lsl(val, shift_amount),
         ShiftTypes::StLsr => shift_lsr(val, shift_amount),
         ShiftTypes::StAsr => shift_asr(val, shift_amount, datasize),
-        ShiftTypes::StRor => shift_ror(val, shift_amount),
+        ShiftTypes::StRor => shift_ror(val, shift_amount, datasize),
     }
 }
