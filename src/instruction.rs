@@ -23,7 +23,7 @@ use crate::{
         Adr, Adrp, AndImmediate, AndShiftedRegister, AndsImmediate, AndsShiftedReg, Asrv,
         AutiaspSystem, Bfm, BicShiftedReg, BicShiftedRegSet, CcmpRegister, Clz, Csel, Csneg, Dsb,
         EorImmediate, EorShiftedReg, Isb, Lslv, Lsrv, Madd, Nop, OrNotShiftedRegister,
-        OrShiftedRegister, OrrImmediate, PaciaSystem, Rev, Sbfm, Smaddl, SubExtendedReg,
+        OrShiftedRegister, OrrImmediate, PaciaSystem, Rbit, Rev, Sbfm, Smaddl, SubExtendedReg,
         SubShiftedRegister, SubsExtendedReg, SubsShiftedReg, Ubfx, Udiv, Umaddl,
     },
 };
@@ -134,6 +134,7 @@ define_instructions!(
     Clz(Clz),
     // ----- Bit Reversal -----
     Rev(Rev),
+    Rbit(Rbit),
     // ----- Logical Xor -----
     EorImmediate(EorImmediate),
     EorShiftedReg(EorShiftedReg),
@@ -301,6 +302,7 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     Clz::CLZ,
     // ----- Bit Reversal -----
     Rev::REV,
+    Rbit::RBIT,
     // ----- Logical Xor -----
     EorShiftedReg::EOR_SHIFTED_REG,
     EorImmediate::EOR_IMMEDIATE,
