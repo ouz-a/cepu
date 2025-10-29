@@ -13,10 +13,10 @@ use crate::{
         LdrhImmPostIndex, LdrhImmPreIndex, LdrhImmUnOffset, LdrhRegister, LdrsbImmPostIndex,
         LdrsbImmPreIndex, LdrsbImmUnsignedOffset, LdrshImmPostIndex, LdrshImmPreIndex,
         LdrshImmUnsignedOffset, LdrswImmPostIndex, LdrswImmPreIndex, LdrswImmUnOffset,
-        LdrswRegister, Ldur, Ldurb, Ldurh, Ldxr, Prfm, StlrNoOffset, Stlrb, Stlxr, StpPostIndex,
-        StpPreIndex, StpSignedOffset, StrImmPostIndex, StrImmPreIndex, StrImmUnOffset, StrRegister,
-        StrbImmUnOffset, StrbPostIndex, StrbPreIndex, StrbRegister, StrhUnsigned, Stur, Sturb,
-        Stxr,
+        LdrswRegister, Ldur, Ldurb, Ldurh, Ldursw, Ldxr, Prfm, StlrNoOffset, Stlrb, Stlxr,
+        StpPostIndex, StpPreIndex, StpSignedOffset, StrImmPostIndex, StrImmPreIndex,
+        StrImmUnOffset, StrRegister, StrbImmUnOffset, StrbPostIndex, StrbPreIndex, StrbRegister,
+        StrhUnsigned, Stur, Sturb, Stxr,
     },
     register_instr::{
         AddExtendedRegister, AddShiftedReg, AddsExtendedRegister, AddsImmediate, AddsShiftedReg,
@@ -207,6 +207,7 @@ define_instructions!(
     LdrLit(LdrLit),
     LdrReg(LdrReg),
     Ldur(Ldur),
+    Ldursw(Ldursw),
     Ldurh(Ldurh),
     Ldurb(Ldurb),
     // ----- Store Pair -----
@@ -376,6 +377,7 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     LdrReg::LDR_REG,
     Ldurh::LDURH,
     Ldur::LDUR,
+    Ldursw::LDURSW,
     Ldurb::LDURB,
     // ----- Store Pair -----
     StpPostIndex::STP_POST_INDEX,

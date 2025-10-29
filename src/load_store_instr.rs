@@ -1195,6 +1195,44 @@ impl Ldurh {
     };
 }
 
+/// Load register signed word (unscaled)
+#[derive(Debug, Clone, Copy)]
+pub struct Ldursw {
+    imm9: u16,
+    rn: u8,
+    rt: u8,
+}
+
+impl Ldursw {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let offset = sign_extend(self.imm9.into(), 9);
+
+        let mut address =
+            if self.rn == 31 { cpu.sp_read() } else { cpu.x_read(self.rn.into(), 64) };
+
+        address = address.wrapping_add(offset);
+
+        let data = cpu.mmu.read_memory(address as usize, 4);
+        if cpu.mmu.faulted {
+            return;
+        }
+
+        cpu.x_write(self.rt.into(), sign_extend(data.1, 32), false);
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let imm9 = get_bits_ct!(word, 12, 9) as u16;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rt = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::Ldursw(Self { imm9, rn, rt })
+    }
+    pub const LDURSW: InstDesc = InstDesc {
+        mask: 0b1111_1111_1110_0000_0000_1100_0000_0000,
+        value: 0b1011_1000_1000_0000_0000_0000_0000_0000,
+        decode: Self::decode,
+    };
+}
+
 /// Store register byte (unscaled)
 #[derive(Debug, Clone, Copy)]
 pub struct Sturb {
