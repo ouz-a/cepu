@@ -65,6 +65,75 @@ impl Dsb {
 // ------------------------
 
 #[derive(Clone, Copy, Debug)]
+pub struct Msub {
+    pub sf: bool,
+    pub rm: u8,
+    pub ra: u8,
+    pub rn: u8,
+    pub rd: u8,
+}
+impl Msub {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let datasize = self.sf.datasize_sf();
+        let op1 = cpu.x_read(self.rn.into(), datasize);
+        let op2 = cpu.x_read(self.rm.into(), datasize);
+        let op3 = cpu.x_read(self.ra.into(), datasize);
+
+        let res = op3.wrapping_sub(op1.wrapping_mul(op2));
+
+        let val = bits_get(res, 0, datasize );
+        cpu.x_write(self.rd.into(), val, datasize == 32);
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let sf = get_bits_ct!(word, 31, 1) == 1;
+        let rm = get_bits_ct!(word, 16, 5) as u8;
+        let ra = get_bits_ct!(word, 10, 5) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rd = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::Msub(Self { sf, rm, ra, rn, rd })
+    }
+
+    pub const MSUB: InstDesc = InstDesc {
+        mask: 0b0111_1111_1110_0000_1000_0000_0000_0000,
+        value: 0b0001_1011_0000_0000_1000_0000_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct Umulh {
+    pub sf: bool,
+    pub rm: u8,
+    pub rn: u8,
+    pub rd: u8,
+}
+impl Umulh {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let op1: u128 = cpu.x_read(self.rn.into(), 64) as u128;
+        let op2: u128 = cpu.x_read(self.rm.into(), 64) as u128;
+
+        let res: u128 = op1 * op2;
+
+        cpu.x_write(self.rd.into(), (res >> 64) as u64, false);
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let sf = get_bits_ct!(word, 31, 1) == 1;
+        let rm = get_bits_ct!(word, 16, 5) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rd = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::Umulh(Self { sf, rm, rn, rd })
+    }
+
+    pub const UMULH: InstDesc = InstDesc {
+        mask: 0b0111_1111_1110_0000_1111_1100_0000_0000,
+        value: 0b0001_1011_1100_0000_0111_1100_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+#[derive(Clone, Copy, Debug)]
 pub struct Madd {
     pub sf: bool,
     pub rd: u8,

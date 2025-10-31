@@ -19,12 +19,7 @@ use crate::{
         StrhUnsigned, Stur, Sturb, Sturh, Stxr,
     },
     register_instr::{
-        AddExtendedRegister, AddShiftedReg, AddsExtendedRegister, AddsImmediate, AddsShiftedReg,
-        Adr, Adrp, AndImmediate, AndShiftedRegister, AndsImmediate, AndsShiftedReg, Asrv,
-        AutiaspSystem, Bfm, BicShiftedReg, BicShiftedRegSet, CcmpRegister, Clz, Csel, Csneg, Dsb,
-        EorImmediate, EorShiftedReg, Isb, Lslv, Lsrv, Madd, Nop, OrNotShiftedRegister,
-        OrShiftedRegister, OrrImmediate, PaciaSystem, Rbit, Rev, Sbfm, Smaddl, SubExtendedReg,
-        SubShiftedRegister, SubsExtendedReg, SubsShiftedReg, Ubfx, Udiv, Umaddl,
+        AddExtendedRegister, AddShiftedReg, AddsExtendedRegister, AddsImmediate, AddsShiftedReg, Adr, Adrp, AndImmediate, AndShiftedRegister, AndsImmediate, AndsShiftedReg, Asrv, AutiaspSystem, Bfm, BicShiftedReg, BicShiftedRegSet, CcmpRegister, Clz, Csel, Csneg, Dsb, EorImmediate, EorShiftedReg, Isb, Lslv, Lsrv, Madd, Msub, Nop, OrNotShiftedRegister, OrShiftedRegister, OrrImmediate, PaciaSystem, Rbit, Rev, Sbfm, Smaddl, SubExtendedReg, SubShiftedRegister, SubsExtendedReg, SubsShiftedReg, Ubfx, Udiv, Umaddl, Umulh
     },
 };
 
@@ -103,6 +98,8 @@ define_instructions!(
     Movn(Movn),
     Movz(Movz),
     // ----- Multiply -----
+    Msub(Msub),
+    Umulh(Umulh),
     Madd(Madd),
     Smaddl(Smaddl),
     Umaddl(Umaddl),
@@ -273,6 +270,8 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     Movn::MOVN,
     Movz::MOVZ,
     // ----- Multiply -----
+    Msub::MSUB,
+    Umulh::UMULH,
     Madd::MADD,
     Smaddl::SMADDL,
     Umaddl::UMADDL,
