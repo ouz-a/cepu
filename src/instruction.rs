@@ -16,10 +16,15 @@ use crate::{
         LdrswRegister, Ldur, Ldurb, Ldurh, Ldursw, Ldxr, Prfm, StlrNoOffset, Stlrb, Stlxr,
         StpPostIndex, StpPreIndex, StpSignedOffset, StrImmPostIndex, StrImmPreIndex,
         StrImmUnOffset, StrRegister, StrbImmUnOffset, StrbPostIndex, StrbPreIndex, StrbRegister,
-        StrhUnsigned, Stur, Sturb, Sturh, Stxr,
+        Strh, StrhUnsigned, Stur, Sturb, Sturh, Stxr,
     },
     register_instr::{
-        AddExtendedRegister, AddShiftedReg, AddsExtendedRegister, AddsImmediate, AddsShiftedReg, Adr, Adrp, AndImmediate, AndShiftedRegister, AndsImmediate, AndsShiftedReg, Asrv, AutiaspSystem, Bfm, BicShiftedReg, BicShiftedRegSet, CcmpRegister, Clz, Csel, Csneg, Dsb, EorImmediate, EorShiftedReg, Isb, Lslv, Lsrv, Madd, Msub, Nop, OrNotShiftedRegister, OrShiftedRegister, OrrImmediate, PaciaSystem, Rbit, Rev, Sbfm, Smaddl, SubExtendedReg, SubShiftedRegister, SubsExtendedReg, SubsShiftedReg, Ubfx, Udiv, Umaddl, Umulh
+        AddExtendedRegister, AddShiftedReg, AddsExtendedRegister, AddsImmediate, AddsShiftedReg,
+        Adr, Adrp, AndImmediate, AndShiftedRegister, AndsImmediate, AndsShiftedReg, Asrv,
+        AutiaspSystem, Bfm, BicShiftedReg, BicShiftedRegSet, CcmpRegister, Clz, Csel, Csneg, Dsb,
+        EorImmediate, EorShiftedReg, Isb, Lslv, Lsrv, Madd, Msub, Nop, OrNotShiftedRegister,
+        OrShiftedRegister, OrrImmediate, PaciaSystem, Rbit, Rev, Sbfm, Smaddl, SubExtendedReg,
+        SubShiftedRegister, SubsExtendedReg, SubsShiftedReg, Ubfx, Udiv, Umaddl, Umulh,
     },
 };
 
@@ -178,6 +183,7 @@ define_instructions!(
     Stlrb(Stlrb),
     Stur(Stur),
     Sturh(Sturh),
+    Strh(Strh),
     Sturb(Sturb),
     // ----- Load Single -----
     Ldar(Ldar),
@@ -349,6 +355,7 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     StrRegister::STR_REGISTER,
     Stur::STUR,
     Sturh::STURH,
+    Strh::STRH,
     Sturb::STURB,
     Stlrb::STLRB,
     // ----- Load Single -----

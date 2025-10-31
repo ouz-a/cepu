@@ -377,6 +377,52 @@ impl StrRegister {
     };
 }
 
+/// Store register halfword (register)
+#[derive(Debug, Clone, Copy)]
+pub struct Strh {
+    pub rm: u8,
+    pub option: u8,
+    pub s: bool,
+    pub rn: u8,
+    pub rt: u8,
+}
+
+impl Strh {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        if bits_get(self.option.into(), 1, 1) == 0 {
+            panic!("Sub word index");
+        }
+        let shift = if self.s { 1 } else { 0 };
+        let extend_type = ExtendType::from_u8(self.option);
+        let offset = extend_register(cpu, self.rm, extend_type, shift, 64);
+
+        let mut address =
+            if self.rn == 31 { cpu.sp_read() } else { cpu.x_read(self.rn.into(), 64) };
+
+        address = address.wrapping_add(offset);
+
+        cpu.mmu.write_memory(address as usize, 2, cpu.x_read(self.rt.into(), 16));
+        if cpu.mmu.faulted {
+            return;
+        }
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let rm = get_bits_ct!(word, 16, 5) as u8;
+        let option = get_bits_ct!(word, 13, 3) as u8;
+        let s = get_bits_ct!(word, 12, 1) == 1;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rt = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::Strh(Self { rm, option, s, rn, rt })
+    }
+
+    pub const STRH: InstDesc = InstDesc {
+        mask: 0b1111_1111_1110_0000_0000_1100_0000_0000,
+        value: 0b0111_1000_0010_0000_0000_1000_0000_0000,
+        decode: Self::decode,
+    };
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct LdrImmUnOffset {
     pub size: u8,
