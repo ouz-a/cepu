@@ -16,7 +16,7 @@ use crate::{
         LdrswRegister, Ldur, Ldurb, Ldurh, Ldursw, Ldxr, Prfm, StlrNoOffset, Stlrb, Stlxr,
         StpPostIndex, StpPreIndex, StpSignedOffset, StrImmPostIndex, StrImmPreIndex,
         StrImmUnOffset, StrRegister, StrbImmUnOffset, StrbPostIndex, StrbPreIndex, StrbRegister,
-        StrhUnsigned, Stur, Sturb, Stxr,
+        StrhUnsigned, Stur, Sturb, Sturh, Stxr,
     },
     register_instr::{
         AddExtendedRegister, AddShiftedReg, AddsExtendedRegister, AddsImmediate, AddsShiftedReg,
@@ -180,6 +180,7 @@ define_instructions!(
     StrRegister(StrRegister),
     Stlrb(Stlrb),
     Stur(Stur),
+    Sturh(Sturh),
     Sturb(Sturb),
     // ----- Load Single -----
     Ldar(Ldar),
@@ -348,6 +349,7 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     StrImmUnOffset::STR_IMM_UN_OFFSET,
     StrRegister::STR_REGISTER,
     Stur::STUR,
+    Sturh::STURH,
     Sturb::STURB,
     Stlrb::STLRB,
     // ----- Load Single -----
