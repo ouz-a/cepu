@@ -81,7 +81,7 @@ impl Msub {
 
         let res = op3.wrapping_sub(op1.wrapping_mul(op2));
 
-        let val = bits_get(res, 0, datasize );
+        let val = bits_get(res, 0, datasize);
         cpu.x_write(self.rd.into(), val, datasize == 32);
     }
 

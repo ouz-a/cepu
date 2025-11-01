@@ -617,3 +617,48 @@ pub fn instruction_ldrsb_imm(
         }
     }
 }
+
+pub fn instruction_ldpsw(
+    cpu: &mut Cpu,
+    imm7: u8,
+    rt2: u8,
+    rn: u8,
+    rt: u8,
+    post_index: bool,
+    wback: bool,
+) {
+    let scale = 2;
+    let datasize = 32;
+    let offset = sign_extend(imm7.into(), 7) << scale;
+    let dbytes = datasize / 8;
+
+    let mut address = if rn == 31 { cpu.sp_read() } else { cpu.x_read(rn.into(), 64) };
+
+    if !post_index {
+        address = address.wrapping_add(offset);
+    }
+
+    let address_2 = address.wrapping_add(dbytes);
+    let data1 = cpu.mmu.read_memory(address.try_into().unwrap(), dbytes.try_into().unwrap()).1;
+    if cpu.mmu.faulted {
+        return;
+    }
+    let data2 = cpu.mmu.read_memory(address_2.try_into().unwrap(), dbytes.try_into().unwrap()).1;
+    if cpu.mmu.faulted {
+        return;
+    }
+
+    cpu.x_write(rt.into(), sign_extend(data1, datasize.try_into().unwrap()), false);
+    cpu.x_write(rt2.into(), sign_extend(data2, datasize.try_into().unwrap()), false);
+
+    if wback {
+        if post_index {
+            address = address.wrapping_add(offset);
+        }
+        if rn == 31 {
+            cpu.sp_write(address);
+        } else {
+            cpu.x_write(rn.into(), address.into(), false);
+        }
+    }
+}
