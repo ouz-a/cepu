@@ -1,31 +1,7 @@
 use std::sync::OnceLock;
 
 use crate::{
-    branch_exc_sys_instr::{
-        Bcond, Bl, Blr, Br, Branch, Bti, Cbnz, Cbz, Ccmpi, Csinc, Csinv, Dmb, Eret, Mrs, MsrImm,
-        MsrReg, Ret, Sys, Tbnz, Tbz, Wfi, Xpaclri, Yield,
-    },
-    cpu::Cpu,
-    imm_instr::{AddImmediate, Movk, Movn, Movz, SubImmediate, Subs},
-    load_store_instr::{
-        Ldar, Ldaxr, LdpPostIndex, LdpPreIndex, LdpSignedOffset, LdrImmPostIdx, LdrImmPreIdx,
-        LdrImmUnOffset, LdrLit, LdrReg, LdrbPostIndex, LdrbPreIndex, LdrbRegister, LdrbUnsignedOff,
-        LdrhImmPostIndex, LdrhImmPreIndex, LdrhImmUnOffset, LdrhRegister, LdrsbImmPostIndex,
-        LdrsbImmPreIndex, LdrsbImmUnsignedOffset, LdrshImmPostIndex, LdrshImmPreIndex,
-        LdrshImmUnsignedOffset, LdrswImmPostIndex, LdrswImmPreIndex, LdrswImmUnOffset,
-        LdrswRegister, Ldur, Ldurb, Ldurh, Ldursw, Ldxr, Prfm, StlrNoOffset, Stlrb, Stlxr,
-        StpPostIndex, StpPreIndex, StpSignedOffset, StrImmPostIndex, StrImmPreIndex,
-        StrImmUnOffset, StrRegister, StrbImmUnOffset, StrbPostIndex, StrbPreIndex, StrbRegister,
-        Strh, StrhUnsigned, Stur, Sturb, Sturh, Stxr,
-    },
-    register_instr::{
-        AddExtendedRegister, AddShiftedReg, AddsExtendedRegister, AddsImmediate, AddsShiftedReg,
-        Adr, Adrp, AndImmediate, AndShiftedRegister, AndsImmediate, AndsShiftedReg, Asrv,
-        AutiaspSystem, Bfm, BicShiftedReg, BicShiftedRegSet, CcmpRegister, Clz, Csel, Csneg, Dsb,
-        EorImmediate, EorShiftedReg, Isb, Lslv, Lsrv, Madd, Msub, Nop, OrNotShiftedRegister,
-        OrShiftedRegister, OrrImmediate, PaciaSystem, Rbit, Rev, Sbfm, Smaddl, SubExtendedReg,
-        SubShiftedRegister, SubsExtendedReg, SubsShiftedReg, Ubfx, Udiv, Umaddl, Umulh,
-    },
+    branch_exc_sys_instr::*, cpu::Cpu, imm_instr::*, load_store_instr::*, register_instr::*,
 };
 
 const PRIME_SIZE: usize = 1 << 12;
