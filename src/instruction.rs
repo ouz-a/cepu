@@ -1,4 +1,7 @@
-use std::sync::OnceLock;
+use std::{
+    collections::VecDeque,
+    sync::{OnceLock, atomic::AtomicBool},
+};
 
 use crate::{
     branch_exc_sys_instr::{
@@ -496,13 +499,8 @@ pub fn decode(word: u32) -> Instruction {
         }
         i += 1;
     }
-    let formatted = format!(
-        "Undefined instruction: {:08X}
-Binary form: {:032b}",
-        word.to_be(),
-        word
-    );
-    panic!("{formatted}");
+    UNDEF_PANIC.store(true, std::sync::atomic::Ordering::SeqCst);
+    Instruction::Nop(Nop)
 }
 
 pub fn decode_undef(_: u32) -> Instruction {
@@ -510,3 +508,49 @@ pub fn decode_undef(_: u32) -> Instruction {
 }
 
 pub const UNDEF_DESC: InstDesc = InstDesc { mask: 0, value: 0, decode: decode_undef };
+pub static UNDEF_PANIC: AtomicBool = AtomicBool::new(false);
+
+pub fn capture_trace(trace_holder: &mut VecDeque<(u64, u32)>, pc: u64, word: u32) {
+    if trace_holder.len() >= 20 {
+        trace_holder.pop_front();
+    }
+    trace_holder.push_back((pc, word));
+}
+
+const WIDTH: usize = 76;
+
+pub fn print_undefined_trace(how_many: u64, trace_holder: &mut VecDeque<(u64, u32)>) {
+    let (pc, word) = trace_holder.pop_back().unwrap();
+
+    let line = "—".repeat(WIDTH);
+
+    println!("\n{line}");
+    println!("{:^WIDTH$}", "FATAL ERROR");
+    println!("{line}");
+    println!("\n  Undefined instruction encountered at PC: 0x{pc:016X}");
+    println!("\n  Instruction encoding:");
+    println!("    Hex:    0x{:08X}", word.to_be());
+    println!("    Binary: 0b{:032b}", word);
+
+    let formatted_count = how_many
+        .to_string()
+        .as_bytes()
+        .rchunks(3)
+        .rev()
+        .map(|chunk| std::str::from_utf8(chunk).unwrap())
+        .collect::<Vec<_>>()
+        .join("_");
+
+    println!("\n  Successfully executed {} instructions before failure", formatted_count);
+    println!("\n{line}");
+    println!("Execution Trace (most recent last):\n");
+
+    for (pc, word) in trace_holder.iter() {
+        let decoded = decode(*word);
+        println!("  PC: 0x{pc:016X}  │  {decoded:?}");
+    }
+
+    println!("\n{line}");
+    println!("Cepu will quit now! Bye");
+    println!("{line}\n");
+}

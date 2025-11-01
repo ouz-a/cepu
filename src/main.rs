@@ -1,12 +1,16 @@
 #![feature(int_lowest_highest_one)]
 
-use std::{path::PathBuf, str::FromStr, sync::atomic::Ordering, time::Duration};
+use std::{
+    collections::VecDeque, path::PathBuf, str::FromStr, sync::atomic::Ordering, time::Duration,
+};
 
 use crate::{
     branch::branch_addr,
     cpu::{BATCH, Cpu, INSTRUCTION_SIZE, monotonic_ns},
     image::{load_device_blob, load_kernel_image},
-    instruction::{DESCR, decode, validate_tables},
+    instruction::{
+        DESCR, UNDEF_PANIC, capture_trace, decode, print_undefined_trace, validate_tables,
+    },
     memory::{MEMORY_SIZE, read_32},
 };
 
@@ -32,7 +36,8 @@ pub fn run_block(cpu: &mut Cpu) {
 
     let mut pc = cpu.pc;
     let limit = MEMORY_SIZE;
-    let mut how_many = 0;
+    let mut how_many: u64 = 0;
+    let mut trace = VecDeque::new();
     loop {
         if !cpu.sleeping.load(Ordering::Relaxed) {
             cpu.handle_devices();
@@ -49,17 +54,17 @@ pub fn run_block(cpu: &mut Cpu) {
             }
             pc = pc.wrapping_add(INSTRUCTION_SIZE);
             let dec = decode(word);
-            println!(
-                "Executing instruction at {old_pc:x}\r\nInstruction is {dec:?} raw: {:08X}",
-                word.to_be()
-            );
+            capture_trace(&mut trace, pc, word);
+            if UNDEF_PANIC.load(Ordering::Acquire) {
+                print_undefined_trace(how_many, &mut trace);
+                std::process::exit(1);
+            }
             dec.exec(cpu, old_pc);
             if cpu.mmu.faulted {
                 cpu.handle_data_abort(&mut pc);
                 continue;
             }
             how_many += 1;
-            println!("Executed {how_many} instructions");
 
             if cpu.branch_taken {
                 pc = cpu.branch_target;
