@@ -91,115 +91,154 @@ impl ExclusiveMonitor {
 
 #[derive(Default, Debug)]
 pub struct Cpu {
-    /// 64-Bit General Purpose Register
+    // ========================================================================
+    // CORE EXECUTION STATE
+    // ========================================================================
+    /// General Purpose Registers X0-X30 (X31 is XZR when read, SP when used as base)
     pub x: [u64; GPRS],
-
-    /// Program Counter
+    /// Program Counter (address of currently executing instruction)
     pub pc: u64,
+    /// Process State (condition flags, exception level, interrupt masks)
+    pub pstate: PState,
 
+    /// Branch taken flag (set by branch instructions)
     pub branch_taken: bool,
-    /// Old pc + offset
+    /// Branch target address (where to jump if branch_taken is true)
     pub branch_target: u64,
+    /// Event Register (set by SEV, cleared by WFE)
+    event_register: bool,
 
-    /// Stack Pointer EL0
+    // ========================================================================
+    // EXCEPTION LEVEL BANKED REGISTERS
+    // ========================================================================
+
+    // --- Stack Pointers (one per exception level) ---
     sp_el0: u64,
-    /// Stack Pointer EL1
     sp_el1: u64,
-    /// Stack Pointer EL2
     sp_el2: u64,
-    /// Stack Pointer EL3
     sp_el3: u64,
 
-    /// System Control Register EL1
-    pub sctlr_el1: u64,
-    /// System Control Register EL2
-    _sctlr_el2: u64,
-    /// System Control Register EL3
-    _sctlr_el3: u64,
+    // --- Exception Link Registers (return address after exception) ---
+    elr_el1: u64,
+    elr_el2: u64,
+    elr_el3: u64,
 
+    // --- Saved Program Status Registers (saved PSTATE on exception entry) ---
+    spsr_el1: u64,
+    spsr_el2: u64,
+    spsr_el3: u64,
+
+    // ========================================================================
+    // SYSTEM CONTROL & CONFIGURATION
+    // ========================================================================
+    /// System Control Register EL1 (MMU enable, cache enable, alignment checks)
+    pub sctlr_el1: u64,
+    /// System Control Register EL2 (unused, reserved for future EL2 support)
+    _sctlr_el2: u64,
+    /// System Control Register EL3 (unused, reserved for future EL3 support)
+    _sctlr_el3: u64,
     /// Secure Configuration Register EL3
     scr_el3: u64,
-
-    /// Saved Program Status Register EL3
-    spsr_el3: u64,
-    /// Saved Program Status Register EL2
-    spsr_el2: u64,
-    /// Saved Program Status Register EL1
-    spsr_el1: u64,
-
-    /// Exception Link Register 3
-    elr_el3: u64,
-    /// Exception Link Register 2
-    elr_el2: u64,
-    /// Exception Link Register 1
-    elr_el1: u64,
-
-    /// Holds the vector base address for any exception that is taken to EL1.
-    vbar_el1: u64,
-
-    ctr_el0: u64,
+    /// Memory Attribute Indirection Register EL1 (memory type encoding)
+    mair_el1: u64,
+    /// Architectural Feature Access Control Register EL1
     cpacr_el1: u64,
+    /// Monitor Debug System Control Register EL1
     mdscr_el1: u64,
+
+    // ========================================================================
+    // EXCEPTION & INTERRUPT HANDLING
+    // ========================================================================
+    /// Vector Base Address Register EL1 (base address of exception vector table)
+    vbar_el1: u64,
+    /// Exception Syndrome Register EL1 (exception class and details)
+    pub esr_el1: u64,
+    /// Fault Address Register EL1 (virtual address that caused fault)
+    pub far_el1: u64,
+    /// Physical Address Register EL1 (result of AT address translation instruction)
+    pub par_el1: u64,
+
+    /// Pending interrupt lines (bitfield, bit N = IRQ line N pending)
+    pub pending_irq: AtomicU32,
+    /// CPU sleeping state (true when WFI executed, cleared by interrupt/event)
+    pub sleeping: AtomicBool,
+    /// Condition variable for waking sleeping CPU thread
+    pub condvar: Arc<(Mutex<bool>, Condvar)>,
+
+    // ========================================================================
+    // THREAD & CONTEXT IDENTIFICATION
+    // ========================================================================
+    /// Thread Pointer ID Register EL1 (kernel-managed thread pointer)
+    tpidr_el1: u64,
+    /// Thread Pointer ID Register EL0 (user-space thread pointer, read-write)
+    tpidr_el0: u64,
+    /// Thread Pointer ID Register EL0 Read-Only (user-space TLS, read-only from EL0)
+    tpidrro_el0: u64,
+
+    // ========================================================================
+    // CPU IDENTIFICATION REGISTERS
+    // ========================================================================
+    /// Main ID Register (implementer, variant, architecture, part number, revision)
+    pub midr_el1: u64,
+    /// Multiprocessor Affinity Register (CPU topology)
+    pub mpidr_el1: u64,
+    /// Revision ID Register (implementation-specific revision info)
+    pub revidr_el1: u64,
+    /// Auxiliary ID Register (implementation-specific auxiliary info)
+    pub aidr_el1: u64,
+
+    /// Cache Type Register EL0 (cache line sizes, cache organization)
+    ctr_el0: u64,
+    /// Data Cache Zero ID Register (DC ZVA block size)
+    dczid_el0: u64,
+
+    // ========================================================================
+    // FEATURE IDENTIFICATION REGISTERS
+    // ========================================================================
+
+    // --- Processor Feature Registers (general CPU features) ---
+    id_aa64pfr0_el1: u64,
+    id_aa64pfr1_el1: u64,
+    id_aa64pfr2_el1: u64,
+
+    // --- Debug Feature Registers ---
     id_aa64dfr0_el1: u64,
     id_aa64dfr1_el1: u64,
-    id_aa64isar3_el1: u64,
+    id_dfr0_el1: u64, // AArch32
+    id_dfr1_el1: u64, // AArch32
 
-    tpidr_el1: u64,
-    tpidr_el0: u64,
-    tpidrro_el0: u64,
-    id_aa64pfr2_el1: u64,
-    id_aa64zfr0_el1: u64,
-    id_aa64smfr0_el1: u64,
-    id_dfr0_el1: u64,
-    id_isar0_el1: u64,
-
-    /// Provides additional information about implemented PE features in AArch64
-    /// state.
-    id_aa64pfr0_el1: u64,
-
-    /// Provides information about the implemented memory model and memory
-    /// management support in AArch64 state.
-    id_aa64mmfr0_el1: u64,
-
-    /// Provides information about the implemented memory model and memory
-    /// management support in AArch64 state.
-    id_aa64mmfr1_el1: u64,
-
-    /// Provides identification information for the PE, including an implementer
-    /// code for the device and a device ID number.
-    pub midr_el1: u64,
-    pub mpidr_el1: u64,
-    pub revidr_el1: u64,
-    pub aidr_el1: u64,
-    pub id_aa64mmfr2_el1: u64,
-    pub id_aa64mmfr4_el1: u64,
-
-    mair_el1: u64,
-
-    id_aa64mmfr3_el1: u64,
+    // --- Instruction Set Attribute Registers ---
     id_aa64isar0_el1: u64,
     id_aa64isar1_el1: u64,
     id_aa64isar2_el1: u64,
-    id_aa64pfr1_el1: u64,
-    id_aa64fpfr0_el1: u64,
-    id_dfr1_el1: u64,
+    id_aa64isar3_el1: u64,
+    id_isar0_el1: u64, // AArch32
 
-    pub far_el1: u64,
-    pub esr_el1: u64,
-    pub par_el1: u64,
+    // --- Memory Model Feature Registers ---
+    id_aa64mmfr0_el1: u64,
+    id_aa64mmfr1_el1: u64,
+    pub id_aa64mmfr2_el1: u64,
+    id_aa64mmfr3_el1: u64,
+    pub id_aa64mmfr4_el1: u64,
 
-    event_register: bool,
-    pub pstate: PState,
-    dczid_el0: u64,
+    // --- SVE/SME/FP Feature Registers ---
+    id_aa64zfr0_el1: u64,  // SVE features
+    id_aa64smfr0_el1: u64, // SME features
+    id_aa64fpfr0_el1: u64, // Floating-point features
 
+    // ========================================================================
+    // TIMER
+    // ========================================================================
+    /// Physical and Virtual Timer state (CNTP_*, CNTV_*)
     pub timer: Timer,
-    pub condvar: Arc<(Mutex<bool>, Condvar)>,
-    pub pending_irq: AtomicU32,
-    pub sleeping: AtomicBool,
 
-    pub monitor: ExclusiveMonitor,
-
+    // ========================================================================
+    // MEMORY SYSTEM
+    // ========================================================================
+    /// MMU and page table walker (handles address translation)
     pub mmu: Mmu,
+    /// Exclusive access monitor (for LDXR/STXR synchronization)
+    pub monitor: ExclusiveMonitor,
 }
 
 impl Cpu {
@@ -228,7 +267,7 @@ impl Cpu {
         cpu.id_aa64isar3_el1 = 0;
         cpu.id_aa64mmfr2_el1 = 0;
         cpu.id_aa64mmfr4_el1 = 0x000000000F000000;
-        cpu.id_aa64pfr1_el1 = 0; 
+        cpu.id_aa64pfr1_el1 = 0;
         cpu.id_aa64pfr2_el1 = 0;
         cpu.id_aa64zfr0_el1 = 0;
         cpu.id_aa64smfr0_el1 = 0;
@@ -468,15 +507,12 @@ impl Cpu {
                 self.timer_rearm();
             }
             MsrRegisters::VbarEl1 => {
-                self.vbar_el1 = self.x_read(t.into(), 64);
+                let val = self.x_read(t.into(), 64);
+                self.vbar_el1 = val & !0x7FFu64;
             }
             MsrRegisters::SctlrEl1 => {
                 self.sctlr_el1 = self.x_read(t.into(), 64);
-                if self.sctlr_el1 & 0b1 == 1 {
-                    self.mmu.enabled = true;
-                } else if self.sctlr_el1 & 0b1 != 0 {
-                    self.mmu.enabled = false;
-                }
+                self.mmu.enabled = (self.sctlr_el1 & SCTLR_M) != 0;
             }
             MsrRegisters::SpsrEl1 => {
                 self.spsr_el1 = self.x_read(t.into(), 64);
