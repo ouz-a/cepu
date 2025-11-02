@@ -66,6 +66,12 @@ pub fn run_block(cpu: &mut Cpu) {
             }
             how_many += 1;
 
+            // TODO: This is a hack
+            if UNDEF_PANIC.load(Ordering::Acquire) {
+                print_undefined_trace(how_many, &mut trace);
+                std::process::exit(1);
+            }
+
             if cpu.branch_taken {
                 pc = cpu.branch_target;
                 cpu.branch_taken = false;

@@ -8,7 +8,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use crate::{get_bits_ct, mmu::Mmu, utils::align};
+use crate::{get_bits_ct, instruction::UNDEF_PANIC, mmu::Mmu, utils::align};
 pub const MEM_TOP: usize = crate::memory::MEMORY_SIZE;
 
 static START: OnceLock<Instant> = OnceLock::new();
@@ -141,6 +141,17 @@ pub struct Cpu {
     cpacr_el1: u64,
     mdscr_el1: u64,
     id_aa64dfr0_el1: u64,
+    id_aa64dfr1_el1: u64,
+    id_aa64isar3_el1: u64,
+
+    tpidr_el1: u64,
+    tpidr_el0: u64,
+    tpidrro_el0: u64,
+    id_aa64pfr2_el1: u64,
+    id_aa64zfr0_el1: u64,
+    id_aa64smfr0_el1: u64,
+    id_dfr0_el1: u64,
+    id_isar0_el1: u64,
 
     /// Provides additional information about implemented PE features in AArch64
     /// state.
@@ -158,6 +169,10 @@ pub struct Cpu {
     /// code for the device and a device ID number.
     pub midr_el1: u64,
     pub mpidr_el1: u64,
+    pub revidr_el1: u64,
+    pub aidr_el1: u64,
+    pub id_aa64mmfr2_el1: u64,
+    pub id_aa64mmfr4_el1: u64,
 
     mair_el1: u64,
 
@@ -166,6 +181,8 @@ pub struct Cpu {
     id_aa64isar1_el1: u64,
     id_aa64isar2_el1: u64,
     id_aa64pfr1_el1: u64,
+    id_aa64fpfr0_el1: u64,
+    id_dfr1_el1: u64,
 
     pub far_el1: u64,
     pub esr_el1: u64,
@@ -183,9 +200,6 @@ pub struct Cpu {
     pub monitor: ExclusiveMonitor,
 
     pub mmu: Mmu,
-    tpidr_el1: u64,
-    tpidr_el0: u64,
-    tpidrro_el0: u64,
 }
 
 impl Cpu {
@@ -200,15 +214,28 @@ impl Cpu {
 
         // System identification registers
         cpu.id_aa64dfr0_el1 = 0x000f00f010101009;
-        cpu.id_aa64pfr0_el1 = 0x22;
-        cpu.midr_el1 = 0x00000000_000F0510;
+        cpu.id_aa64pfr0_el1 = 0x11;
+        cpu.id_aa64dfr1_el1 = 0;
+        cpu.midr_el1 = 0x410F0510;
+        cpu.revidr_el1 = 0;
+        cpu.aidr_el1 = 0;
         cpu.id_aa64mmfr0_el1 = 0x000000000F000020;
         cpu.id_aa64mmfr1_el1 = 0;
         cpu.id_aa64isar0_el1 = 0;
         cpu.id_aa64mmfr3_el1 = 0;
         cpu.id_aa64isar1_el1 = 0;
         cpu.id_aa64isar2_el1 = 0;
-        cpu.id_aa64pfr1_el1 = 0x0000_0001_0000_0001;
+        cpu.id_aa64isar3_el1 = 0;
+        cpu.id_aa64mmfr2_el1 = 0;
+        cpu.id_aa64mmfr4_el1 = 0x000000000F000000;
+        cpu.id_aa64pfr1_el1 = 0; 
+        cpu.id_aa64pfr2_el1 = 0;
+        cpu.id_aa64zfr0_el1 = 0;
+        cpu.id_aa64smfr0_el1 = 0;
+        cpu.id_aa64fpfr0_el1 = 0;
+        cpu.id_dfr0_el1 = 0;
+        cpu.id_dfr1_el1 = 0;
+        cpu.id_isar0_el1 = 0;
         cpu.dczid_el0 = 0x14;
         cpu.ctr_el0 = 0x34448004;
         cpu.mpidr_el1 = 0x8000_0000;
@@ -417,7 +444,8 @@ impl Cpu {
         let register: MsrRegisters = comp.into();
         match register {
             MsrRegisters::Unknown => {
-                panic!("Value {comp} not convered, please check the ARM docs!")
+                UNDEF_PANIC.store(true, Ordering::Relaxed);
+                println!("\r\nValue {comp} not convered, please check the ARM docs!")
             }
             MsrRegisters::ElrEl3 => {
                 self.elr_el3 = self.x_read(t.into(), 64);
@@ -516,7 +544,8 @@ impl Cpu {
         let register: MrsRegisters = comp.into();
         match register {
             MrsRegisters::Unknown => {
-                panic!("Value {comp} not convered, please check the ARM docs!")
+                UNDEF_PANIC.store(true, Ordering::Relaxed);
+                println!("\r\nValue {comp} not convered, please check the ARM docs!")
             }
             MrsRegisters::CntfrqEl0 => {
                 if !self.pstate.current_el.is_el0() {
@@ -638,6 +667,45 @@ impl Cpu {
             }
             MrsRegisters::TpidrroEl0 => {
                 self.x_write(t.into(), self.tpidrro_el0, false);
+            }
+            MrsRegisters::RevidrEl1 => {
+                self.x_write(t.into(), self.revidr_el1, false);
+            }
+            MrsRegisters::AidrEl1 => {
+                self.x_write(t.into(), self.aidr_el1, false);
+            }
+            MrsRegisters::IdAa64dfr1El1 => {
+                self.x_write(t.into(), self.id_aa64dfr1_el1, false);
+            }
+            MrsRegisters::IdAa64isar3El1 => {
+                self.x_write(t.into(), self.id_aa64isar3_el1, false);
+            }
+            MrsRegisters::IdAa64mmfr2El1 => {
+                self.x_write(t.into(), self.id_aa64mmfr2_el1, false);
+            }
+            MrsRegisters::IdAa64mmfr4El1 => {
+                self.x_write(t.into(), self.id_aa64mmfr4_el1, false);
+            }
+            MrsRegisters::IdAa64pfr2El1 => {
+                self.x_write(t.into(), self.id_aa64pfr2_el1, false);
+            }
+            MrsRegisters::IdAa64zfr0El1 => {
+                self.x_write(t.into(), self.id_aa64zfr0_el1, false);
+            }
+            MrsRegisters::IdAa64smfr0El1 => {
+                self.x_write(t.into(), self.id_aa64smfr0_el1, false);
+            }
+            MrsRegisters::IdAa64fpfr0El1 => {
+                self.x_write(t.into(), self.id_aa64fpfr0_el1, false);
+            }
+            MrsRegisters::IdDfr0El1 => {
+                self.x_write(t.into(), self.id_dfr0_el1, false);
+            }
+            MrsRegisters::IdDfr1El1 => {
+                self.x_write(t.into(), self.id_dfr1_el1, false);
+            }
+            MrsRegisters::IdIsar0El1 => {
+                self.x_write(t.into(), self.id_isar0_el1, false);
             }
         }
     }
@@ -1013,6 +1081,8 @@ mrs_enum! {
     ElrEl1 = 12885164033,
     EsrEl1 = 12885230080,
     MpidrEl1 = 12884901893,
+    RevidrEl1 = 12884901894,
+    AidrEl1 = 12901679111,
     CntfrqEl0 = 12936151040,
     CntpctEl0 = 12936151041,
     CntpCtlEl0 = 12936151553,
@@ -1021,18 +1091,29 @@ mrs_enum! {
     CtrEl0 = 12935233537,
     IdAa64dfr0El1 = 12884903168,
     IdAa64pfr0El1 = 12884902912,
+    IdAa64dfr1El1 =12884903169,
     MidrEl1 = 12884901888,
     DczidEl0 = 12935233543,
     TcrEl1 = 12885032962,
     CntvctEl0 = 12936151042,
 
-    IdAa64mmfr0El1 = 12884903680,
-    IdAa64mmfr1El1 = 12884903681,
-    IdAa64mmfr3El1 = 12884903683,
-    IdAa64isar0El1 = 2884903424,
-    IdAa64isar1El1 = 12884903425,
-    IdAa64isar2El1 = 12884903426,
-    IdAa64pfr1El1  = 12884902913,
+    IdAa64mmfr0El1   = 12884903680,
+    IdAa64mmfr1El1   = 12884903681,
+    IdAa64mmfr3El1   = 12884903683,
+    IdAa64isar0El1   = 12884903424,
+    IdAa64isar1El1   = 12884903425,
+    IdAa64isar2El1   = 12884903426,
+    IdAa64pfr1El1    = 12884902913,
+    IdAa64isar3El1   = 12884903427,
+    IdAa64mmfr2El1   = 12884903682,
+    IdAa64mmfr4El1   = 12884903684,
+    IdAa64pfr2El1    = 12884902914,
+    IdAa64zfr0El1    = 12884902916,
+    IdAa64smfr0El1   = 12884902917,
+    IdAa64fpfr0El1   = 12884902919,
+    IdDfr0El1        = 12884902146,
+    IdDfr1El1        = 12884902661,
+    IdIsar0El1       = 12884902400,
     FarEl1 = 12885295104,
     ParEl1 = 12885361664,
 }
