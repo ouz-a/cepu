@@ -17,6 +17,60 @@ use crate::{
 
 /// Store register halfword
 #[derive(Debug, Clone, Copy)]
+pub struct StrhPostIndex {
+    pub imm9: u16,
+    pub rn: u8,
+    pub rt: u8,
+}
+
+impl StrhPostIndex {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let offset = sign_extend(self.imm9.into(), 9);
+        instruction_str_halfword_imm(cpu, self.rn, self.rt, offset, true, true);
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let imm9 = get_bits_ct!(word, 12, 9) as u16;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rt = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::StrhPostIndex(Self { imm9, rn, rt })
+    }
+    pub const STRH_POST_INDEX: InstDesc = InstDesc {
+        mask: 0b1111_1111_1110_0000_0000_1100_0000_0000,
+        value: 0b0111_1000_0000_0000_0000_0100_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+/// Store register halfword
+#[derive(Debug, Clone, Copy)]
+pub struct StrhPreIndex {
+    pub imm9: u16,
+    pub rn: u8,
+    pub rt: u8,
+}
+
+impl StrhPreIndex {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let offset = sign_extend(self.imm9.into(), 9);
+        instruction_str_halfword_imm(cpu, self.rn, self.rt, offset, false, true);
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let imm9 = get_bits_ct!(word, 12, 9) as u16;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rt = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::StrhPreIndex(Self { imm9, rn, rt })
+    }
+    pub const STRH_PRE_INDEX: InstDesc = InstDesc {
+        mask: 0b1111_1111_1110_0000_0000_1100_0000_0000,
+        value: 0b0111_1000_0000_0000_0000_1100_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+/// Store register halfword
+#[derive(Debug, Clone, Copy)]
 pub struct StrhUnsigned {
     pub imm12: u16,
     pub rn: u8,
