@@ -164,8 +164,7 @@ pub fn instruction_stnp(cpu: &mut Cpu, rt: u8, rt2: u8, rn: u8, datasize: u8, of
         return;
     }
     cpu.mmu.write_memory(address_2 as usize, dbytes.into(), data2);
-    if cpu.mmu.faulted {
-    }
+    if cpu.mmu.faulted {}
 }
 
 pub fn instruction_stp(
