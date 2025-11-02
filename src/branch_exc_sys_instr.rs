@@ -4,7 +4,7 @@ use crate::{
     branch::{
         branch_to, condition_holds, instruction_bl, instruction_branch, instruction_bunc,
         instruction_cbnz, instruction_cbz, instruction_ccmpi, instruction_eret,
-        instruction_msr_imm, instruction_ret, instruction_tbnz, instruction_tbz,
+        instruction_msr_imm, instruction_ret, instruction_smc, instruction_tbnz, instruction_tbz,
     },
     cpu::{Cpu, ExceptionLevel, PstateField},
     get_bits_ct,
@@ -48,6 +48,27 @@ impl Eret {
     pub const ERET: InstDesc = InstDesc {
         mask: 0b1111_1111_1111_1111_1111_1111_1111_1111,
         value: 0b1101_0110_1001_1111_0000_0011_1110_0000,
+        decode: Self::decode,
+    };
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct Smc {
+    pub imm: u16,
+}
+
+impl Smc {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        instruction_smc(cpu);
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        Instruction::Smc(Self { imm: get_bits_ct!(word, 5, 16) as u16 })
+    }
+
+    pub const SMC: InstDesc = InstDesc {
+        mask: 0b1111_1111_1110_0000_0000_0000_0001_1111,
+        value: 0b1101_0100_0000_0000_0000_0000_0000_0011,
         decode: Self::decode,
     };
 }

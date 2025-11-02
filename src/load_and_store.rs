@@ -148,6 +148,26 @@ pub fn instruction_ldp(
     }
 }
 
+pub fn instruction_stnp(cpu: &mut Cpu, rt: u8, rt2: u8, rn: u8, datasize: u8, offset: u64) {
+    let dbytes = datasize / 8;
+    let mut address = if rn == 31 { cpu.sp_read() } else { cpu.x_read(rn.into(), 64) };
+
+    address = address.wrapping_add(offset);
+
+    let address_2 = address.wrapping_add(dbytes.into());
+
+    let data1 = cpu.x_read(rt.into(), datasize);
+    let data2 = cpu.x_read(rt2.into(), datasize);
+
+    cpu.mmu.write_memory(address as usize, dbytes.into(), data1);
+    if cpu.mmu.faulted {
+        return;
+    }
+    cpu.mmu.write_memory(address_2 as usize, dbytes.into(), data2);
+    if cpu.mmu.faulted {
+    }
+}
+
 pub fn instruction_stp(
     cpu: &mut Cpu,
     t: u8,
@@ -658,7 +678,7 @@ pub fn instruction_ldpsw(
         if rn == 31 {
             cpu.sp_write(address);
         } else {
-            cpu.x_write(rn.into(), address.into(), false);
+            cpu.x_write(rn.into(), address, false);
         }
     }
 }

@@ -134,6 +134,56 @@ pub fn instruction_eret(cpu: &mut Cpu) {
     cpu.aarch64_exception_return(target, spsr);
 }
 
+const ARM_SMCCC_VERSION: u32 = 0x8000_0000;
+const ARM_SMCCC_ARCH_FEATURES: u32 = 0x8000_0001;
+const PSCI_VERSION_32: u32 = 0x8400_0000;
+const PSCI_CPU_OFF_32: u32 = 0x8400_0002;
+const PSCI_SYSTEM_OFF_32: u32 = 0x8400_0008;
+const PSCI_SYSTEM_RESET_32: u32 = 0x8400_0009;
+const PSCI_MIGRATE_INFO_TYPE_32: u32 = 0x8400_0006;
+const PSCI_FEATURES_32: u32 = 0x8400_000A;
+
+const RET_SUCCESS: u64 = 0;
+const RET_NOT_SUPPORTED: u64 = (-1i64) as u64;
+const RET_TOS_MIGRATION_NOT_REQUIRED: u64 = 2;
+
+pub fn instruction_smc(cpu: &mut Cpu) {
+    let function_id = cpu.x_read(0, 64) as u32;
+
+    let result = match function_id {
+        ARM_SMCCC_VERSION => 0x0001_0002,
+        ARM_SMCCC_ARCH_FEATURES => RET_NOT_SUPPORTED,
+        PSCI_VERSION_32 => 0x0001_0001,
+        PSCI_CPU_OFF_32 => RET_SUCCESS,
+        PSCI_FEATURES_32 => {
+            let feature_id = cpu.x_read(1, 64) as u32;
+            match feature_id {
+                PSCI_VERSION_32
+                | PSCI_CPU_OFF_32
+                | PSCI_SYSTEM_OFF_32
+                | PSCI_SYSTEM_RESET_32
+                | PSCI_MIGRATE_INFO_TYPE_32 => RET_SUCCESS,
+                _ => RET_NOT_SUPPORTED,
+            }
+        }
+        PSCI_MIGRATE_INFO_TYPE_32 => RET_TOS_MIGRATION_NOT_REQUIRED,
+        PSCI_SYSTEM_OFF_32 => {
+            println!("\r\n[PSCI] System shutdown requested");
+            std::process::exit(0);
+        }
+        PSCI_SYSTEM_RESET_32 => {
+            println!("\r\n[PSCI] System reset requested");
+            std::process::exit(0);
+        }
+        _ => {
+            println!("\r\n[PSCI] Unhandled SMC function: {:#010x}", function_id);
+            RET_NOT_SUPPORTED
+        }
+    };
+
+    cpu.x_write(0, result, false);
+}
+
 pub fn instruction_bunc(cpu: &mut Cpu, offset: u64, old_pc: u64) {
     branch_to(cpu, old_pc.wrapping_add(offset), false, old_pc);
 }

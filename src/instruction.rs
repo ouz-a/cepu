@@ -6,7 +6,7 @@ use std::{
 use crate::{
     branch_exc_sys_instr::{
         Bcond, Bl, Blr, Br, Branch, Bti, Cbnz, Cbz, Ccmpi, Csinc, Csinv, Dmb, Eret, Mrs, MsrImm,
-        MsrReg, Ret, Sys, Tbnz, Tbz, Wfi, Xpaclri, Yield,
+        MsrReg, Ret, Smc, Sys, Tbnz, Tbz, Wfi, Xpaclri, Yield,
     },
     cpu::Cpu,
     imm_instr::{AddImmediate, Movk, Movn, Movz, SubImmediate, Subs},
@@ -17,9 +17,10 @@ use crate::{
         LdrhImmPreIndex, LdrhImmUnOffset, LdrhRegister, LdrsbImmPostIndex, LdrsbImmPreIndex,
         LdrsbImmUnsignedOffset, LdrshImmPostIndex, LdrshImmPreIndex, LdrshImmUnsignedOffset,
         LdrswImmPostIndex, LdrswImmPreIndex, LdrswImmUnOffset, LdrswRegister, Ldur, Ldurb, Ldurh,
-        Ldursw, Ldxr, Prfm, StlrNoOffset, Stlrb, Stlxr, StpPostIndex, StpPreIndex, StpSignedOffset,
-        StrImmPostIndex, StrImmPreIndex, StrImmUnOffset, StrRegister, StrbImmUnOffset,
-        StrbPostIndex, StrbPreIndex, StrbRegister, Strh, StrhUnsigned, Stur, Sturb, Sturh, Stxr,
+        Ldursw, Ldxr, Prfm, StlrNoOffset, Stlrb, Stlxr, Stnp, StpPostIndex, StpPreIndex,
+        StpSignedOffset, StrImmPostIndex, StrImmPreIndex, StrImmUnOffset, StrRegister,
+        StrbImmUnOffset, StrbPostIndex, StrbPreIndex, StrbRegister, Strh, StrhUnsigned, Stur,
+        Sturb, Sturh, Stxr,
     },
     register_instr::{
         AddExtendedRegister, AddShiftedReg, AddsExtendedRegister, AddsImmediate, AddsShiftedReg,
@@ -148,6 +149,7 @@ define_instructions!(
     // ============================================================
     // ----- Exceptions -----
     Eret(Eret),
+    Smc(Smc),
     // ----- Flag Manipulation -----
     MsrImm(MsrImm),
     // ----- Registers -----
@@ -218,6 +220,7 @@ define_instructions!(
     Ldurh(Ldurh),
     Ldurb(Ldurb),
     // ----- Store Pair -----
+    Stnp(Stnp),
     StpPostIndex(StpPostIndex),
     StpPreIndex(StpPreIndex),
     StpSignedOffset(StpSignedOffset),
@@ -324,6 +327,7 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     // ============================================================
     // ----- Exceptions -----
     Eret::ERET,
+    Smc::SMC,
     // ----- Flag Manipulation -----
     MsrImm::MSR_IMM,
     // ----- Registers -----
@@ -394,6 +398,7 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     Ldursw::LDURSW,
     Ldurb::LDURB,
     // ----- Store Pair -----
+    Stnp::STNP,
     StpPostIndex::STP_POST_INDEX,
     StpPreIndex::STP_PRE_INDEX,
     StpSignedOffset::STP_SIGNED_OFFSET,
