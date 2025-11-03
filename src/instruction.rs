@@ -11,16 +11,7 @@ use crate::{
     cpu::Cpu,
     imm_instr::{AddImmediate, Extr, Movk, Movn, Movz, SubImmediate, Subs},
     load_store_instr::{
-        Ldar, Ldaxr, LdpPostIndex, LdpPreIndex, LdpSignedOffset, LdpswPostIndex, LdpswPreIndex,
-        LdpswSignedOffset, LdrImmPostIdx, LdrImmPreIdx, LdrImmUnOffset, LdrLit, LdrReg,
-        LdrbPostIndex, LdrbPreIndex, LdrbRegister, LdrbUnsignedOff, LdrhImmPostIndex,
-        LdrhImmPreIndex, LdrhImmUnOffset, LdrhRegister, LdrsbImmPostIndex, LdrsbImmPreIndex,
-        LdrsbImmUnsignedOffset, LdrsbReg, LdrshImmPostIndex, LdrshImmPreIndex,
-        LdrshImmUnsignedOffset, LdrswImmPostIndex, LdrswImmPreIndex, LdrswImmUnOffset,
-        LdrswRegister, Ldur, Ldurb, Ldurh, Ldursw, Ldxr, Prfm, StlrNoOffset, Stlrb, Stlxr, Stnp,
-        StpPostIndex, StpPreIndex, StpSignedOffset, StrImmPostIndex, StrImmPreIndex,
-        StrImmUnOffset, StrRegister, StrbImmUnOffset, StrbPostIndex, StrbPreIndex, StrbRegister,
-        Strh, StrhPostIndex, StrhPreIndex, StrhUnsigned, Stur, Sturb, Sturh, Stxr,
+        Ldar, Ldaxr, LdpPostIndex, LdpPreIndex, LdpSignedOffset, LdpswPostIndex, LdpswPreIndex, LdpswSignedOffset, LdrImmPostIdx, LdrImmPreIdx, LdrImmUnOffset, LdrLit, LdrReg, LdrbPostIndex, LdrbPreIndex, LdrbRegister, LdrbUnsignedOff, LdrhImmPostIndex, LdrhImmPreIndex, LdrhImmUnOffset, LdrhRegister, LdrsbImmPostIndex, LdrsbImmPreIndex, LdrsbImmUnsignedOffset, LdrsbReg, LdrshImmPostIndex, LdrshImmPreIndex, LdrshImmUnsignedOffset, LdrswImmPostIndex, LdrswImmPreIndex, LdrswImmUnOffset, LdrswRegister, Ldur, Ldurb, Ldurh, Ldursw, Ldxr, Ldxrb, Prfm, StlrNoOffset, Stlrb, Stlxr, Stnp, StpPostIndex, StpPreIndex, StpSignedOffset, StrImmPostIndex, StrImmPreIndex, StrImmUnOffset, StrRegister, StrbImmUnOffset, StrbPostIndex, StrbPreIndex, StrbRegister, Strh, StrhPostIndex, StrhPreIndex, StrhUnsigned, Stur, Sturb, Sturh, Stxr, Stxrb
     },
     register_instr::{
         AddExtendedRegister, AddShiftedReg, AddsExtendedRegister, AddsImmediate, AddsShiftedReg,
@@ -240,9 +231,11 @@ define_instructions!(
     // ----- Load Exclusive -----
     Ldaxr(Ldaxr),
     Ldxr(Ldxr),
+    Ldxrb(Ldxrb),
     // ----- Store Exclusive -----
     Stlxr(Stlxr),
     Stxr(Stxr),
+    Stxrb(Stxrb),
 );
 
 pub const DESCR: &[InstDesc] = &sort_by_specificity([
@@ -423,9 +416,11 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     // ----- Load Exclusive -----
     Ldaxr::LDAXR,
     Ldxr::LDXR,
+    Ldxrb::LDXRB,
     // ----- Store Exclusive -----
     Stlxr::STLXR,
     Stxr::STXR,
+    Stxrb::STXRB,
 ]);
 
 const fn sort_by_specificity<const N: usize>(mut arr: [InstDesc; N]) -> [InstDesc; N] {

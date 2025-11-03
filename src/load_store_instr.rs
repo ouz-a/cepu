@@ -1470,12 +1470,12 @@ impl Ldaxr {
 
         let address = if self.rn == 31 { cpu.sp_read() } else { cpu.x_read(self.rn.into(), 64) };
 
+        cpu.monitor.set(address, dbytes as u8);
         let data = cpu.mmu.read_memory(address.try_into().unwrap(), dbytes);
         if cpu.mmu.faulted {
             return;
         }
         cpu.x_write(self.rt.into(), data.1, regsize == 32);
-        cpu.monitor.set(address, dbytes as u8);
     }
 
     pub const fn decode(word: u32) -> Instruction {
@@ -1509,12 +1509,12 @@ impl Ldxr {
 
         let address = if self.rn == 31 { cpu.sp_read() } else { cpu.x_read(self.rn.into(), 64) };
 
+        cpu.monitor.set(address, dbytes as u8);
         let data = cpu.mmu.read_memory(address.try_into().unwrap(), dbytes);
         if cpu.mmu.faulted {
             return;
         }
         cpu.x_write(self.rt.into(), data.1, regsize == 32);
-        cpu.monitor.set(address, dbytes as u8);
     }
 
     pub const fn decode(word: u32) -> Instruction {
@@ -1527,6 +1527,37 @@ impl Ldxr {
     pub const LDXR: InstDesc = InstDesc {
         mask: 0b1011_1111_1111_1111_1111_1100_0000_0000,
         value: 0b1000_1000_0101_1111_0111_1100_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct Ldxrb {
+    pub rn: u8,
+    pub rt: u8,
+}
+
+impl Ldxrb {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let address = if self.rn == 31 { cpu.sp_read() } else { cpu.x_read(self.rn.into(), 64) };
+
+        cpu.monitor.set(address, 1);
+        let data = cpu.mmu.read_memory(address.try_into().unwrap(), 1);
+        if cpu.mmu.faulted {
+            return;
+        }
+        cpu.x_write(self.rt.into(), data.1, true);
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rt = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::Ldxrb(Self { rn, rt })
+    }
+
+    pub const LDXRB: InstDesc = InstDesc {
+        mask: 0b1111_1111_1111_1111_1111_1100_0000_0000,
+        value: 0b0000_1000_0101_1111_0111_1100_0000_0000,
         decode: Self::decode,
     };
 }
@@ -1616,6 +1647,56 @@ impl Stxr {
     pub const STXR: InstDesc = InstDesc {
         mask: 0b1011_1111_1110_0000_1111_1100_0000_0000,
         value: 0b1000_1000_0000_0000_0111_1100_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+
+#[derive(Debug, Clone, Copy)]
+pub struct Stxrb {
+    rs: u8,
+    rn: u8,
+    rt: u8,
+}
+
+impl Stxrb {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let elsize = 8;
+        let dbytes = 1;
+
+        if self.rs == self.rt {
+            panic!("Oh no");
+        } else if self.rn == self.rs && self.rn != 31 {
+            panic!("Oh no");
+        }
+
+        let address = if self.rn == 31 { cpu.sp_read() } else { cpu.x_read(self.rn.into(), 64) };
+
+        let data = cpu.x_read(self.rt.into(), elsize);
+
+        let status = if cpu.monitor.safe(address, dbytes) {
+            cpu.mmu.write_memory(address as usize, dbytes.into(), data);
+            0u64
+        } else {
+            1u64
+        };
+        if cpu.mmu.faulted {
+            return;
+        }
+        cpu.monitor.off();
+        cpu.x_write(self.rs.into(), status, true);
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let rs = get_bits_ct!(word, 16, 5) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rt = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::Stxrb(Self {  rs, rn, rt })
+    }
+
+    pub const STXRB: InstDesc = InstDesc {
+        mask: 0b1111_1111_1110_0000_1111_1100_0000_0000,
+        value: 0b0000_1000_0000_0000_0111_1100_0000_0000,
         decode: Self::decode,
     };
 }
