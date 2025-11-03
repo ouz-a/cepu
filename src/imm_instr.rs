@@ -6,6 +6,7 @@ use crate::{
     },
     get_bits_ct,
     instruction::*,
+    utils::{Utils, bits_get},
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -181,6 +182,54 @@ impl SubImmediate {
     pub const SUB_IMMEDIATE: InstDesc = InstDesc {
         mask: 0b0111_1111_1000_0000_0000_0000_0000_0000,
         value: 0b0101_0001_0000_0000_0000_0000_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+/// Extract register
+#[derive(Debug, Clone, Copy)]
+pub struct Extr {
+    pub sf: bool,
+    pub n: bool,
+    pub rm: u8,
+    pub imms: u8,
+    pub rn: u8,
+    pub rd: u8,
+}
+
+impl Extr {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        if self.n != self.sf {
+            panic!("Undefined")
+        }
+        if !self.sf && bits_get(self.imms.into(), 5, 1) == 1 {
+            panic!("Undefined")
+        }
+        let lsb = self.imms as u64;
+        let datasize = self.sf.datasize_sf();
+        let op1 = cpu.x_read(self.rn.into(), datasize);
+        let op2 = cpu.x_read(self.rm.into(), datasize);
+
+        let concat: u128 = ((op1 as u128) << datasize) | (op2 as u128);
+
+        let result = bits_get((concat >> lsb) as u64, 0, datasize as u8);
+
+        cpu.x_write(self.rd.into(), result, datasize == 32);
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let sf = get_bits_ct!(word, 31, 1) == 1;
+        let n = get_bits_ct!(word, 22, 1) == 1;
+        let rm = get_bits_ct!(word, 16, 5) as u8;
+        let imms = get_bits_ct!(word, 10, 6) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rd = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::Extr(Self { sf, n, rm, imms, rn, rd })
+    }
+
+    pub const EXTR: InstDesc = InstDesc {
+        mask: 0b0111_1111_1010_0000_0000_0000_0000_0000,
+        value: 0b0001_0011_1000_0000_0000_0000_0000_0000,
         decode: Self::decode,
     };
 }

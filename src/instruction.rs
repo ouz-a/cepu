@@ -9,7 +9,7 @@ use crate::{
         MsrReg, Ret, Smc, Sys, Tbnz, Tbz, Wfi, Xpaclri, Yield,
     },
     cpu::Cpu,
-    imm_instr::{AddImmediate, Movk, Movn, Movz, SubImmediate, Subs},
+    imm_instr::{AddImmediate, Extr, Movk, Movn, Movz, SubImmediate, Subs},
     load_store_instr::{
         Ldar, Ldaxr, LdpPostIndex, LdpPreIndex, LdpSignedOffset, LdpswPostIndex, LdpswPreIndex,
         LdpswSignedOffset, LdrImmPostIdx, LdrImmPreIdx, LdrImmUnOffset, LdrLit, LdrReg,
@@ -155,6 +155,7 @@ define_instructions!(
     // ----- Flag Manipulation -----
     MsrImm(MsrImm),
     // ----- Registers -----
+    Extr(Extr),
     Mrs(Mrs),
     MsrReg(MsrReg),
     // ----- Hints -----
@@ -336,6 +337,7 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     // ----- Flag Manipulation -----
     MsrImm::MSR_IMM,
     // ----- Registers -----
+    Extr::EXTR,
     Mrs::MRS,
     MsrReg::MSR_REG,
     // ----- Hints -----
