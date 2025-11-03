@@ -94,7 +94,8 @@ pub struct Cpu {
     // ========================================================================
     // CORE EXECUTION STATE
     // ========================================================================
-    /// General Purpose Registers X0-X30 (X31 is XZR when read, SP when used as base)
+    /// General Purpose Registers X0-X30 (X31 is XZR when read, SP when used as
+    /// base)
     pub x: [u64; GPRS],
     /// Program Counter (address of currently executing instruction)
     pub pc: u64,
@@ -149,13 +150,15 @@ pub struct Cpu {
     // ========================================================================
     // EXCEPTION & INTERRUPT HANDLING
     // ========================================================================
-    /// Vector Base Address Register EL1 (base address of exception vector table)
+    /// Vector Base Address Register EL1 (base address of exception vector
+    /// table)
     vbar_el1: u64,
     /// Exception Syndrome Register EL1 (exception class and details)
     pub esr_el1: u64,
     /// Fault Address Register EL1 (virtual address that caused fault)
     pub far_el1: u64,
-    /// Physical Address Register EL1 (result of AT address translation instruction)
+    /// Physical Address Register EL1 (result of AT address translation
+    /// instruction)
     pub par_el1: u64,
 
     /// Pending interrupt lines (bitfield, bit N = IRQ line N pending)
@@ -172,13 +175,15 @@ pub struct Cpu {
     tpidr_el1: u64,
     /// Thread Pointer ID Register EL0 (user-space thread pointer, read-write)
     tpidr_el0: u64,
-    /// Thread Pointer ID Register EL0 Read-Only (user-space TLS, read-only from EL0)
+    /// Thread Pointer ID Register EL0 Read-Only (user-space TLS, read-only from
+    /// EL0)
     tpidrro_el0: u64,
 
     // ========================================================================
     // CPU IDENTIFICATION REGISTERS
     // ========================================================================
-    /// Main ID Register (implementer, variant, architecture, part number, revision)
+    /// Main ID Register (implementer, variant, architecture, part number,
+    /// revision)
     pub midr_el1: u64,
     /// Multiprocessor Affinity Register (CPU topology)
     pub mpidr_el1: u64,
