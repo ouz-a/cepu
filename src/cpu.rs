@@ -294,6 +294,14 @@ impl Cpu {
         cpu
     }
 
+    pub fn address_for_rn(&self, rn: u8) -> u64 {
+        if rn == 31 { self.sp_read() } else { self.x_read(rn.into(), 64) }
+    }
+
+    pub fn memory_op_faulted(&self) -> bool {
+        self.mmu.faulted
+    }
+
     pub fn handle_devices(&mut self) {
         if self.mmu.bus.uart.dr != 0 {
             stdout().write_all(&[self.mmu.bus.uart.dr]).unwrap();

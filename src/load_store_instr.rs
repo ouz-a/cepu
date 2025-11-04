@@ -1651,7 +1651,6 @@ impl Stxr {
     };
 }
 
-
 #[derive(Debug, Clone, Copy)]
 pub struct Stxrb {
     rs: u8,
@@ -1691,7 +1690,7 @@ impl Stxrb {
         let rs = get_bits_ct!(word, 16, 5) as u8;
         let rn = get_bits_ct!(word, 5, 5) as u8;
         let rt = get_bits_ct!(word, 0, 5) as u8;
-        Instruction::Stxrb(Self {  rs, rn, rt })
+        Instruction::Stxrb(Self { rs, rn, rt })
     }
 
     pub const STXRB: InstDesc = InstDesc {
@@ -2325,6 +2324,64 @@ impl LdrsbReg {
     pub const LDRSB_REG: InstDesc = InstDesc {
         mask: 0b1111_1111_1010_0000_0000_1100_0000_0000,
         value: 0b0011_1000_1010_0000_0000_1000_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+/// Load exclusive pair of registers
+#[derive(Debug, Clone, Copy)]
+pub struct Ldxp {
+    pub sz: u8,
+    pub rt2: u8,
+    pub rn: u8,
+    pub rt: u8,
+}
+
+impl Ldxp {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let elsize: u8 = 32 << self.sz;
+        let datasize = elsize * 2;
+        let dbytes = datasize / 8;
+
+        let address = cpu.address_for_rn(self.rn);
+
+        cpu.monitor.set(address, dbytes);
+        if elsize == 32 {
+            let data = cpu.mmu.read_memory(address.try_into().unwrap(), dbytes.into()).1;
+            if cpu.memory_op_faulted() {
+                return;
+            }
+
+            let bot = bits_get(data, 0, elsize);
+            let top = bits_get(data, elsize, elsize);
+            cpu.x_write(self.rt.into(), bot, elsize == 32);
+            cpu.x_write(self.rt2.into(), top, elsize == 32);
+        } else {
+            let address2 = address.wrapping_add(8);
+            let data1 = cpu.mmu.read_memory(address.try_into().unwrap(), 8);
+            if cpu.memory_op_faulted() {
+                return;
+            }
+            let data2 = cpu.mmu.read_memory(address2.try_into().unwrap(), 8);
+            if cpu.memory_op_faulted() {
+                return;
+            }
+            cpu.x_write(self.rt.into(), data1.1, false);
+            cpu.x_write(self.rt2.into(), data2.1, false);
+        }
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let sz = get_bits_ct!(word, 30, 1) as u8;
+        let rt2 = get_bits_ct!(word, 10, 5) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rt = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::Ldxp(Self { sz, rt2, rn, rt })
+    }
+
+    pub const LDXP: InstDesc = InstDesc {
+        mask: 0b1011_1111_1111_1111_1000_0000_0000_0000,
+        value: 0b1000_1000_0111_1111_0000_0000_0000_0000,
         decode: Self::decode,
     };
 }

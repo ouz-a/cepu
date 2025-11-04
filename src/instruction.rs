@@ -11,7 +11,16 @@ use crate::{
     cpu::Cpu,
     imm_instr::{AddImmediate, Extr, Movk, Movn, Movz, SubImmediate, Subs},
     load_store_instr::{
-        Ldar, Ldaxr, LdpPostIndex, LdpPreIndex, LdpSignedOffset, LdpswPostIndex, LdpswPreIndex, LdpswSignedOffset, LdrImmPostIdx, LdrImmPreIdx, LdrImmUnOffset, LdrLit, LdrReg, LdrbPostIndex, LdrbPreIndex, LdrbRegister, LdrbUnsignedOff, LdrhImmPostIndex, LdrhImmPreIndex, LdrhImmUnOffset, LdrhRegister, LdrsbImmPostIndex, LdrsbImmPreIndex, LdrsbImmUnsignedOffset, LdrsbReg, LdrshImmPostIndex, LdrshImmPreIndex, LdrshImmUnsignedOffset, LdrswImmPostIndex, LdrswImmPreIndex, LdrswImmUnOffset, LdrswRegister, Ldur, Ldurb, Ldurh, Ldursw, Ldxr, Ldxrb, Prfm, StlrNoOffset, Stlrb, Stlxr, Stnp, StpPostIndex, StpPreIndex, StpSignedOffset, StrImmPostIndex, StrImmPreIndex, StrImmUnOffset, StrRegister, StrbImmUnOffset, StrbPostIndex, StrbPreIndex, StrbRegister, Strh, StrhPostIndex, StrhPreIndex, StrhUnsigned, Stur, Sturb, Sturh, Stxr, Stxrb
+        Ldar, Ldaxr, LdpPostIndex, LdpPreIndex, LdpSignedOffset, LdpswPostIndex, LdpswPreIndex,
+        LdpswSignedOffset, LdrImmPostIdx, LdrImmPreIdx, LdrImmUnOffset, LdrLit, LdrReg,
+        LdrbPostIndex, LdrbPreIndex, LdrbRegister, LdrbUnsignedOff, LdrhImmPostIndex,
+        LdrhImmPreIndex, LdrhImmUnOffset, LdrhRegister, LdrsbImmPostIndex, LdrsbImmPreIndex,
+        LdrsbImmUnsignedOffset, LdrsbReg, LdrshImmPostIndex, LdrshImmPreIndex,
+        LdrshImmUnsignedOffset, LdrswImmPostIndex, LdrswImmPreIndex, LdrswImmUnOffset,
+        LdrswRegister, Ldur, Ldurb, Ldurh, Ldursw, Ldxp, Ldxr, Ldxrb, Prfm, StlrNoOffset, Stlrb,
+        Stlxr, Stnp, StpPostIndex, StpPreIndex, StpSignedOffset, StrImmPostIndex, StrImmPreIndex,
+        StrImmUnOffset, StrRegister, StrbImmUnOffset, StrbPostIndex, StrbPreIndex, StrbRegister,
+        Strh, StrhPostIndex, StrhPreIndex, StrhUnsigned, Stur, Sturb, Sturh, Stxr, Stxrb,
     },
     register_instr::{
         AddExtendedRegister, AddShiftedReg, AddsExtendedRegister, AddsImmediate, AddsShiftedReg,
@@ -222,6 +231,7 @@ define_instructions!(
     StpPreIndex(StpPreIndex),
     StpSignedOffset(StpSignedOffset),
     // ----- Load Pair -----
+    Ldxp(Ldxp),
     LdpPostIndex(LdpPostIndex),
     LdpPreIndex(LdpPreIndex),
     LdpSignedOffset(LdpSignedOffset),
@@ -407,6 +417,7 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     StpPreIndex::STP_PRE_INDEX,
     StpSignedOffset::STP_SIGNED_OFFSET,
     // ----- Load Pair -----
+    Ldxp::LDXP,
     LdpPostIndex::LDP_POST_INDEX,
     LdpPreIndex::LDP_PRE_INDEX,
     LdpSignedOffset::LDP_SIGNED_OFFSET,
