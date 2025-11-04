@@ -212,7 +212,7 @@ impl Extr {
 
         let concat: u128 = ((op1 as u128) << datasize) | (op2 as u128);
 
-        let result = bits_get((concat >> lsb) as u64, 0, datasize as u8);
+        let result = bits_get((concat >> lsb) as u64, 0, datasize);
 
         cpu.x_write(self.rd.into(), result, datasize == 32);
     }

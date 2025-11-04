@@ -2295,7 +2295,7 @@ impl LdrsbReg {
         let extend_type = ExtendType::from_u8(self.option);
         let regsize: u8 = 64 >> bits_get(self.opc.into(), 0, 1);
 
-        let offset = extend_register(cpu, self.rm.into(), extend_type, 0, 64);
+        let offset = extend_register(cpu, self.rm, extend_type, 0, 64);
 
         let address = if self.rn == 31 { cpu.sp_read() } else { cpu.x_read(self.rn.into(), 64) };
 
