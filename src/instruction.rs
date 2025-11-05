@@ -18,9 +18,10 @@ use crate::{
         LdrsbImmUnsignedOffset, LdrsbReg, LdrshImmPostIndex, LdrshImmPreIndex,
         LdrshImmUnsignedOffset, LdrswImmPostIndex, LdrswImmPreIndex, LdrswImmUnOffset,
         LdrswRegister, Ldur, Ldurb, Ldurh, Ldursw, Ldxp, Ldxr, Ldxrb, Prfm, StlrNoOffset, Stlrb,
-        Stlxr, Stnp, StpPostIndex, StpPreIndex, StpSignedOffset, StrImmPostIndex, StrImmPreIndex,
-        StrImmUnOffset, StrRegister, StrbImmUnOffset, StrbPostIndex, StrbPreIndex, StrbRegister,
-        Strh, StrhPostIndex, StrhPreIndex, StrhUnsigned, Stur, Sturb, Sturh, Stxr, Stxrb,
+        Stlxp, Stlxr, Stnp, StpPostIndex, StpPreIndex, StpSignedOffset, StrImmPostIndex,
+        StrImmPreIndex, StrImmUnOffset, StrRegister, StrbImmUnOffset, StrbPostIndex, StrbPreIndex,
+        StrbRegister, Strh, StrhPostIndex, StrhPreIndex, StrhUnsigned, Stur, Sturb, Sturh, Stxp,
+        Stxr, Stxrb,
     },
     register_instr::{
         AddExtendedRegister, AddShiftedReg, AddsExtendedRegister, AddsImmediate, AddsShiftedReg,
@@ -243,6 +244,8 @@ define_instructions!(
     Ldxr(Ldxr),
     Ldxrb(Ldxrb),
     // ----- Store Exclusive -----
+    Stxp(Stxp),
+    Stlxp(Stlxp),
     Stlxr(Stlxr),
     Stxr(Stxr),
     Stxrb(Stxrb),
@@ -429,6 +432,8 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     Ldxr::LDXR,
     Ldxrb::LDXRB,
     // ----- Store Exclusive -----
+    Stxp::STXP,
+    Stlxp::STLXP,
     Stlxr::STLXR,
     Stxr::STXR,
     Stxrb::STXRB,

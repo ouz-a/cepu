@@ -1632,7 +1632,11 @@ impl Stxr {
         if cpu.mmu.faulted {
             return;
         }
-        cpu.monitor.off();
+
+        if status == 0 {
+            cpu.monitor.off();
+        }
+
         cpu.x_write(self.rs.into(), status, true);
     }
 
@@ -1682,7 +1686,11 @@ impl Stxrb {
         if cpu.mmu.faulted {
             return;
         }
-        cpu.monitor.off();
+
+        if status == 0 {
+            cpu.monitor.off();
+        }
+
         cpu.x_write(self.rs.into(), status, true);
     }
 
@@ -1974,7 +1982,11 @@ impl Stlxr {
         if cpu.mmu.faulted {
             return;
         }
-        cpu.monitor.off();
+
+        if status == 0 {
+            cpu.monitor.off();
+        }
+
         cpu.x_write(self.rs.into(), status, true);
     }
 
@@ -2382,6 +2394,152 @@ impl Ldxp {
     pub const LDXP: InstDesc = InstDesc {
         mask: 0b1011_1111_1111_1111_1000_0000_0000_0000,
         value: 0b1000_1000_0111_1111_0000_0000_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+/// Store exclusive pair of registers
+#[derive(Debug, Clone, Copy)]
+pub struct Stlxp {
+    pub sz: u8,
+    pub rs: u8,
+    pub rt2: u8,
+    pub rn: u8,
+    pub rt: u8,
+}
+
+impl Stlxp {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let elsize: u8 = 32 << self.sz;
+        let datasize = elsize * 2;
+        let dbytes = datasize / 8;
+
+        let address = cpu.address_for_rn(self.rn);
+
+        let status = if cpu.monitor.safe(address, dbytes) {
+            if elsize == 32 {
+                let bot = cpu.x_read(self.rt.into(), elsize);
+                let top = cpu.x_read(self.rt2.into(), elsize);
+
+                cpu.mmu.write_memory(address.try_into().unwrap(), dbytes.into(), (top << 32) | bot);
+                if cpu.memory_op_faulted() {
+                    return;
+                }
+                0u64
+            } else {
+                let bot = cpu.x_read(self.rt.into(), elsize);
+                let top = cpu.x_read(self.rt2.into(), elsize);
+
+                cpu.mmu.write_memory(address.try_into().unwrap(), 8, bot);
+                if cpu.memory_op_faulted() {
+                    return;
+                }
+
+                cpu.mmu.write_memory((address + 8).try_into().unwrap(), 8, top);
+                if cpu.memory_op_faulted() {
+                    return;
+                }
+                0u64
+            }
+        } else {
+            1u64
+        };
+
+        if status == 0 {
+            cpu.monitor.off();
+        }
+
+        cpu.x_write(self.rs.into(), status, true);
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let sz = get_bits_ct!(word, 30, 1) as u8;
+        let rs = get_bits_ct!(word, 16, 5) as u8;
+        let rt2 = get_bits_ct!(word, 10, 5) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rt = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::Stlxp(Self { sz, rs, rt2, rn, rt })
+    }
+
+    pub const STLXP: InstDesc = InstDesc {
+        mask: 0b1011_1111_1110_0000_1000_0000_0000_0000,
+        value: 0b1000_1000_0010_0000_1000_0000_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct Stxp {
+    pub sz: u8,
+    pub rs: u8,
+    pub rt2: u8,
+    pub rn: u8,
+    pub rt: u8,
+}
+
+impl Stxp {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        if self.rs == self.rt || self.rs == self.rt2 {
+            panic!("STXP: Rs overlaps with Rt/Rt2 (UNPREDICTABLE)");
+        }
+        if self.rs == self.rn && self.rn != 31 {
+            panic!("STXP: Rs overlaps with Rn (UNPREDICTABLE)");
+        }
+
+        let elsize: u8 = 32 << self.sz;
+        let datasize = elsize * 2;
+        let dbytes = datasize / 8;
+
+        let address = cpu.address_for_rn(self.rn);
+
+        let status = if cpu.monitor.safe(address, dbytes) {
+            if elsize == 32 {
+                let bot = cpu.x_read(self.rt.into(), elsize);
+                let top = cpu.x_read(self.rt2.into(), elsize);
+
+                cpu.mmu.write_memory(address.try_into().unwrap(), dbytes.into(), (top << 32) | bot);
+                if cpu.memory_op_faulted() {
+                    return;
+                }
+                0u64
+            } else {
+                let bot = cpu.x_read(self.rt.into(), elsize);
+                let top = cpu.x_read(self.rt2.into(), elsize);
+
+                cpu.mmu.write_memory(address.try_into().unwrap(), 8, bot);
+                if cpu.memory_op_faulted() {
+                    return;
+                }
+
+                cpu.mmu.write_memory((address + 8).try_into().unwrap(), 8, top);
+                if cpu.memory_op_faulted() {
+                    return;
+                }
+                0u64
+            }
+        } else {
+            1u64
+        };
+
+        if status == 0 {
+            cpu.monitor.off();
+        }
+
+        cpu.x_write(self.rs.into(), status, true);
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let sz = get_bits_ct!(word, 30, 1) as u8;
+        let rs = get_bits_ct!(word, 16, 5) as u8;
+        let rt2 = get_bits_ct!(word, 10, 5) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rt = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::Stxp(Self { sz, rs, rt2, rn, rt })
+    }
+
+    pub const STXP: InstDesc = InstDesc {
+        mask: 0b1011_1111_1110_0000_1000_0000_0000_0000,
+        value: 0b1000_1000_0010_0000_0000_0000_0000_0000,
         decode: Self::decode,
     };
 }

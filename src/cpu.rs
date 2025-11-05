@@ -244,11 +244,17 @@ pub struct Cpu {
     pub mmu: Mmu,
     /// Exclusive access monitor (for LDXR/STXR synchronization)
     pub monitor: ExclusiveMonitor,
+
+    // ========================================================================
+    // DEBUG
+    // ========================================================================
+    pub uart_debug: String,
 }
 
 impl Cpu {
     pub fn init() -> Self {
         let mut cpu = Self::default();
+        cpu.uart_debug = String::new();
         cpu.pstate.sp = 1;
 
         cpu.sp_el0 = 0x100000; // 1MB
@@ -302,11 +308,20 @@ impl Cpu {
         self.mmu.faulted
     }
 
+    pub fn memory_op_safe(&self, address: u64, dbytes: u8) -> bool {
+        self.monitor.safe(address, dbytes)
+    }
+
     pub fn handle_devices(&mut self) {
         if self.mmu.bus.uart.dr != 0 {
-            stdout().write_all(&[self.mmu.bus.uart.dr]).unwrap();
+            let buf = &[self.mmu.bus.uart.dr];
+            stdout().write_all(buf).unwrap();
+            self.uart_debug.push_str(str::from_utf8(buf).unwrap());
             stdout().flush().unwrap();
             self.mmu.bus.uart.dr = 0;
+            if self.uart_debug.contains("end Kernel panic") {
+                UNDEF_PANIC.store(true, Ordering::Relaxed);
+            }
         }
     }
 
