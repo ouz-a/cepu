@@ -1,8 +1,13 @@
-use crate::{devices::Uart, memory::*};
+use crate::{devices::Uart, gic::Gic, memory::*};
 
 pub const RAM_RANGE_BEG: usize = 0;
 pub const RAM_SIZE: usize = 0x10000000;
 pub const RAM_RANGE_END: usize = RAM_RANGE_BEG + RAM_SIZE - 1;
+
+pub const GIC_DIST_BEG: usize = 0x8000_0000;
+pub const GIC_DIST_END: usize = 0x8000_0FFF;
+pub const GIC_CPU_BEG: usize = 0x8001_0000;
+pub const GIC_CPU_END: usize = 0x8001_1FFF;
 
 pub const UART_RANGE_BEG: usize = 0x9000_0000;
 pub const UART_RANGE_END: usize = UART_RANGE_BEG + 4096;
@@ -10,12 +15,17 @@ pub const UART_RANGE_END: usize = UART_RANGE_BEG + 4096;
 #[derive(Default, Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Bus {
     pub uart: Uart,
+    pub gic: Gic,
 }
 
 impl Bus {
     pub fn read_memory(&mut self, address: usize, size: usize) -> (PhyMemStatus, u64) {
         match address {
             RAM_RANGE_BEG..=RAM_RANGE_END => Bus::read_memory_impl(address, size),
+            GIC_DIST_BEG..=GIC_DIST_END | GIC_CPU_BEG..=GIC_CPU_END => {
+                let val = self.gic.read(address as u64);
+                (PhyMemStatus::default(), val as u64)
+            }
             UART_RANGE_BEG..=UART_RANGE_END => self.uart.read((address - UART_RANGE_BEG) as u8),
             _ => {
                 panic!("Out of bounds memory read! Range {address:x}")
@@ -23,10 +33,14 @@ impl Bus {
         }
     }
 
-    /// Size as in bytes not bits     
+    /// Size as in bytes not bits
     pub fn write_memory(&mut self, address: usize, size: usize, value: u64) -> PhyMemStatus {
         match address {
             RAM_RANGE_BEG..=RAM_RANGE_END => Bus::write_memory_impl(address, size, value),
+            GIC_DIST_BEG..=GIC_DIST_END | GIC_CPU_BEG..=GIC_CPU_END => {
+                self.gic.write(address as u64, value as u32);
+                PhyMemStatus::default()
+            }
             UART_RANGE_BEG..=UART_RANGE_END => {
                 self.uart.write((address - UART_RANGE_BEG) as u8, value, size)
             }

@@ -1,5 +1,7 @@
 use std::ops::Not;
 
+use crate::instruction::UNDEF_PANIC;
+
 #[macro_export]
 macro_rules! get_bits_ct {
     ($val:expr, $start:expr, $len:expr) => {{
@@ -53,7 +55,7 @@ pub const fn is_aligned(value: u64, align: u64) -> bool {
 
 pub fn sign_extend_xor(val: u64, width: isize) -> u64 {
     let sign_bit = 1u64 << (width - 1);
-    (val ^ sign_bit) - sign_bit
+    (val ^ sign_bit).wrapping_sub(sign_bit)
 }
 
 /// We preserve SIGN of a value while extending it
@@ -198,4 +200,8 @@ impl Utils for bool {
     fn datasize_sf(self) -> u8 {
         if self { 64 } else { 32 }
     }
+}
+
+pub fn just_panic() {
+    UNDEF_PANIC.store(true, std::sync::atomic::Ordering::SeqCst);
 }

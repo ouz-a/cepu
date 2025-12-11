@@ -21,6 +21,7 @@ pub mod cpu;
 pub mod data_processing;
 pub mod devices;
 pub mod elf;
+pub mod gic;
 pub mod image;
 pub mod imm_instr;
 pub mod instruction;
