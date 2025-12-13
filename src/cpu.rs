@@ -63,7 +63,10 @@ pub struct Timer {
     /// Virtual Timer Compare Value (CNTV_CVAL_EL0)
     pub ctnv_cval_el0: u64,
     /// Virtual Timer Control (CNTV_CTL_EL0)
-    pub cntv_ctl_el0: u32,
+    pub cntv_ctl_el0: u64,
+
+    ///  Counter-timer Kernel Control Register
+    pub cntkctl_el1: u64,
 
     /// Physical Counter (CNTPCT_EL0)
     pub cntp_ct_el0: u64,
@@ -146,6 +149,8 @@ pub struct Cpu {
     cpacr_el1: u64,
     /// Monitor Debug System Control Register EL1
     mdscr_el1: u64,
+    /// Cache Level ID Register EL1
+    pub clidr_el1: u64,
 
     // ========================================================================
     // EXCEPTION & INTERRUPT HANDLING
@@ -267,6 +272,8 @@ impl Cpu {
         cpu.id_aa64pfr0_el1 = 0x11;
         cpu.id_aa64dfr1_el1 = 0;
         cpu.midr_el1 = 0x410F0510;
+        // We don't have CACHE
+        cpu.clidr_el1 = 0;
         cpu.revidr_el1 = 0;
         cpu.aidr_el1 = 0;
         cpu.id_aa64mmfr0_el1 = 0x000000000F000020;
@@ -587,6 +594,14 @@ impl Cpu {
                 // AArch64-par_el1.xml: allow software writes
                 self.par_el1 = self.x_read(t.into(), 64);
             }
+            MsrRegisters::CntvCtlEl0 => {
+                self.timer.cntv_ctl_el0 = self.x_read(t.into(), 64);
+            }
+            MsrRegisters::CntvCvalEl0 => self.timer.cntp_cval_el0 = self.x_read(t.into(), 64),
+            MsrRegisters::CntkctlEl1 => self.timer.cntkctl_el1 = self.x_read(t.into(), 64),
+            MsrRegisters::ClidrEl1 => {
+                self.clidr_el1 = self.x_read(t.into(), 64);
+            }
         }
     }
 
@@ -770,6 +785,21 @@ impl Cpu {
             }
             MrsRegisters::IdIsar0El1 => {
                 self.x_write(t.into(), self.id_isar0_el1, false);
+            }
+            MrsRegisters::CntvCtlEl0 => {
+                self.x_write(t.into(), self.timer.cntv_ctl_el0.into(), false);
+            }
+            MrsRegisters::CntvCvalEl0 => {
+                self.x_write(t.into(), self.timer.cntp_cval_el0, false);
+            }
+            MrsRegisters::CntkctlEl1 => {
+                self.x_write(t.into(), self.timer.cntkctl_el1, false);
+            }
+            MrsRegisters::ClidrEl1 => {
+                self.x_write(t.into(), self.clidr_el1, false);
+            }
+            MrsRegisters::CpacrEl1 => {
+                self.x_write(t.into(), self.cpacr_el1, false);
             }
         }
     }
@@ -1107,6 +1137,10 @@ msr_enum! {
     TpidrroEl0 = 12936085507,
     FarEl1   = 12885295104,
     ParEl1   = 12885361664,
+    CntvCtlEl0 = 12936151809,
+    CntvCvalEl0 = 12936151810,
+    CntkctlEl1 = 12885819648,
+    ClidrEl1 = 12901679105,
 }
 
 macro_rules! mrs_enum {
@@ -1160,6 +1194,11 @@ mrs_enum! {
     DczidEl0 = 12935233543,
     TcrEl1 = 12885032962,
     CntvctEl0 = 12936151042,
+    CntvCtlEl0 = 12936151809,
+    CntvCvalEl0 = 12936151810,
+    CntkctlEl1 = 12885819648,
+    ClidrEl1 = 12901679105,
+    CpacrEl1 = 12884967426,
 
     IdAa64mmfr0El1   = 12884903680,
     IdAa64mmfr1El1   = 12884903681,
