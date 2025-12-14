@@ -270,7 +270,8 @@ impl Cpu {
         cpu.sp_el3 = 0x10000000 - 0x30000; // 256MB - 192KB
 
         // System identification registers
-        cpu.id_aa64dfr0_el1 = 0x000f00f010101009;
+        // DebugVer=9 (Debugv8p4), but BRPs=0, WRPs=0, CTX_CMPs=0 (no debug registers)
+        cpu.id_aa64dfr0_el1 = 0x000f00f000000009;
         cpu.id_aa64pfr0_el1 = 0x11;
         cpu.id_aa64dfr1_el1 = 0;
         cpu.midr_el1 = 0x410F0510;
@@ -363,6 +364,7 @@ impl Cpu {
         if pending == 0 || self.pstate.irq_masked() {
             return;
         }
+        UNDEF_PANIC.store(true, Ordering::SeqCst);
 
         let line = pending.trailing_zeros();
         self.pending_irq.fetch_and(!(1u32 << line), Ordering::AcqRel);
@@ -607,7 +609,11 @@ impl Cpu {
             MsrRegisters::OslarEl1 => {
                 self.oslar_el1 = self.x_read(t.into(), 64);
             }
-            MsrRegisters::OsdlrEl1 => {
+            MsrRegisters::OsdlrEl1
+            | MsrRegisters::Dbgbvr0El1
+            | MsrRegisters::Dbgbcr0El1
+            | MsrRegisters::Dbgwvr0El1
+            | MsrRegisters::Dbgwcr0El1 => {
                 // RAZ/WI
             }
         }
@@ -815,7 +821,11 @@ impl Cpu {
             MrsRegisters::OslarEl1 => {
                 self.x_write(t.into(), self.oslar_el1, false);
             }
-            MrsRegisters::OsdlrEl1 => {
+            MrsRegisters::OsdlrEl1
+            | MrsRegisters::Dbgbvr0El1
+            | MrsRegisters::Dbgbcr0El1
+            | MrsRegisters::Dbgwvr0El1
+            | MrsRegisters::Dbgwcr0El1 => {
                 // RAZ/WI
                 self.x_write(t.into(), 0, false);
             }
@@ -1132,6 +1142,12 @@ macro_rules! msr_enum {
 }
 
 msr_enum! {
+    // Debug registers (RAZ/WI - n=0 only since BRPs=0, WRPs=0)
+    Dbgbvr0El1 = 8589934596,
+    Dbgbcr0El1 = 8589934597,
+    Dbgwvr0El1 = 8589934598,
+    Dbgwcr0El1 = 8589934599,
+
     OsdlrEl1 = 8590000900,
     OslarEl1 = 8590000132,
     Daif = 12935496193,
@@ -1190,6 +1206,12 @@ macro_rules! mrs_enum {
 }
 
 mrs_enum! {
+    // Debug registers (RAZ/WI - n=0 only since BRPs=0, WRPs=0)
+    Dbgbvr0El1 = 8589934596,
+    Dbgbcr0El1 = 8589934597,
+    Dbgwvr0El1 = 8589934598,
+    Dbgwcr0El1 = 8589934599,
+
     TpidrEl1 = 12885753860,
     TpidrEl0 = 12936085506,
     TpidrroEl0 = 12936085507,

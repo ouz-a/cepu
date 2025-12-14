@@ -556,7 +556,7 @@ pub fn instruction_ldrh_imm(
         if rn == 31 {
             cpu.sp_write(address);
         } else {
-            cpu.x_write(rn.into(), address, true);
+            cpu.x_write(rn.into(), address, false);
         }
     }
 }
