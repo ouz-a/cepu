@@ -419,6 +419,38 @@ impl Mrs {
 }
 
 #[derive(Debug, Clone, Copy)]
+pub struct Sevl;
+impl Sevl {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        cpu.event_register = true;
+    }
+    pub const fn decode(_word: u32) -> Instruction {
+        Instruction::Sevl(Self)
+    }
+    pub const SEVL: InstDesc = InstDesc {
+        mask: 0b1111_1111_1111_1111_1111_1111_1111_1111,
+        value: 0b1101_0101_0000_0011_0010_0000_1011_1111,
+        decode: Self::decode,
+    };
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct Wfe;
+impl Wfe {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        cpu.event_register = true;
+    }
+    pub const fn decode(_word: u32) -> Instruction {
+        Instruction::Wfe(Wfe)
+    }
+    pub const WFE: InstDesc = InstDesc {
+        mask: 0b1111_1111_1111_1111_1111_1111_1111_1111,
+        value: 0b1101_0101_0000_0011_0010_0000_0101_1111,
+        decode: Self::decode,
+    };
+}
+
+#[derive(Debug, Clone, Copy)]
 pub struct Wfi;
 
 impl Wfi {

@@ -110,7 +110,7 @@ pub struct Cpu {
     /// Branch target address (where to jump if branch_taken is true)
     pub branch_target: u64,
     /// Event Register (set by SEV, cleared by WFE)
-    event_register: bool,
+    pub event_register: bool,
 
     // ========================================================================
     // EXCEPTION LEVEL BANKED REGISTERS
@@ -801,6 +801,9 @@ impl Cpu {
             MrsRegisters::CpacrEl1 => {
                 self.x_write(t.into(), self.cpacr_el1, false);
             }
+            MrsRegisters::Ttbr1El1 => {
+                self.x_write(t.into(), self.mmu.ttbr1_el1, false);
+            }
         }
     }
 
@@ -1199,6 +1202,7 @@ mrs_enum! {
     CntkctlEl1 = 12885819648,
     ClidrEl1 = 12901679105,
     CpacrEl1 = 12884967426,
+    Ttbr1El1 = 12885032961,
 
     IdAa64mmfr0El1   = 12884903680,
     IdAa64mmfr1El1   = 12884903681,

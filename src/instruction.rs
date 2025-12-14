@@ -6,7 +6,7 @@ use std::{
 use crate::{
     branch_exc_sys_instr::{
         Bcond, Bl, Blr, Br, Branch, Bti, Cbnz, Cbz, Ccmpi, Csinc, Csinv, Dmb, Eret, Mrs, MsrImm,
-        MsrReg, Ret, Smc, Sys, Tbnz, Tbz, Wfi, Xpaclri, Yield,
+        MsrReg, Ret, Sevl, Smc, Sys, Tbnz, Tbz, Wfe, Wfi, Xpaclri, Yield,
     },
     cpu::Cpu,
     imm_instr::{AddImmediate, Extr, Movk, Movn, Movz, SubImmediate, Subs},
@@ -163,6 +163,8 @@ define_instructions!(
     Bti(Bti),
     Nop(Nop),
     Wfi(Wfi),
+    Wfe(Wfe),
+    Sevl(Sevl),
     Xpaclri(Xpaclri),
     Yield(Yield),
     // ----- Barriers -----
@@ -351,6 +353,8 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     Bti::BTI,
     Nop::NOP,
     Wfi::WFI,
+    Wfe::WFE,
+    Sevl::SEVL,
     Xpaclri::XPACLRI,
     Yield::YIELD,
     // ----- Barriers -----
