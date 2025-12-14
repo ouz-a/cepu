@@ -28,7 +28,7 @@ use crate::{
         Adr, Adrp, AndImmediate, AndShiftedRegister, AndsImmediate, AndsShiftedReg, Asrv,
         AutiaspSystem, Bfm, BicShiftedReg, BicShiftedRegSet, CcmpRegister, Clz, Csel, Csneg, Dsb,
         EorImmediate, EorShiftedReg, Isb, Lslv, Lsrv, Madd, Msub, Nop, OrNotShiftedRegister,
-        OrShiftedRegister, OrrImmediate, PaciaSystem, Rbit, Rev, Sbfm, Sdiv, Smaddl,
+        OrShiftedRegister, OrrImmediate, PaciaSystem, Rbit, Rev, Sbfm, Sdiv, Smaddl, Smulh,
         SubExtendedReg, SubShiftedRegister, SubsExtendedReg, SubsShiftedReg, Ubfx, Udiv, Umaddl,
         Umulh,
     },
@@ -111,6 +111,7 @@ define_instructions!(
     // ----- Multiply -----
     Msub(Msub),
     Umulh(Umulh),
+    Smulh(Smulh),
     Madd(Madd),
     Smaddl(Smaddl),
     Umaddl(Umaddl),
@@ -301,6 +302,7 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     // ----- Multiply -----
     Msub::MSUB,
     Umulh::UMULH,
+    Smulh::SMULH,
     Madd::MADD,
     Smaddl::SMADDL,
     Umaddl::UMADDL,

@@ -151,6 +151,8 @@ pub struct Cpu {
     mdscr_el1: u64,
     /// Cache Level ID Register EL1
     pub clidr_el1: u64,
+    /// Used to lock or unlock the OS Lock.
+    pub oslar_el1: u64,
 
     // ========================================================================
     // EXCEPTION & INTERRUPT HANDLING
@@ -602,6 +604,12 @@ impl Cpu {
             MsrRegisters::ClidrEl1 => {
                 self.clidr_el1 = self.x_read(t.into(), 64);
             }
+            MsrRegisters::OslarEl1 => {
+                self.oslar_el1 = self.x_read(t.into(), 64);
+            }
+            MsrRegisters::OsdlrEl1 => {
+                // RAZ/WI
+            }
         }
     }
 
@@ -803,6 +811,13 @@ impl Cpu {
             }
             MrsRegisters::Ttbr1El1 => {
                 self.x_write(t.into(), self.mmu.ttbr1_el1, false);
+            }
+            MrsRegisters::OslarEl1 => {
+                self.x_write(t.into(), self.oslar_el1, false);
+            }
+            MrsRegisters::OsdlrEl1 => {
+                // RAZ/WI
+                self.x_write(t.into(), 0, false);
             }
         }
     }
@@ -1117,6 +1132,8 @@ macro_rules! msr_enum {
 }
 
 msr_enum! {
+    OsdlrEl1 = 8590000900,
+    OslarEl1 = 8590000132,
     Daif = 12935496193,
     ElrEl3  = 12985827329,
     SpsrEl3 = 12985827328,
@@ -1203,6 +1220,8 @@ mrs_enum! {
     ClidrEl1 = 12901679105,
     CpacrEl1 = 12884967426,
     Ttbr1El1 = 12885032961,
+    OsdlrEl1 = 8590000900,
+    OslarEl1 = 8590000132,
 
     IdAa64mmfr0El1   = 12884903680,
     IdAa64mmfr1El1   = 12884903681,

@@ -134,6 +134,38 @@ impl Umulh {
 }
 
 #[derive(Clone, Copy, Debug)]
+pub struct Smulh {
+    pub sf: bool,
+    pub rm: u8,
+    pub rn: u8,
+    pub rd: u8,
+}
+impl Smulh {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let op1 = cpu.x_read(self.rn.into(), 64) as i64 as i128;
+        let op2 = cpu.x_read(self.rm.into(), 64) as i64 as i128;
+
+        let res = op1.wrapping_mul(op2);
+
+        cpu.x_write(self.rd.into(), (res >> 64) as u64, false);
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let sf = get_bits_ct!(word, 31, 1) == 1;
+        let rm = get_bits_ct!(word, 16, 5) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rd = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::Smulh(Self { sf, rm, rn, rd })
+    }
+
+    pub const SMULH: InstDesc = InstDesc {
+        mask: 0b0111_1111_1110_0000_1111_1100_0000_0000,
+        value: 0b0001_1011_0100_0000_0111_1100_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+#[derive(Clone, Copy, Debug)]
 pub struct Madd {
     pub sf: bool,
     pub rd: u8,
