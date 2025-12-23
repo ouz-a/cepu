@@ -1385,6 +1385,40 @@ impl Rev {
 }
 
 #[derive(Debug, Clone, Copy)]
+pub struct Rev16 {
+    pub sf: bool,
+    pub rn: u8,
+    pub rd: u8,
+}
+
+impl Rev16 {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let datasize = if self.sf { 64 } else { 32 };
+        let op = cpu.x_read(self.rn.into(), datasize);
+        let mut res = 0u64;
+        for i in 0..(datasize / 16) {
+            let shift = i * 16;
+            let h = ((op >> shift) as u16).swap_bytes() as u64;
+            res |= h << shift;
+        }
+        cpu.x_write(self.rd.into(), res, datasize == 32);
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let sf = get_bits_ct!(word, 31, 1) == 1;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rd = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::Rev16(Self { sf, rn, rd })
+    }
+
+    pub const REV16: InstDesc = InstDesc {
+        mask: 0b0111_1111_1111_1111_1111_1100_0000_0000,
+        value: 0b0101_1010_1100_0000_0000_0100_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+#[derive(Debug, Clone, Copy)]
 pub struct Rbit {
     pub sf: bool,
     pub rn: u8,

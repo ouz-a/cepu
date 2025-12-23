@@ -1043,6 +1043,38 @@ impl Sturh {
     };
 }
 
+/// Store-release register halfword
+#[derive(Debug, Clone, Copy)]
+pub struct Stlrh {
+    rn: u8,
+    rt: u8,
+}
+
+impl Stlrh {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let datasize = 16;
+
+        let address =
+            if self.rn == 31 { cpu.sp_read() } else { cpu.x_read(self.rn.into(), 64) };
+
+        let val = cpu.x_read(self.rt.into(), datasize);
+
+        cpu.mmu.write_memory(address as usize, (datasize / 8).into(), val);
+
+        if cpu.mmu.faulted {}
+    }
+    pub const fn decode(word: u32) -> Instruction {
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rt = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::Stlrh(Self { rn, rt })
+    }
+    pub const STLRH: InstDesc = InstDesc {
+        mask: 0b1111_1111_1111_1111_1111_1100_0000_0000,
+        value: 0b0100_1000_1001_1111_1111_1100_0000_0000,
+        decode: Self::decode,
+    };
+}
+
 /// Load register byte (immediate)
 #[derive(Debug, Clone, Copy)]
 pub struct LdrbUnsignedOff {

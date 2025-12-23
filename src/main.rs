@@ -7,7 +7,7 @@ use std::{
 use crate::{
     branch::branch_addr,
     cpu::{BATCH, Cpu, INSTRUCTION_SIZE, monotonic_ns},
-    image::{load_device_blob, load_kernel_image},
+    image::{load_device_blob, load_initramfs, load_kernel_image},
     instruction::{
         DESCR, UNDEF_PANIC, capture_trace, decode, print_undefined_trace, validate_tables,
     },
@@ -124,5 +124,6 @@ fn main() {
     //validate_and_load_elf_header(&mut cpu, Path::new("./.executables/boot.elf"));
     load_device_blob(&mut cpu, &PathBuf::from_str("/Users/ouz/code/cepu_now/cepu.dtb").unwrap());
     load_kernel_image(&mut cpu, &PathBuf::from_str("/Users/ouz/code/cepu_now/Image").unwrap());
+    load_initramfs(&PathBuf::from_str("/Users/ouz/code/cepu_now/initramfs.cpio.gz").unwrap());
     run_block(&mut cpu);
 }

@@ -7,6 +7,24 @@ use crate::{cpu::Cpu, memory::MEMORY};
 pub const KERNEL_LOAD_ADD: usize = 0x200000;
 
 pub const DTB_LOAD_ADD: usize = 0x80000; // 512KB - safe distance from kernel
+pub const INITRD_LOAD_ADD: usize = 0x0800_0000; // 128MB
+
+pub fn load_initramfs(initrd_path: &PathBuf) -> usize {
+    let mut buf: Vec<u8> = Vec::new();
+    let mut initrd = File::open(initrd_path).expect("Failed to open initramfs");
+    initrd.read_to_end(&mut buf).expect("Failed to read initramfs");
+    let size = buf.len();
+    unsafe {
+        MEMORY[INITRD_LOAD_ADD..(INITRD_LOAD_ADD + size)].copy_from_slice(&buf);
+    }
+    println!(
+        "Loaded initramfs: {} bytes at 0x{:08x}-0x{:08x}",
+        size,
+        INITRD_LOAD_ADD,
+        INITRD_LOAD_ADD + size
+    );
+    size
+}
 
 pub fn load_device_blob(cpu: &mut Cpu, dtb_path: &PathBuf) {
     let mut buf = Vec::new();
