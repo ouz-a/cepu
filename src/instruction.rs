@@ -11,7 +11,17 @@ use crate::{
     cpu::Cpu,
     imm_instr::{AddImmediate, Extr, Movk, Movn, Movz, SubImmediate, Subs},
     load_store_instr::{
-        Ldar, Ldaxr, LdpPostIndex, LdpPreIndex, LdpSignedOffset, LdpswPostIndex, LdpswPreIndex, LdpswSignedOffset, LdrImmPostIdx, LdrImmPreIdx, LdrImmUnOffset, LdrLit, LdrReg, LdrbPostIndex, LdrbPreIndex, LdrbRegister, LdrbUnsignedOff, LdrhImmPostIndex, LdrhImmPreIndex, LdrhImmUnOffset, LdrhRegister, LdrsbImmPostIndex, LdrsbImmPreIndex, LdrsbImmUnsignedOffset, LdrsbReg, LdrshImmPostIndex, LdrshImmPreIndex, LdrshImmUnsignedOffset, LdrswImmPostIndex, LdrswImmPreIndex, LdrswImmUnOffset, LdrswRegister, Ldur, Ldurb, Ldurh, Ldursw, Ldxp, Ldxr, Ldxrb, Prfm, StlrNoOffset, Stlrb, Stlrh, Stlxp, Stlxr, Stnp, StpPostIndex, StpPreIndex, StpSignedOffset, StrImmPostIndex, StrImmPreIndex, StrImmUnOffset, StrRegister, StrbImmUnOffset, StrbPostIndex, StrbPreIndex, StrbRegister, Strh, StrhPostIndex, StrhPreIndex, StrhUnsigned, Stur, Sturb, Sturh, Stxp, Stxr, Stxrb
+        Ldar, Ldaxr, LdpPostIndex, LdpPreIndex, LdpSignedOffset, LdpswPostIndex, LdpswPreIndex,
+        LdpswSignedOffset, LdrImmPostIdx, LdrImmPreIdx, LdrImmUnOffset, LdrLit, LdrReg,
+        LdrbPostIndex, LdrbPreIndex, LdrbRegister, LdrbUnsignedOff, LdrhImmPostIndex,
+        LdrhImmPreIndex, LdrhImmUnOffset, LdrhRegister, LdrsbImmPostIndex, LdrsbImmPreIndex,
+        LdrsbImmUnsignedOffset, LdrsbReg, LdrshImmPostIndex, LdrshImmPreIndex,
+        LdrshImmUnsignedOffset, LdrswImmPostIndex, LdrswImmPreIndex, LdrswImmUnOffset,
+        LdrswRegister, Ldur, Ldurb, Ldurh, Ldursw, Ldxp, Ldxr, Ldxrb, Prfm, StlrNoOffset, Stlrb,
+        Stlrh, Stlxp, Stlxr, Stnp, StpPostIndex, StpPreIndex, StpSignedOffset, StrImmPostIndex,
+        StrImmPreIndex, StrImmUnOffset, StrRegister, StrUnpriv, StrbImmUnOffset, StrbPostIndex,
+        StrbPreIndex, StrbRegister, Strh, StrhPostIndex, StrhPreIndex, StrhUnsigned, Stur, Sturb,
+        Sturh, Stxp, Stxr, Stxrb,
     },
     register_instr::{
         AddExtendedRegister, AddShiftedReg, AddsExtendedRegister, AddsImmediate, AddsShiftedReg,
@@ -191,6 +201,7 @@ define_instructions!(
     Stlrh(Stlrh),
     Strh(Strh),
     Sturb(Sturb),
+    StrUnpriv(StrUnpriv),
     // ----- Load Single -----
     LdrsbReg(LdrsbReg),
     Ldar(Ldar),
@@ -384,6 +395,7 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     Strh::STRH,
     Sturb::STURB,
     Stlrb::STLRB,
+    StrUnpriv::STR_UNPRIV,
     // ----- Load Single -----
     Ldar::LDAR,
     LdrsbReg::LDRSB_REG,

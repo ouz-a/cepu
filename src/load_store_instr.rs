@@ -138,6 +138,50 @@ impl StrImmUnOffset {
     };
 }
 
+/// STTR
+/// Store register (unprivileged)
+#[derive(Debug, Clone, Copy)]
+pub struct StrUnpriv {
+    pub size: u8,
+    pub imm9: u16,
+    pub rn: u8,
+    pub rt: u8,
+}
+
+impl StrUnpriv {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let offset = sign_extend(self.imm9.into(), 9);
+        let datasize = (8 << (self.size)) as u8;
+        let tag_checked = self.rn != 31;
+        instruction_str_imm_un_off(
+            cpu,
+            self.rn,
+            self.rt,
+            datasize.into(),
+            offset,
+            false,
+            false,
+            false,
+            tag_checked,
+            false,
+        );
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let size = get_bits_ct!(word, 30, 2) as u8;
+        let imm9 = get_bits_ct!(word, 12, 9) as u16;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rt = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::StrUnpriv(Self { size, imm9, rn, rt })
+    }
+
+    pub const STR_UNPRIV: InstDesc = InstDesc {
+        mask: 0b1011_1111_1110_0000_0000_1100_0000_0000,
+        value: 0b1011_1000_0000_0000_0000_1000_0000_0000,
+        decode: Self::decode,
+    };
+}
+
 /// Store register (immediate) Pre-index
 #[derive(Debug, Clone, Copy)]
 pub struct StrImmPreIndex {
@@ -1054,8 +1098,7 @@ impl Stlrh {
     pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
         let datasize = 16;
 
-        let address =
-            if self.rn == 31 { cpu.sp_read() } else { cpu.x_read(self.rn.into(), 64) };
+        let address = if self.rn == 31 { cpu.sp_read() } else { cpu.x_read(self.rn.into(), 64) };
 
         let val = cpu.x_read(self.rt.into(), datasize);
 
