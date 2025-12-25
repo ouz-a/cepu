@@ -977,6 +977,45 @@ impl LdpSignedOffset {
     };
 }
 
+/// LDTR
+/// Load register (unprivileged)
+#[derive(Debug, Clone, Copy)]
+pub struct LdrUnpriv {
+    size: u8,
+    imm9: u16,
+    rn: u8,
+    rt: u8,
+}
+
+impl LdrUnpriv {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let offset = sign_extend(self.imm9.into(), 9);
+        let datasize = 8 << self.size;
+        let regsize = if datasize == 64 { 64 } else { 32 };
+
+        let mut address =
+            if self.rn == 31 { cpu.sp_read() } else { cpu.x_read(self.rn.into(), 64) };
+        address = address.wrapping_add(offset);
+        let data = cpu.mmu.read_memory(address as usize, datasize / 8);
+        if cpu.mmu.faulted {
+            return;
+        }
+        cpu.x_write(self.rt.into(), zero_extend(data.1, regsize), datasize == 32);
+    }
+    pub const fn decode(word: u32) -> Instruction {
+        let size = get_bits_ct!(word, 30, 2) as u8;
+        let imm9 = get_bits_ct!(word, 12, 9) as u16;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rt = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::LdrUnpriv(Self { size, imm9, rn, rt })
+    }
+    pub const LDR_UNPRIV: InstDesc = InstDesc {
+        mask: 0b1011_1111_1110_0000_0000_1100_0000_0000,
+        value: 0b1011_1000_0100_0000_0000_1000_0000_0000,
+        decode: Self::decode,
+    };
+}
+
 /// Load register (unscaled)
 #[derive(Debug, Clone, Copy)]
 pub struct Ldur {
