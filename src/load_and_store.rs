@@ -681,3 +681,50 @@ pub fn instruction_ldpsw(
         }
     }
 }
+
+pub fn instruction_ldp_simd_fp(
+    cpu: &mut Cpu,
+    rt: u8,
+    rt2: u8,
+    rn: u8,
+    datasize: u8,
+    offset: u64,
+    postindex: bool,
+    wback: bool,
+) {
+    let dbytes = datasize / 8;
+    let mut address = if rn == 31 {
+        cpu.check_space_alignment();
+        cpu.sp_read()
+    } else {
+        cpu.x_read(rn.into(), 64)
+    };
+
+    if !postindex {
+        address = address.wrapping_add(offset);
+    }
+
+    let address_2 = address.wrapping_add(dbytes.into());
+    let data1 = cpu.mmu.read_memory(address.try_into().unwrap(), dbytes.try_into().unwrap()).1;
+    if cpu.mmu.faulted {
+        return;
+    }
+    let data2 = cpu.mmu.read_memory(address_2.try_into().unwrap(), dbytes.try_into().unwrap()).1;
+    if cpu.mmu.faulted {
+        return;
+    }
+
+    cpu.v_write(rt.into(), data1.into(), false);
+    cpu.v_write(rt2.into(), data2.into(), false);
+
+    if wback {
+        if postindex {
+            address = address.wrapping_add(offset);
+        }
+        if rn == 31 {
+            cpu.sp_write(address);
+        } else {
+            cpu.x_write(rn.into(), address, false);
+        }
+    }
+}

@@ -19,7 +19,7 @@ pub const BATCH: u32 = 100;
 pub const INSTRUCTION_SIZE: u64 = 4;
 
 const GPRS: usize = 32;
-
+const VPRS: usize = 32;
 const ZERO_REG: usize = 31;
 pub const SP_REGISTER: usize = 31;
 
@@ -100,6 +100,8 @@ pub struct Cpu {
     /// General Purpose Registers X0-X30 (X31 is XZR when read, SP when used as
     /// base)
     pub x: [u64; GPRS],
+    /// Vector Registers V0-V31
+    pub v: [u128; VPRS],
     /// Program Counter (address of currently executing instruction)
     pub pc: u64,
     /// Process State (condition flags, exception level, interrupt masks)
@@ -475,6 +477,28 @@ impl Cpu {
                 ExceptionLevel::EL2 => self.sp_el2 = value,
                 ExceptionLevel::EL3 => self.sp_el3 = value,
             }
+        }
+    }
+
+    pub fn v_read(&self, n: usize, width: u8) -> u128 {
+        assert!(n < VPRS);
+        assert!(width <= 128 && width.is_multiple_of(8));
+        if n != ZERO_REG {
+            let mask = if width == 128 { !0u128 } else { (1 << width) - 1 };
+            return self.v[n] & mask;
+        }
+        0
+    }
+
+    pub fn v_write(&mut self, n: usize, value: u128, is_32b: bool) {
+        assert!(n < VPRS);
+        if n == ZERO_REG {
+            return;
+        }
+        if is_32b {
+            self.v[n] = value & 0xFFFF_FFFF_FFFF_FFFF;
+        } else {
+            self.v[n] = value;
         }
     }
 

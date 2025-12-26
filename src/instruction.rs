@@ -11,17 +11,17 @@ use crate::{
     cpu::Cpu,
     imm_instr::{AddImmediate, Extr, Movk, Movn, Movz, SubImmediate, Subs},
     load_store_instr::{
-        Ldar, Ldaxr, LdpPostIndex, LdpPreIndex, LdpSignedOffset, LdpswPostIndex, LdpswPreIndex,
-        LdpswSignedOffset, LdrImmPostIdx, LdrImmPreIdx, LdrImmUnOffset, LdrLit, LdrReg, LdrUnpriv,
-        LdrbPostIndex, LdrbPreIndex, LdrbRegister, LdrbUnsignedOff, LdrhImmPostIndex,
-        LdrhImmPreIndex, LdrhImmUnOffset, LdrhRegister, LdrsbImmPostIndex, LdrsbImmPreIndex,
-        LdrsbImmUnsignedOffset, LdrsbReg, LdrshImmPostIndex, LdrshImmPreIndex,
-        LdrshImmUnsignedOffset, LdrswImmPostIndex, LdrswImmPreIndex, LdrswImmUnOffset,
-        LdrswRegister, Ldur, Ldurb, Ldurh, Ldursw, Ldxp, Ldxr, Ldxrb, Prfm, StlrNoOffset, Stlrb,
-        Stlrh, Stlxp, Stlxr, Stnp, StpPostIndex, StpPreIndex, StpSignedOffset, StrImmPostIndex,
-        StrImmPreIndex, StrImmUnOffset, StrRegister, StrUnpriv, StrbImmUnOffset, StrbPostIndex,
-        StrbPreIndex, StrbRegister, Strh, StrhPostIndex, StrhPreIndex, StrhUnsigned, Stur, Sturb,
-        Sturh, Stxp, Stxr, Stxrb,
+        Ldar, Ldaxr, LdpPostIndex, LdpPreIndex, LdpSignedOffset, LdpSimdFpPostIndex,
+        LdpSimdFpPreIndex, LdpSimdFpSignedOffset, LdpswPostIndex, LdpswPreIndex, LdpswSignedOffset,
+        LdrImmPostIdx, LdrImmPreIdx, LdrImmUnOffset, LdrLit, LdrReg, LdrUnpriv, LdrbPostIndex,
+        LdrbPreIndex, LdrbRegister, LdrbUnsignedOff, LdrhImmPostIndex, LdrhImmPreIndex,
+        LdrhImmUnOffset, LdrhRegister, LdrsbImmPostIndex, LdrsbImmPreIndex, LdrsbImmUnsignedOffset,
+        LdrsbReg, LdrshImmPostIndex, LdrshImmPreIndex, LdrshImmUnsignedOffset, LdrswImmPostIndex,
+        LdrswImmPreIndex, LdrswImmUnOffset, LdrswRegister, Ldur, Ldurb, Ldurh, Ldursw, Ldxp, Ldxr,
+        Ldxrb, Prfm, StlrNoOffset, Stlrb, Stlrh, Stlxp, Stlxr, Stnp, StpPostIndex, StpPreIndex,
+        StpSignedOffset, StrImmPostIndex, StrImmPreIndex, StrImmUnOffset, StrRegister, StrUnpriv,
+        StrbImmUnOffset, StrbPostIndex, StrbPreIndex, StrbRegister, Strh, StrhPostIndex,
+        StrhPreIndex, StrhUnsigned, Stur, Sturb, Sturh, Stxp, Stxr, Stxrb,
     },
     register_instr::{
         AddExtendedRegister, AddShiftedReg, AddsExtendedRegister, AddsImmediate, AddsShiftedReg,
@@ -233,6 +233,9 @@ define_instructions!(
     Ldurh(Ldurh),
     Ldurb(Ldurb),
     LdrUnpriv(LdrUnpriv),
+    LdpSimdFpPostIndex(LdpSimdFpPostIndex),
+    LdpSimdFpPreIndex(LdpSimdFpPreIndex),
+    LdpSimdFpSignedOffset(LdpSimdFpSignedOffset),
     // ----- Store Pair -----
     Stnp(Stnp),
     StpPostIndex(StpPostIndex),
@@ -428,6 +431,9 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     Ldursw::LDURSW,
     Ldurb::LDURB,
     LdrUnpriv::LDR_UNPRIV,
+    LdpSimdFpPostIndex::LDP_SIMD_FP_POST_INDEX,
+    LdpSimdFpPreIndex::LDP_SIMD_FP_PRE_INDEX,
+    LdpSimdFpSignedOffset::LDP_SIMD_FP_SIGNED_OFFSET,
     // ----- Store Pair -----
     Stnp::STNP,
     StpPostIndex::STP_POST_INDEX,
@@ -469,6 +475,19 @@ const fn sort_by_specificity<const N: usize>(mut arr: [InstDesc; N]) -> [InstDes
     arr
 }
 
+fn format_u32_binary(value: u32) -> String {
+    let binary = format!("{:032b}", value);
+    
+    let formatted: String = binary
+        .as_bytes()
+        .chunks(4)
+        .map(|chunk| std::str::from_utf8(chunk).unwrap())
+        .collect::<Vec<_>>()
+        .join("_");
+
+    format!("0b{}", formatted)
+}
+
 pub fn validate_tables(table: &[InstDesc]) {
     let mut clash = Vec::new();
 
@@ -487,7 +506,7 @@ pub fn validate_tables(table: &[InstDesc]) {
         println!("FATAL ERROR!");
         println!("THERE ARE COLLIDING ENTRIES IN INSTRUCTION TABLE");
         clash.iter().for_each(|e| {
-            println!("These two are colliding.\r\n-> {:032b}\r\n-> {:032b}", e.0.value, e.1.value)
+            println!("These two are colliding.\r\n-> {}\r\n-> {}", format_u32_binary(e.0.value), format_u32_binary(e.1.value))
         });
         println!("Aborting the execution");
         std::process::exit(0);
