@@ -106,6 +106,10 @@ pub struct Cpu {
     pub pc: u64,
     /// Process State (condition flags, exception level, interrupt masks)
     pub pstate: PState,
+    /// Provides floating-point system status information.
+    pub fpsr: u64,
+    /// Controls floating-point behavior.
+    pub fpcr: u64,
 
     /// Branch taken flag (set by branch instructions)
     pub branch_taken: bool,
@@ -633,6 +637,8 @@ impl Cpu {
             MsrRegisters::OslarEl1 => {
                 self.oslar_el1 = self.x_read(t.into(), 64);
             }
+            MsrRegisters::Fpsr => self.fpsr = self.x_read(t.into(), 64),
+            MsrRegisters::Fpcr => self.fpcr = self.x_read(t.into(), 64),
             MsrRegisters::OsdlrEl1
             | MsrRegisters::Dbgbvr0El1
             | MsrRegisters::Dbgbcr0El1
@@ -844,6 +850,12 @@ impl Cpu {
             }
             MrsRegisters::OslarEl1 => {
                 self.x_write(t.into(), self.oslar_el1, false);
+            }
+            MrsRegisters::Fpsr => {
+                self.x_write(t.into(), self.fpsr, false);
+            }
+            MrsRegisters::Fpcr => {
+                self.x_write(t.into(), self.fpcr, false);
             }
             MrsRegisters::OsdlrEl1
             | MrsRegisters::Dbgbvr0El1
@@ -1171,7 +1183,8 @@ msr_enum! {
     Dbgbcr0El1 = 8589934597,
     Dbgwvr0El1 = 8589934598,
     Dbgwcr0El1 = 8589934599,
-
+    Fpsr = 12935496705,
+    Fpcr = 12935496704,
     OsdlrEl1 = 8590000900,
     OslarEl1 = 8590000132,
     Daif = 12935496193,
@@ -1236,6 +1249,8 @@ mrs_enum! {
     Dbgwvr0El1 = 8589934598,
     Dbgwcr0El1 = 8589934599,
 
+    Fpcr = 12935496704,
+    Fpsr = 12935496705,
     TpidrEl1 = 12885753860,
     TpidrEl0 = 12936085506,
     TpidrroEl0 = 12936085507,
