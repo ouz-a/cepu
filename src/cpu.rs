@@ -349,20 +349,28 @@ impl Cpu {
         self.elr_el1 = *old_pc;
         self.spsr_el1 = self.spsr_from_pstate();
         self.far_el1 = self.mmu.fault_va.try_into().unwrap();
-        self.esr_el1 = (0x25u64 << 26) | (1u64 << 25) | (self.mmu.fault_level as u64 + 4);
+        let ec = if self.pstate.current_el == ExceptionLevel::EL0 { 0x24 } else { 0x25 };
+        self.esr_el1 = (ec << 26) | (1u64 << 25) | (self.mmu.fault_level as u64 + 4);
         self.pstate.daif_disable();
-        *old_pc = self.vbar_el1 + 0x200;
+        let offset = if self.pstate.current_el == ExceptionLevel::EL0 { 0x400 } else { 0x200 };
+        self.pstate.set_to_exception();
+        *old_pc = self.vbar_el1 + offset;
         self.mmu.faulted = false;
+        self.pstate.current_el = ExceptionLevel::EL1;
     }
 
     pub fn handle_instruction_abort(&mut self, old_pc: &mut u64) {
         self.elr_el1 = *old_pc;
         self.spsr_el1 = self.spsr_from_pstate();
         self.far_el1 = self.mmu.fault_va.try_into().unwrap();
-        self.esr_el1 = (0x21u64 << 26) | (1u64 << 25) | (self.mmu.fault_level as u64 + 4);
+        let ec = if self.pstate.current_el == ExceptionLevel::EL0 { 0x20 } else { 0x21 };
+        self.esr_el1 = (ec << 26) | (1u64 << 25) | (self.mmu.fault_level as u64 + 4);
         self.pstate.daif_disable();
-        *old_pc = self.vbar_el1 + 0x200;
+        let offset = if self.pstate.current_el == ExceptionLevel::EL0 { 0x400 } else { 0x200 };
+        self.pstate.set_to_exception();
+        *old_pc = self.vbar_el1 + offset;
         self.mmu.faulted = false;
+        self.pstate.current_el = ExceptionLevel::EL1;
     }
 
     pub fn handle_interrupts(&mut self, next_pc: &mut u64) {
@@ -370,7 +378,7 @@ impl Cpu {
         if pending == 0 || self.pstate.irq_masked() {
             return;
         }
-        UNDEF_PANIC.store(true, Ordering::SeqCst);
+        //UNDEF_PANIC.store(true, Ordering::SeqCst);
 
         let line = pending.trailing_zeros();
         self.pending_irq.fetch_and(!(1u32 << line), Ordering::AcqRel);
@@ -390,11 +398,12 @@ impl Cpu {
             ExceptionLevel::EL2 => panic!("EL2 Is not implemented!"),
         }
 
+        let offset = if self.pstate.current_el == ExceptionLevel::EL0 { 0x480 } else { 0x280 };
         self.pstate.il = false;
         self.pstate.current_el = target_el;
         self.pstate.set_to_exception();
 
-        *next_pc = self.vbar_el1 + 0x280;
+        *next_pc = self.vbar_el1 + offset;
     }
 
     pub fn timer_device_tick(&mut self) {
@@ -922,10 +931,10 @@ impl Cpu {
         }
 
         let m = match (self.pstate.current_el, self.pstate.sp) {
-            (ExceptionLevel::EL0, 1) => 0b0000,
+            (ExceptionLevel::EL0, 0) => 0b0000,
             (ExceptionLevel::EL1, 0) => 0b0100,
             (ExceptionLevel::EL1, 1) => 0b0101,
-            _ => panic!("Pstate not covered"),
+            _ => panic!("Pstate: ({:?}-{:?}) not covered", self.pstate.current_el, self.pstate.sp),
         };
         spsr |= m;
 
@@ -1096,6 +1105,7 @@ impl PState {
     fn set_to_exception(&mut self) {
         self.daif_disable();
         self.il = false;
+        self.sp = 1;
     }
 }
 

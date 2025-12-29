@@ -477,7 +477,7 @@ const fn sort_by_specificity<const N: usize>(mut arr: [InstDesc; N]) -> [InstDes
 
 fn format_u32_binary(value: u32) -> String {
     let binary = format!("{:032b}", value);
-    
+
     let formatted: String = binary
         .as_bytes()
         .chunks(4)
@@ -506,7 +506,11 @@ pub fn validate_tables(table: &[InstDesc]) {
         println!("FATAL ERROR!");
         println!("THERE ARE COLLIDING ENTRIES IN INSTRUCTION TABLE");
         clash.iter().for_each(|e| {
-            println!("These two are colliding.\r\n-> {}\r\n-> {}", format_u32_binary(e.0.value), format_u32_binary(e.1.value))
+            println!(
+                "These two are colliding.\r\n-> {}\r\n-> {}",
+                format_u32_binary(e.0.value),
+                format_u32_binary(e.1.value)
+            )
         });
         println!("Aborting the execution");
         std::process::exit(0);
