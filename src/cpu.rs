@@ -496,23 +496,15 @@ impl Cpu {
     pub fn v_read(&self, n: usize, width: u8) -> u128 {
         assert!(n < VPRS);
         assert!(width <= 128 && width.is_multiple_of(8));
-        if n != ZERO_REG {
-            let mask = if width == 128 { !0u128 } else { (1 << width) - 1 };
-            return self.v[n] & mask;
-        }
-        0
+        let mask = if width == 128 { !0u128 } else { (1u128 << width) - 1 };
+        self.v[n] & mask
     }
 
-    pub fn v_write(&mut self, n: usize, value: u128, is_32b: bool) {
+    pub fn v_write(&mut self, n: usize, width: u8, value: u128) {
         assert!(n < VPRS);
-        if n == ZERO_REG {
-            return;
-        }
-        if is_32b {
-            self.v[n] = value & 0xFFFF_FFFF_FFFF_FFFF;
-        } else {
-            self.v[n] = value;
-        }
+        assert!(width <= 128 && width.is_multiple_of(8));
+        let mask = if width == 128 { !0u128 } else { (1u128 << width) - 1 };
+        self.v[n] = value & mask;
     }
 
     /// When n == 31 we return 0

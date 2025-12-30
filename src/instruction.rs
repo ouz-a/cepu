@@ -31,7 +31,7 @@ use crate::{
         OrShiftedRegister, OrrImmediate, PaciaSystem, Rbit, Rev, Rev16, Sbfm, Sdiv, Smaddl, Smulh,
         SubExtendedReg, SubShiftedRegister, SubsExtendedReg, SubsShiftedReg, Ubfx, Udiv, Umaddl,
         Umulh,
-    },
+    }, simd_fp::DupGeneral,
 };
 
 const PRIME_SIZE: usize = 1 << 12;
@@ -259,6 +259,7 @@ define_instructions!(
     Stlxr(Stlxr),
     Stxr(Stxr),
     Stxrb(Stxrb),
+    DupGeneral(DupGeneral),
 );
 
 pub const DESCR: &[InstDesc] = &sort_by_specificity([
@@ -457,6 +458,8 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     Stlxr::STLXR,
     Stxr::STXR,
     Stxrb::STXRB,
+    // ----- Simd, FP -----
+    DupGeneral::DUP_GENERAL,
 ]);
 
 const fn sort_by_specificity<const N: usize>(mut arr: [InstDesc; N]) -> [InstDesc; N] {

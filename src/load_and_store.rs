@@ -714,8 +714,8 @@ pub fn instruction_ldp_simd_fp(
         return;
     }
 
-    cpu.v_write(rt.into(), data1.into(), false);
-    cpu.v_write(rt2.into(), data2.into(), false);
+    cpu.v_write(rt.into(), 64, data1.into());
+    cpu.v_write(rt2.into(), 64, data2.into());
 
     if wback {
         if postindex {
