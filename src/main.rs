@@ -30,9 +30,9 @@ pub mod load_store_instr;
 pub mod memory;
 pub mod mmu;
 pub mod register_instr;
-pub mod utils;
 pub mod simd_fp;
 pub mod simd_fp_instr;
+pub mod utils;
 
 pub fn run_block(cpu: &mut Cpu) {
     let mut batch_left = BATCH;

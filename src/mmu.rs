@@ -43,6 +43,20 @@ impl Mmu {
             self.bus.write_memory(address, size, value)
         }
     }
+    pub fn write_memory_128bit(&mut self, address: usize, value: u128) -> PhyMemStatus {
+        let lo = value;
+        let high = (value >> 64) as u64;
+        self.write_memory(address, 8, lo.try_into().unwrap());
+        self.write_memory(address + 8, 8, high)
+    }
+    pub fn read_memory_128bit(&mut self, address: usize) -> (PhyMemStatus, u128) {
+        let (_, lo) = self.read_memory(address, 8);
+        if self.faulted {
+            return (PhyMemStatus::default(), 0);
+        }
+        let (status, hi) = self.read_memory(address + 8, 8);
+        (status, lo as u128 | ((hi as u128) << 64))
+    }
     fn which_base(&self, va: usize) -> usize {
         let top_bits = bits_get(va as u64, 48, 16);
 

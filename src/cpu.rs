@@ -320,6 +320,33 @@ impl Cpu {
         if rn == 31 { self.sp_read() } else { self.x_read(rn.into(), 64) }
     }
 
+    pub fn ret_sp_or_reg(&self, rn: u8) -> u64 {
+        if rn == 31 { self.sp_read() } else { self.x_read(rn.into(), 64) }
+    }
+
+    pub fn wback_address_write(&mut self, rn: u8, size: u8, address: u64) {
+        if rn == 31 {
+            self.sp_write(address);
+        } else {
+            self.x_write(rn.into(), address, size == 32);
+        }
+    }
+
+    pub fn handle_wback_postindex(
+        &mut self,
+        postindex: bool,
+        address: u64,
+        offset: u64,
+        size: u8,
+        rn: u8,
+    ) {
+        let mut address = address;
+        if postindex {
+            address = address.wrapping_add(offset);
+        }
+        self.wback_address_write(rn, size, address);
+    }
+
     pub fn memory_op_faulted(&self) -> bool {
         self.mmu.faulted
     }

@@ -36,6 +36,18 @@ pub fn bits_get(val: u64, start: u8, len: u8) -> u64 {
     (val >> start) & mask
 }
 
+pub fn bits_get_u128(val: u128, start: u8, len: u8) -> u128 {
+    debug_assert!((start as u16 + len as u16) <= 128);
+
+    if len == 0 {
+        return 0;
+    }
+
+    let mask = if len == 128 { u128::MAX } else { (1u128 << len) - 1 };
+
+    (val >> start) & mask
+}
+
 /// Gets bits then shifts them to left by `start` amount
 /// This has the same effect as masking value
 pub fn bits_get_in_place(val: u64, start: u8, len: u8) -> u64 {
@@ -205,3 +217,52 @@ impl Utils for bool {
 pub fn just_panic() {
     UNDEF_PANIC.store(true, std::sync::atomic::Ordering::SeqCst);
 }
+
+pub trait BitUtils {
+    fn single_bit(self, idx: u8) -> u8;
+    fn bits_get(self, start: u8, len: u8) -> Self;
+    /// Set a single bit to 1
+    fn bit_set(self, idx: u8) -> Self;
+}
+
+macro_rules! impl_bit_utils {
+    ($($t:ty),*) => {
+        $(
+            impl BitUtils for $t {
+                fn single_bit(self, idx: u8) -> u8 {
+                    bits_get_u128(self as u128, idx, 1) as u8
+                }
+
+                fn bits_get(self, start: u8, len: u8) -> Self {
+                    bits_get_u128(self as u128, start, len) as Self
+                }
+                    fn bit_set(self, idx: u8) -> Self {
+                    self | (1 << idx)
+                }
+            }
+        )*
+    };
+}
+
+impl_bit_utils!(u8, u16, u32, u64, u128, usize);
+
+macro_rules! impl_bit_utils_signed {
+    ($(($signed:ty, $unsigned:ty)),*) => {
+        $(
+            impl BitUtils for $signed {
+                fn single_bit(self, idx: u8) -> u8 {
+                    bits_get_u128(self as $unsigned as u128, idx, 1) as u8
+                }
+
+                fn bits_get(self, start: u8, len: u8) -> Self {
+                    bits_get_u128(self as $unsigned as u128, start, len) as Self
+                }
+                fn bit_set(self, idx: u8) -> Self {
+                    self | (1 << idx)
+                }
+            }
+        )*
+    };
+}
+
+impl_bit_utils_signed!((i8, u8), (i16, u16), (i32, u32), (i64, u64), (i128, u128), (isize, usize));
