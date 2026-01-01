@@ -31,7 +31,11 @@ pub fn str_imd_fp_instruction(
             return;
         }
     } else {
-        cpu.mmu.write_memory(address as usize, (datasize / 8).into(), cpu.x_read(rt.into(), datasize));
+        cpu.mmu.write_memory(
+            address as usize,
+            (datasize / 8).into(),
+            cpu.x_read(rt.into(), datasize),
+        );
     }
     if wback {
         cpu.handle_wback_postindex(postindex, address, offset, datasize, rn);
@@ -89,3 +93,65 @@ pub fn str_pair_fp_instruction(
     }
 }
 
+pub fn instruction_ldp_simd_fp(
+    cpu: &mut Cpu,
+    rt: u8,
+    rt2: u8,
+    rn: u8,
+    datasize: u8,
+    offset: u64,
+    postindex: bool,
+    wback: bool,
+) {
+    let dbytes: u8 = datasize / 8;
+    let mut address = if rn == 31 {
+        cpu.check_space_alignment();
+        cpu.sp_read()
+    } else {
+        cpu.x_read(rn.into(), 64)
+    };
+
+    if !postindex {
+        address = address.wrapping_add(offset);
+    }
+
+    let address_2 = address.wrapping_add(dbytes.into());
+
+    let (data1, data2): (u128, u128) = if datasize == 128 {
+        // 128-bit loads require special handling
+        let (_, d1) = cpu.mmu.read_memory_128bit(address.try_into().unwrap());
+        if cpu.mmu.faulted {
+            return;
+        }
+        let (_, d2) = cpu.mmu.read_memory_128bit(address_2.try_into().unwrap());
+        if cpu.mmu.faulted {
+            return;
+        }
+        (d1, d2)
+    } else {
+        // 32-bit or 64-bit loads
+        let (_, d1) = cpu.mmu.read_memory(address.try_into().unwrap(), dbytes.into());
+        if cpu.mmu.faulted {
+            return;
+        }
+        let (_, d2) = cpu.mmu.read_memory(address_2.try_into().unwrap(), dbytes.into());
+        if cpu.mmu.faulted {
+            return;
+        }
+        (d1.into(), d2.into())
+    };
+
+    cpu.v_write(rt.into(), datasize, data1);
+    cpu.v_write(rt2.into(), datasize, data2);
+
+    if wback {
+        if postindex {
+            address = address.wrapping_add(offset);
+        }
+        if rn == 31 {
+            cpu.sp_write(address);
+        } else {
+            cpu.x_write(rn.into(), address, false);
+        }
+    }
+}

@@ -3,7 +3,10 @@ use crate::{
     data_processing::shift_lsl,
     get_bits_ct,
     instruction::{InstDesc, Instruction},
-    simd_fp_instr::{dup_general_instruction, str_imd_fp_instruction, str_pair_fp_instruction},
+    simd_fp_instr::{
+        dup_general_instruction, instruction_ldp_simd_fp, str_imd_fp_instruction,
+        str_pair_fp_instruction,
+    },
     utils::{BitUtils, bits_get, sign_extend},
 };
 
@@ -176,9 +179,7 @@ impl StrPairFpPostIndex {
         let datasize = 8 << scale;
         let offset = shift_lsl(sign_extend(self.imm7.into(), 7), scale);
 
-        str_pair_fp_instruction(
-            cpu, self.rn, self.rt, self.rt2, offset, datasize, true, true,
-        );
+        str_pair_fp_instruction(cpu, self.rn, self.rt, self.rt2, offset, datasize, true, true);
     }
 
     pub const fn decode(word: u32) -> Instruction {
@@ -212,9 +213,7 @@ impl StrPairFpPreIndex {
         let datasize = 8 << scale;
         let offset = shift_lsl(sign_extend(self.imm7.into(), 7), scale);
 
-        str_pair_fp_instruction(
-            cpu, self.rn, self.rt, self.rt2, offset, datasize, false, true,
-        );
+        str_pair_fp_instruction(cpu, self.rn, self.rt, self.rt2, offset, datasize, false, true);
     }
 
     pub const fn decode(word: u32) -> Instruction {
@@ -247,9 +246,7 @@ impl StrPairFpSignedOffset {
         let datasize = 8 << scale;
         let offset = shift_lsl(sign_extend(self.imm7.into(), 7), scale);
 
-        str_pair_fp_instruction(
-            cpu, self.rn, self.rt, self.rt2, offset, datasize, false, false,
-        );
+        str_pair_fp_instruction(cpu, self.rn, self.rt, self.rt2, offset, datasize, false, false);
     }
 
     pub const fn decode(word: u32) -> Instruction {
@@ -267,3 +264,98 @@ impl StrPairFpSignedOffset {
     };
 }
 
+/// Load pair of SIMD&FP registers
+#[derive(Debug, Clone, Copy)]
+pub struct LdpSimdFpPostIndex {
+    opc: u8,
+    imm7: u8,
+    rt2: u8,
+    rn: u8,
+    rt: u8,
+}
+
+impl LdpSimdFpPostIndex {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let scale = 2 + self.opc;
+        let datasize = 8 << scale;
+        let offset = shift_lsl(sign_extend(self.imm7.into(), 7), scale);
+        instruction_ldp_simd_fp(cpu, self.rt, self.rt2, self.rn, datasize, offset, true, true);
+    }
+    pub const fn decode(word: u32) -> Instruction {
+        let opc = get_bits_ct!(word, 30, 2) as u8;
+        let imm7 = get_bits_ct!(word, 15, 7) as u8;
+        let rt2 = get_bits_ct!(word, 10, 5) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rt = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::LdpSimdFpPostIndex(Self { opc, imm7, rt2, rn, rt })
+    }
+    pub const LDP_SIMD_FP_POST_INDEX: InstDesc = InstDesc {
+        mask: 0b0011_1111_1100_0000_0000_0000_0000_0000,
+        value: 0b0010_1100_1100_0000_0000_0000_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+/// Load pair of SIMD&FP registers
+#[derive(Debug, Clone, Copy)]
+pub struct LdpSimdFpPreIndex {
+    opc: u8,
+    imm7: u8,
+    rt2: u8,
+    rn: u8,
+    rt: u8,
+}
+
+impl LdpSimdFpPreIndex {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let scale = 2 + self.opc;
+        let datasize = 8 << scale;
+        let offset = shift_lsl(sign_extend(self.imm7.into(), 7), scale);
+        instruction_ldp_simd_fp(cpu, self.rt, self.rt2, self.rn, datasize, offset, false, true);
+    }
+    pub const fn decode(word: u32) -> Instruction {
+        let opc = get_bits_ct!(word, 30, 2) as u8;
+        let imm7 = get_bits_ct!(word, 15, 7) as u8;
+        let rt2 = get_bits_ct!(word, 10, 5) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rt = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::LdpSimdFpPreIndex(Self { opc, imm7, rt2, rn, rt })
+    }
+    pub const LDP_SIMD_FP_PRE_INDEX: InstDesc = InstDesc {
+        mask: 0b0011_1111_1100_0000_0000_0000_0000_0000,
+        value: 0b0010_1101_1100_0000_0000_0000_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+/// Load pair of SIMD&FP registers
+#[derive(Debug, Clone, Copy)]
+pub struct LdpSimdFpSignedOffset {
+    opc: u8,
+    imm7: u8,
+    rt2: u8,
+    rn: u8,
+    rt: u8,
+}
+
+impl LdpSimdFpSignedOffset {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let scale = 2 + self.opc;
+        let datasize = 8 << scale;
+        let offset = shift_lsl(sign_extend(self.imm7.into(), 7), scale);
+        instruction_ldp_simd_fp(cpu, self.rt, self.rt2, self.rn, datasize, offset, false, false);
+    }
+    pub const fn decode(word: u32) -> Instruction {
+        let opc = get_bits_ct!(word, 30, 2) as u8;
+        let imm7 = get_bits_ct!(word, 15, 7) as u8;
+        let rt2 = get_bits_ct!(word, 10, 5) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rt = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::LdpSimdFpSignedOffset(Self { opc, imm7, rt2, rn, rt })
+    }
+    pub const LDP_SIMD_FP_SIGNED_OFFSET: InstDesc = InstDesc {
+        mask: 0b0011_1111_1100_0000_0000_0000_0000_0000,
+        value: 0b0010_1101_0100_0000_0000_0000_0000_0000,
+        decode: Self::decode,
+    };
+}
