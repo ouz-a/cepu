@@ -3,7 +3,7 @@ use crate::{
     data_processing::shift_lsl,
     get_bits_ct,
     instruction::{InstDesc, Instruction},
-    simd_fp_instr::{dup_general_instruction, str_imd_fp_instruction},
+    simd_fp_instr::{dup_general_instruction, str_imd_fp_instruction, str_pair_fp_instruction},
     utils::{BitUtils, bits_get, sign_extend},
 };
 
@@ -68,7 +68,7 @@ impl StrImdFpPostIndex {
         str_imd_fp_instruction(cpu, self.rn, self.rt, datasize, postindex, wback, offset);
     }
 
-    pub fn decode(word: u32) -> Instruction {
+    pub const fn decode(word: u32) -> Instruction {
         let size = get_bits_ct!(word, 30, 2) as u8;
         let opc = get_bits_ct!(word, 22, 1) as u8;
         let imm9 = get_bits_ct!(word, 12, 9) as u16;
@@ -108,7 +108,7 @@ impl StrImdFpPreIndex {
 
         str_imd_fp_instruction(cpu, self.rn, self.rt, datasize, postindex, wback, offset);
     }
-    pub fn decode(word: u32) -> Instruction {
+    pub const fn decode(word: u32) -> Instruction {
         let size = get_bits_ct!(word, 30, 2) as u8;
         let opc = get_bits_ct!(word, 22, 1) as u8;
         let imm9 = get_bits_ct!(word, 12, 9) as u16;
@@ -146,7 +146,7 @@ impl StrImdFpUnsignedOffset {
 
         str_imd_fp_instruction(cpu, self.rn, self.rt, datasize, postindex, wback, offset);
     }
-    pub fn decode(word: u32) -> Instruction {
+    pub const fn decode(word: u32) -> Instruction {
         let size = get_bits_ct!(word, 30, 2) as u8;
         let opc = get_bits_ct!(word, 22, 1) as u8;
         let imm12 = get_bits_ct!(word, 12, 9) as u16;
@@ -160,3 +160,110 @@ impl StrImdFpUnsignedOffset {
         decode: Self::decode,
     };
 }
+
+// STP (SIMD&FP)
+#[derive(Debug, Clone, Copy)]
+pub struct StrPairFpPostIndex {
+    pub opc: u8,
+    pub imm7: u8,
+    pub rt2: u8,
+    pub rn: u8,
+    pub rt: u8,
+}
+impl StrPairFpPostIndex {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let scale = 2 + self.opc;
+        let datasize = 8 << scale;
+        let offset = shift_lsl(sign_extend(self.imm7.into(), 7), scale);
+
+        str_pair_fp_instruction(
+            cpu, self.rn, self.rt, self.rt2, offset, datasize, true, true,
+        );
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let opc = get_bits_ct!(word, 30, 2) as u8;
+        let imm7 = get_bits_ct!(word, 15, 7) as u8;
+        let rt2 = get_bits_ct!(word, 10, 5) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rt = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::StrPairFpPostIndex(Self { opc, imm7, rt2, rn, rt })
+    }
+
+    pub const STR_PAIR_FP_POST_INDEX: InstDesc = InstDesc {
+        mask: 0b0011_1111_1100_0000_0000_0000_0000_0000,
+        value: 0b0010_1100_1000_0000_0000_0000_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+// STP (SIMD&FP)
+#[derive(Debug, Clone, Copy)]
+pub struct StrPairFpPreIndex {
+    pub opc: u8,
+    pub imm7: u8,
+    pub rt2: u8,
+    pub rn: u8,
+    pub rt: u8,
+}
+impl StrPairFpPreIndex {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let scale = 2 + self.opc;
+        let datasize = 8 << scale;
+        let offset = shift_lsl(sign_extend(self.imm7.into(), 7), scale);
+
+        str_pair_fp_instruction(
+            cpu, self.rn, self.rt, self.rt2, offset, datasize, false, true,
+        );
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let opc = get_bits_ct!(word, 30, 2) as u8;
+        let imm7 = get_bits_ct!(word, 15, 7) as u8;
+        let rt2 = get_bits_ct!(word, 10, 5) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rt = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::StrPairFpPreIndex(Self { opc, imm7, rt2, rn, rt })
+    }
+    pub const STR_PAIR_FP_PRE_INDEX: InstDesc = InstDesc {
+        mask: 0b0011_1111_1100_0000_0000_0000_0000_0000,
+        value: 0b0010_1101_1000_0000_0000_0000_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+// STP (SIMD&FP)
+#[derive(Debug, Clone, Copy)]
+pub struct StrPairFpSignedOffset {
+    pub opc: u8,
+    pub imm7: u8,
+    pub rt2: u8,
+    pub rn: u8,
+    pub rt: u8,
+}
+impl StrPairFpSignedOffset {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let scale = 2 + self.opc;
+        let datasize = 8 << scale;
+        let offset = shift_lsl(sign_extend(self.imm7.into(), 7), scale);
+
+        str_pair_fp_instruction(
+            cpu, self.rn, self.rt, self.rt2, offset, datasize, false, false,
+        );
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let opc = get_bits_ct!(word, 30, 2) as u8;
+        let imm7 = get_bits_ct!(word, 15, 7) as u8;
+        let rt2 = get_bits_ct!(word, 10, 5) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rt = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::StrPairFpSignedOffset(Self { opc, imm7, rt2, rn, rt })
+    }
+    pub const STR_PAIR_FP_SIGNED_OFFSET: InstDesc = InstDesc {
+        mask: 0b0011_1111_1100_0000_0000_0000_0000_0000,
+        value: 0b0010_1101_0000_0000_0000_0000_0000_0000,
+        decode: Self::decode,
+    };
+}
+

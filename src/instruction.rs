@@ -32,7 +32,10 @@ use crate::{
         SubExtendedReg, SubShiftedRegister, SubsExtendedReg, SubsShiftedReg, Ubfx, Udiv, Umaddl,
         Umulh,
     },
-    simd_fp::{DupGeneral, StrImdFpPostIndex, StrImdFpPreIndex, StrImdFpUnsignedOffset},
+    simd_fp::{
+        DupGeneral, StrImdFpPostIndex, StrImdFpPreIndex, StrImdFpUnsignedOffset,
+        StrPairFpPostIndex, StrPairFpPreIndex, StrPairFpSignedOffset,
+    },
 };
 
 const PRIME_SIZE: usize = 1 << 12;
@@ -264,7 +267,10 @@ define_instructions!(
     DupGeneral(DupGeneral),
     StrImdFpPostIndex(StrImdFpPostIndex),
     StrImdFpPreIndex(StrImdFpPreIndex),
-    StrImdFpUnsignedOffset(StrImdFpUnsignedOffset)
+    StrImdFpUnsignedOffset(StrImdFpUnsignedOffset),
+    StrPairFpPostIndex(StrPairFpPostIndex),
+    StrPairFpPreIndex(StrPairFpPreIndex),
+    StrPairFpSignedOffset(StrPairFpSignedOffset),
 );
 
 pub const DESCR: &[InstDesc] = &sort_by_specificity([
@@ -468,6 +474,9 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     StrImdFpPostIndex::STR_IMD_FP_POST_INDEX,
     StrImdFpPreIndex::STR_IMD_FP_PRE_INDEX,
     StrImdFpUnsignedOffset::STR_IMD_FP_UNSIGNED_OFFSET,
+    StrPairFpPostIndex::STR_PAIR_FP_POST_INDEX,
+    StrPairFpPreIndex::STR_PAIR_FP_PRE_INDEX,
+    StrPairFpSignedOffset::STR_PAIR_FP_SIGNED_OFFSET,
 ]);
 
 const fn sort_by_specificity<const N: usize>(mut arr: [InstDesc; N]) -> [InstDesc; N] {
