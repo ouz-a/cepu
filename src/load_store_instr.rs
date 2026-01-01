@@ -2676,7 +2676,7 @@ impl LdpSimdFpPostIndex {
         instruction_ldp_simd_fp(cpu, self.rt, self.rt2, self.rn, datasize, offset, true, true);
     }
     pub const fn decode(word: u32) -> Instruction {
-        let opc = get_bits_ct!(word, 31, 1) as u8;
+        let opc = get_bits_ct!(word, 30, 2) as u8;
         let imm7 = get_bits_ct!(word, 15, 7) as u8;
         let rt2 = get_bits_ct!(word, 10, 5) as u8;
         let rn = get_bits_ct!(word, 5, 5) as u8;
@@ -2708,7 +2708,7 @@ impl LdpSimdFpPreIndex {
         instruction_ldp_simd_fp(cpu, self.rt, self.rt2, self.rn, datasize, offset, false, true);
     }
     pub const fn decode(word: u32) -> Instruction {
-        let opc = get_bits_ct!(word, 30, 1) as u8;
+        let opc = get_bits_ct!(word, 30, 2) as u8;
         let imm7 = get_bits_ct!(word, 15, 7) as u8;
         let rt2 = get_bits_ct!(word, 10, 5) as u8;
         let rn = get_bits_ct!(word, 5, 5) as u8;
@@ -2740,7 +2740,7 @@ impl LdpSimdFpSignedOffset {
         instruction_ldp_simd_fp(cpu, self.rt, self.rt2, self.rn, datasize, offset, false, false);
     }
     pub const fn decode(word: u32) -> Instruction {
-        let opc = get_bits_ct!(word, 31, 1) as u8;
+        let opc = get_bits_ct!(word, 30, 2) as u8;
         let imm7 = get_bits_ct!(word, 15, 7) as u8;
         let rt2 = get_bits_ct!(word, 10, 5) as u8;
         let rn = get_bits_ct!(word, 5, 5) as u8;
