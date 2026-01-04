@@ -36,7 +36,7 @@ use crate::{
         DupGeneral, LdpSimdFpPostIndex, LdpSimdFpPreIndex, LdpSimdFpSignedOffset,
         LdrSimdFpPostIndex, LdrSimdFpPreIndex, LdrSimdFpUnsignedOffset, Movi, StrImdFpPostIndex,
         StrImdFpPreIndex, StrImdFpUnsignedOffset, StrPairFpPostIndex, StrPairFpPreIndex,
-        StrPairFpSignedOffset, StrSimdRegOffset,
+        StrPairFpSignedOffset, StrSimdRegOffset, SturSimdUnscaledOffset,
     },
 };
 
@@ -278,6 +278,7 @@ define_instructions!(
     StrPairFpPostIndex(StrPairFpPostIndex),
     StrPairFpPreIndex(StrPairFpPreIndex),
     StrPairFpSignedOffset(StrPairFpSignedOffset),
+    SturSimdUnscaledOffset(SturSimdUnscaledOffset),
     LdrSimdFpPostIndex(LdrSimdFpPostIndex),
     LdrSimdFpPreIndex(LdrSimdFpPreIndex),
     LdrSimdFpUnsignedOffset(LdrSimdFpUnsignedOffset),
@@ -492,6 +493,7 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     StrPairFpPostIndex::STR_PAIR_FP_POST_INDEX,
     StrPairFpPreIndex::STR_PAIR_FP_PRE_INDEX,
     StrPairFpSignedOffset::STR_PAIR_FP_SIGNED_OFFSET,
+    SturSimdUnscaledOffset::STUR_SIMD_UNSCALED_OFFSET,
     LdrSimdFpPostIndex::LDR_SIMD_FP_POST_INDEX,
     LdrSimdFpPreIndex::LDR_SIMD_FP_PRE_INDEX,
     LdrSimdFpUnsignedOffset::LDR_SIMD_FP_UNSIGNED_OFFSET,

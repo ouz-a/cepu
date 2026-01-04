@@ -74,7 +74,7 @@ impl StrImdFpPostIndex {
 
     pub const fn decode(word: u32) -> Instruction {
         let size = get_bits_ct!(word, 30, 2) as u8;
-        let opc = get_bits_ct!(word, 22, 1) as u8;
+        let opc = get_bits_ct!(word, 22, 2) as u8;
         let imm9 = get_bits_ct!(word, 12, 9) as u16;
         let rn = get_bits_ct!(word, 5, 5) as u8;
         let rt = get_bits_ct!(word, 0, 5) as u8;
@@ -114,7 +114,7 @@ impl StrImdFpPreIndex {
     }
     pub const fn decode(word: u32) -> Instruction {
         let size = get_bits_ct!(word, 30, 2) as u8;
-        let opc = get_bits_ct!(word, 22, 1) as u8;
+        let opc = get_bits_ct!(word, 22, 2) as u8;
         let imm9 = get_bits_ct!(word, 12, 9) as u16;
         let rn = get_bits_ct!(word, 5, 5) as u8;
         let rt = get_bits_ct!(word, 0, 5) as u8;
@@ -659,6 +659,58 @@ impl StrSimdRegOffset {
     pub const STR_SIMD_REG_OFFSET: InstDesc = InstDesc {
         mask: 0b0011_1111_0110_0000_0000_1100_0000_0000,
         value: 0b0011_1100_0010_0000_0000_1000_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+/// Store SIMD&FP register (unscaled offset)
+#[derive(Debug, Clone, Copy)]
+pub struct SturSimdUnscaledOffset {
+    pub size: u8,
+    pub opc: u8,
+    pub imm9: u16,
+    pub rn: u8,
+    pub rt: u8,
+}
+
+impl SturSimdUnscaledOffset {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        if self.opc.single_bit(1) == 1 && self.size != 0 {
+            panic!("Undefined");
+        }
+
+        let scale = if self.opc.single_bit(1) == 1 { 4 } else { self.size };
+        let offset = sign_extend(self.imm9.into(), 9);
+        let datasize = 8 << scale;
+
+        let mut address = cpu.address_for_rn(self.rn);
+        address = address.wrapping_add(offset);
+        if datasize == 128 {
+            cpu.mmu.write_memory_128bit(
+                address.try_into().unwrap(),
+                cpu.v_read(self.rt.into(), datasize),
+            );
+        } else {
+            cpu.mmu.write_memory(
+                address.try_into().unwrap(),
+                datasize as usize / 8,
+                cpu.v_read(self.rt.into(), datasize) as u64,
+            );
+        }
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let size = get_bits_ct!(word, 30, 2) as u8;
+        let opc = get_bits_ct!(word, 22, 2) as u8;
+        let imm9 = get_bits_ct!(word, 12, 9) as u16;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rt = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::SturSimdUnscaledOffset(Self { size, opc, imm9, rn, rt })
+    }
+
+    pub const STUR_SIMD_UNSCALED_OFFSET: InstDesc = InstDesc {
+        mask: 0b0011_1111_0110_0000_0000_1100_0000_0000,
+        value: 0b0011_1100_0000_0000_0000_0000_0000_0000,
         decode: Self::decode,
     };
 }
