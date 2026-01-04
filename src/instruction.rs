@@ -5,7 +5,7 @@ use std::{
 
 use crate::{
     branch_exc_sys_instr::{
-        Bcond, Bl, Blr, Br, Branch, Bti, Cbnz, Cbz, Ccmpi, Csinc, Csinv, Dmb, Eret, Mrs, MsrImm, MsrReg, Ret, Sevl, Smc, Svc, Sys, Tbnz, Tbz, Wfe, Wfi, Xpaclri, Yield
+        Bcond, Bl, Blr, Br, Branch, Bti, Cbnz, Cbz, Ccmpi, Csdb, Csinc, Csinv, Dmb, Eret, Mrs, MsrImm, MsrReg, Ret, Sevl, Smc, Svc, Sys, Tbnz, Tbz, Wfe, Wfi, Xpaclri, Yield
     },
     cpu::Cpu,
     imm_instr::{AddImmediate, Extr, Movk, Movn, Movz, Sbc, SubImmediate, Subs},
@@ -177,6 +177,7 @@ define_instructions!(
     Xpaclri(Xpaclri),
     Yield(Yield),
     // ----- Barriers -----
+    Csdb(Csdb),
     Dmb(Dmb),
     Dsb(Dsb),
     Isb(Isb),
@@ -389,6 +390,7 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     Xpaclri::XPACLRI,
     Yield::YIELD,
     // ----- Barriers -----
+    Csdb::CSDB,
     Dmb::DMB,
     Dsb::DSB,
     Isb::ISB,

@@ -517,6 +517,24 @@ impl Dmb {
     };
 }
 
+/// Data memory barrier
+#[derive(Debug, Clone, Copy)]
+pub struct Csdb;
+
+impl Csdb {
+    pub fn exec(self, _cpu: &mut Cpu, _old_pc: u64) {}
+
+    pub const fn decode(_word: u32) -> Instruction {
+        Instruction::Csdb(Self)
+    }
+
+    pub const CSDB: InstDesc = InstDesc {
+        mask: 0b1111_1111_1111_1111_1111_1111_1111_1111,
+        value: 0b1101_0101_0000_0011_0010_0010_1001_1111,
+        decode: Self::decode,
+    };
+}
+
 /// Branch target identification
 #[derive(Debug, Clone, Copy)]
 pub struct Bti;
