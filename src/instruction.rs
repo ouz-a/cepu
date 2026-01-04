@@ -33,7 +33,10 @@ use crate::{
         Umulh,
     },
     simd_fp::{
-        DupGeneral, LdpSimdFpPostIndex, LdpSimdFpPreIndex, LdpSimdFpSignedOffset, Movi, StrImdFpPostIndex, StrImdFpPreIndex, StrImdFpUnsignedOffset, StrPairFpPostIndex, StrPairFpPreIndex, StrPairFpSignedOffset
+        DupGeneral, LdpSimdFpPostIndex, LdpSimdFpPreIndex, LdpSimdFpSignedOffset,
+        LdrSimdFpPostIndex, LdrSimdFpPreIndex, LdrSimdFpUnsignedOffset, Movi, StrImdFpPostIndex,
+        StrImdFpPreIndex, StrImdFpUnsignedOffset, StrPairFpPostIndex, StrPairFpPreIndex,
+        StrPairFpSignedOffset,
     },
 };
 
@@ -271,6 +274,9 @@ define_instructions!(
     StrPairFpPostIndex(StrPairFpPostIndex),
     StrPairFpPreIndex(StrPairFpPreIndex),
     StrPairFpSignedOffset(StrPairFpSignedOffset),
+    LdrSimdFpPostIndex(LdrSimdFpPostIndex),
+    LdrSimdFpPreIndex(LdrSimdFpPreIndex),
+    LdrSimdFpUnsignedOffset(LdrSimdFpUnsignedOffset),
 );
 
 pub const DESCR: &[InstDesc] = &sort_by_specificity([
@@ -478,6 +484,9 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     StrPairFpPostIndex::STR_PAIR_FP_POST_INDEX,
     StrPairFpPreIndex::STR_PAIR_FP_PRE_INDEX,
     StrPairFpSignedOffset::STR_PAIR_FP_SIGNED_OFFSET,
+    LdrSimdFpPostIndex::LDR_SIMD_FP_POST_INDEX,
+    LdrSimdFpPreIndex::LDR_SIMD_FP_PRE_INDEX,
+    LdrSimdFpUnsignedOffset::LDR_SIMD_FP_UNSIGNED_OFFSET,
 ]);
 
 const fn sort_by_specificity<const N: usize>(mut arr: [InstDesc; N]) -> [InstDesc; N] {

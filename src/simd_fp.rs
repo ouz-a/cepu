@@ -4,8 +4,8 @@ use crate::{
     get_bits_ct,
     instruction::{InstDesc, Instruction},
     simd_fp_instr::{
-        dup_general_instruction, instruction_ldp_simd_fp, str_imd_fp_instruction,
-        str_pair_fp_instruction,
+        dup_general_instruction, instruction_ldp_simd_fp, instruction_ldr_simd_fp,
+        str_imd_fp_instruction, str_pair_fp_instruction,
     },
     utils::{BitUtils, bits_get, sign_extend},
 };
@@ -477,7 +477,8 @@ pub fn adv_simd_expand_imm(op: u8, cmode: u8, imm8: u8) -> u64 {
                 let imm8f: u8 = imm8.single_bit(2).replicate(8);
                 let imm8g: u8 = imm8.single_bit(1).replicate(8);
                 let imm8h: u8 = imm8.single_bit(0).replicate(8);
-                imm64 = u64::from_be_bytes([imm8a, imm8b, imm8c, imm8d, imm8e, imm8f, imm8g, imm8h]);
+                imm64 =
+                    u64::from_be_bytes([imm8a, imm8b, imm8c, imm8d, imm8e, imm8f, imm8g, imm8h]);
             }
             if cmode.single_bit(0) == 1 && op == 0 {
                 let bit7 = imm8.single_bit(7) as u32;
@@ -503,4 +504,109 @@ pub fn adv_simd_expand_imm(op: u8, cmode: u8, imm8: u8) -> u64 {
     }
 
     imm64
+}
+
+/// Load SIMD&FP register (immediate offset)
+#[derive(Debug, Clone, Copy)]
+pub struct LdrSimdFpPostIndex {
+    size: u8,
+    opc: u8,
+    imm9: u16,
+    rn: u8,
+    rt: u8,
+}
+
+impl LdrSimdFpPostIndex {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        if self.opc.single_bit(1) == 1 && self.size != 0 {
+            panic!("Undefined");
+        }
+        let scale = if self.opc.single_bit(1) == 1 { 4 } else { self.size };
+        let offset = sign_extend(self.imm9.into(), 9);
+        let datasize = 8 << scale;
+        instruction_ldr_simd_fp(cpu, self.rt, self.rn, datasize, offset, true, true);
+    }
+    pub const fn decode(word: u32) -> Instruction {
+        let size = get_bits_ct!(word, 30, 2) as u8;
+        let opc = get_bits_ct!(word, 22, 2) as u8;
+        let imm9 = get_bits_ct!(word, 12, 9) as u16;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rt = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::LdrSimdFpPostIndex(Self { size, opc, imm9, rn, rt })
+    }
+    pub const LDR_SIMD_FP_POST_INDEX: InstDesc = InstDesc {
+        mask: 0b0011_1111_0110_0000_0000_1100_0000_0000,
+        value: 0b0011_1100_0100_0000_0000_0100_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+/// Load SIMD&FP register (immediate offset)
+#[derive(Debug, Clone, Copy)]
+pub struct LdrSimdFpPreIndex {
+    size: u8,
+    opc: u8,
+    imm9: u16,
+    rn: u8,
+    rt: u8,
+}
+
+impl LdrSimdFpPreIndex {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        if self.opc.single_bit(1) == 1 && self.size != 0 {
+            panic!("Undefined");
+        }
+        let scale = if self.opc.single_bit(1) == 1 { 4 } else { self.size };
+        let offset = sign_extend(self.imm9.into(), 9);
+        let datasize = 8 << scale;
+        instruction_ldr_simd_fp(cpu, self.rt, self.rn, datasize, offset, false, true);
+    }
+    pub const fn decode(word: u32) -> Instruction {
+        let size = get_bits_ct!(word, 30, 2) as u8;
+        let opc = get_bits_ct!(word, 22, 2) as u8;
+        let imm9 = get_bits_ct!(word, 12, 9) as u16;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rt = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::LdrSimdFpPreIndex(Self { size, opc, imm9, rn, rt })
+    }
+    pub const LDR_SIMD_FP_PRE_INDEX: InstDesc = InstDesc {
+        mask: 0b0011_1111_0110_0000_0000_1100_0000_0000,
+        value: 0b0011_1100_0100_0000_0000_1100_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+/// Load SIMD&FP register (immediate offset)
+#[derive(Debug, Clone, Copy)]
+pub struct LdrSimdFpUnsignedOffset {
+    size: u8,
+    opc: u8,
+    imm12: u16,
+    rn: u8,
+    rt: u8,
+}
+
+impl LdrSimdFpUnsignedOffset {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        if self.opc.single_bit(1) == 1 && self.size != 0 {
+            panic!("Undefined");
+        }
+        let scale = if self.opc.single_bit(1) == 1 { 4 } else { self.size };
+        let offset = (self.imm12 as u64) << scale;
+        let datasize = 8 << scale;
+        instruction_ldr_simd_fp(cpu, self.rt, self.rn, datasize, offset, false, false);
+    }
+    pub const fn decode(word: u32) -> Instruction {
+        let size = get_bits_ct!(word, 30, 2) as u8;
+        let opc = get_bits_ct!(word, 22, 2) as u8;
+        let imm12 = get_bits_ct!(word, 10, 12) as u16;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rt = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::LdrSimdFpUnsignedOffset(Self { size, opc, imm12, rn, rt })
+    }
+    pub const LDR_SIMD_FP_UNSIGNED_OFFSET: InstDesc = InstDesc {
+        mask: 0b0011_1111_0110_0000_0000_0000_0000_0000,
+        value: 0b0011_1101_0100_0000_0000_0000_0000_0000,
+        decode: Self::decode,
+    };
 }

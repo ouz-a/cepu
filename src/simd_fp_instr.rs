@@ -155,3 +155,43 @@ pub fn instruction_ldp_simd_fp(
         }
     }
 }
+
+pub fn instruction_ldr_simd_fp(
+    cpu: &mut Cpu,
+    rt: u8,
+    rn: u8,
+    datasize: u8,
+    offset: u64,
+    postindex: bool,
+    wback: bool,
+) {
+    let dbytes: u8 = datasize / 8;
+    let mut address = cpu.address_for_rn(rn);
+
+    if !postindex {
+        address = address.wrapping_add(offset);
+    }
+
+    let data1 = if datasize == 128 {
+        let (_, d1) = cpu.mmu.read_memory_128bit(address.try_into().unwrap());
+        if cpu.mmu.faulted {
+            return;
+        }
+        if cpu.mmu.faulted {
+            return;
+        }
+        d1
+    } else {
+        let (_, d1) = cpu.mmu.read_memory(address.try_into().unwrap(), dbytes.into());
+        if cpu.mmu.faulted {
+            return;
+        }
+        d1.into()
+    };
+
+    cpu.v_write(rt.into(), datasize, data1);
+
+    if wback {
+        cpu.handle_wback_postindex(postindex, address, offset, datasize, rn);
+    }
+}
