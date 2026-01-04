@@ -129,16 +129,6 @@ pub fn instruction_eret(cpu: &mut Cpu) {
     let target = cpu.get_elr_elx();
     let spsr = cpu.get_spsr_elx();
 
-    let target_el = (spsr >> 2) & 0x3;
-    if target_el == 0 {
-        // Returning to EL0 - show X0 (syscall return value)
-        println!(
-            "\r\n[ERET→EL0] ELR={:#x} X0={:#x}",
-            target,
-            cpu.x_read(0, 64)
-        );
-    }
-
     cpu.aarch64_exception_return(target, spsr);
 }
 
