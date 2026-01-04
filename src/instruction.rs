@@ -33,9 +33,7 @@ use crate::{
         Umulh,
     },
     simd_fp::{
-        DupGeneral, LdpSimdFpPostIndex, LdpSimdFpPreIndex, LdpSimdFpSignedOffset,
-        StrImdFpPostIndex, StrImdFpPreIndex, StrImdFpUnsignedOffset, StrPairFpPostIndex,
-        StrPairFpPreIndex, StrPairFpSignedOffset,
+        DupGeneral, LdpSimdFpPostIndex, LdpSimdFpPreIndex, LdpSimdFpSignedOffset, Movi, StrImdFpPostIndex, StrImdFpPreIndex, StrImdFpUnsignedOffset, StrPairFpPostIndex, StrPairFpPreIndex, StrPairFpSignedOffset
     },
 };
 
@@ -265,6 +263,7 @@ define_instructions!(
     Stxr(Stxr),
     Stxrb(Stxrb),
     // ----- Simd, FP -----
+    Movi(Movi),
     DupGeneral(DupGeneral),
     StrImdFpPostIndex(StrImdFpPostIndex),
     StrImdFpPreIndex(StrImdFpPreIndex),
@@ -471,6 +470,7 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     Stxr::STXR,
     Stxrb::STXRB,
     // ----- Simd, FP -----
+    Movi::MOVI,
     DupGeneral::DUP_GENERAL,
     StrImdFpPostIndex::STR_IMD_FP_POST_INDEX,
     StrImdFpPreIndex::STR_IMD_FP_PRE_INDEX,

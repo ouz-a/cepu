@@ -359,3 +359,148 @@ impl LdpSimdFpSignedOffset {
         decode: Self::decode,
     };
 }
+
+/// Move immediate (vector)
+#[derive(Debug, Clone, Copy)]
+pub struct Movi {
+    pub q: u8,
+    pub op: u8,
+    pub a: u8,
+    pub b: u8,
+    pub c: u8,
+    pub cmode: u8,
+    pub d: u8,
+    pub e: u8,
+    pub f: u8,
+    pub g: u8,
+    pub h: u8,
+    pub rd: u8,
+}
+
+impl Movi {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let datasize = 64 << self.q;
+        let imm8 = (self.a as u8) << 7
+            | (self.b as u8) << 6
+            | (self.c as u8) << 5
+            | (self.d as u8) << 4
+            | (self.e as u8) << 3
+            | (self.f as u8) << 2
+            | (self.g as u8) << 1
+            | (self.h as u8);
+        let imm64 = adv_simd_expand_imm(self.op, self.cmode, imm8);
+        if datasize == 128 {
+            let imm: u128 = imm64.replicate(2);
+            cpu.v_write(self.rd.into(), 128, imm);
+        } else {
+            cpu.v_write(self.rd.into(), 64, imm64 as u128);
+        }
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let q = get_bits_ct!(word, 30, 1) as u8;
+        let op = get_bits_ct!(word, 29, 1) as u8;
+        let a = get_bits_ct!(word, 18, 1) as u8;
+        let b = get_bits_ct!(word, 17, 1) as u8;
+        let c = get_bits_ct!(word, 16, 1) as u8;
+        let cmode = get_bits_ct!(word, 12, 4) as u8;
+        let d = get_bits_ct!(word, 9, 1) as u8;
+        let e = get_bits_ct!(word, 8, 1) as u8;
+        let f = get_bits_ct!(word, 7, 1) as u8;
+        let g = get_bits_ct!(word, 6, 1) as u8;
+        let h = get_bits_ct!(word, 5, 1) as u8;
+        let rd = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::Movi(Self { q, op, a, b, c, cmode, d, e, f, g, h, rd })
+    }
+
+    pub const MOVI: InstDesc = InstDesc {
+        mask: 0b1001_1111_1111_1000_0000_1100_0000_0000,
+        value: 0b0000_1111_0000_0000_0000_0100_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+pub fn adv_simd_expand_imm(op: u8, cmode: u8, imm8: u8) -> u64 {
+    let mut imm64: u64 = 0;
+
+    match cmode.bits_get(1, 3) {
+        0b000 => {
+            imm64 = (imm8 as u32).replicate::<u64>(2);
+        }
+        0b001 => {
+            let imm8 = imm8 as u32;
+            let imm8 = imm8 << 8;
+            imm64 = imm8.replicate::<u64>(2);
+        }
+        0b010 => {
+            let imm8 = imm8 as u32;
+            let imm8 = imm8 << 16;
+            imm64 = imm8.replicate::<u64>(2);
+        }
+        0b011 => {
+            let imm8 = imm8 as u32;
+            let imm8 = imm8 << 24;
+            imm64 = imm8.replicate::<u64>(2);
+        }
+        0b100 => {
+            let imm8 = imm8 as u16;
+            imm64 = imm8.replicate::<u64>(4);
+        }
+        0b101 => {
+            let imm8 = imm8 as u16;
+            let imm8 = imm8 << 8;
+            imm64 = imm8.replicate::<u64>(4);
+        }
+        0b110 => {
+            if cmode.single_bit(0) == 0 {
+                let imm8 = imm8 as u32;
+                let ones: u32 = 0b1.replicate(8);
+                let imm8 = (imm8 << 8) | ones;
+                imm64 = imm8.replicate::<u64>(2);
+            } else {
+                let imm8 = imm8 as u32;
+                let ones: u32 = 0b1.replicate(16);
+                let imm8 = (imm8 << 16) | ones;
+                imm64 = imm8.replicate::<u64>(2);
+            }
+        }
+        0b111 => {
+            if cmode.single_bit(0) == 0 && op == 0 {
+                imm64 = imm8.replicate::<u64>(8);
+            }
+            if cmode.single_bit(0) == 0 && op == 1 {
+                let imm8a: u8 = imm8.single_bit(7).replicate(8);
+                let imm8b: u8 = imm8.single_bit(6).replicate(8);
+                let imm8c: u8 = imm8.single_bit(5).replicate(8);
+                let imm8d: u8 = imm8.single_bit(4).replicate(8);
+                let imm8e: u8 = imm8.single_bit(3).replicate(8);
+                let imm8f: u8 = imm8.single_bit(2).replicate(8);
+                let imm8g: u8 = imm8.single_bit(1).replicate(8);
+                let imm8h: u8 = imm8.single_bit(0).replicate(8);
+                imm64 = u64::from_be_bytes([imm8a, imm8b, imm8c, imm8d, imm8e, imm8f, imm8g, imm8h]);
+            }
+            if cmode.single_bit(0) == 1 && op == 0 {
+                let bit7 = imm8.single_bit(7) as u32;
+                let bit6 = imm8.single_bit(6) as u32;
+                let bits5_0 = imm8.bits_get(0, 5) as u32;
+                let imm32: u32 = (bit7 << 31)
+                    | ((bit6 ^ 1) << 30)
+                    | (bit6.replicate::<u32>(5) << 25)
+                    | (bits5_0 << 19);
+                imm64 = imm32.replicate(2);
+            }
+            if cmode.single_bit(0) == 1 && op == 1 {
+                let bit7 = imm8.single_bit(7) as u64;
+                let bit6 = imm8.single_bit(6) as u64;
+                let bits5_0 = imm8.bits_get(0, 5) as u64;
+                imm64 = (bit7 << 63)
+                    | ((bit6 ^ 1) << 62)
+                    | (bit6.replicate::<u64>(8) << 54)
+                    | (bits5_0 << 48);
+            }
+        }
+        _ => panic!("Unknown cmode"),
+    }
+
+    imm64
+}

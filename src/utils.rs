@@ -193,6 +193,22 @@ pub fn replicate_bits_u64(bits: u64, width: u32, times: u32) -> u64 {
     p.wrapping_mul(factor)
 }
 
+fn replicate_bits_128(bits: u128, width: u8, times: u8) -> u128 {
+    assert!(width <= 128 && times <= 128 && (width as u128) * (times as u128) <= 128);
+    if width == 0 || times == 0 {
+        return 0;
+    }
+
+    let mask_m = if width == 128 { u128::MAX } else { (1u128 << width) - 1 };
+    let p = bits & mask_m;
+
+    let mn = width * times;
+    let numer = if mn == 128 { u128::MAX } else { (1u128 << mn) - 1 };
+
+    let factor = if width == 128 { 1 } else { numer / mask_m };
+    p.wrapping_mul(factor)
+}
+
 fn ones_masked(n: u32, width: u8) -> u64 {
     let ones = if n == 0 {
         0
@@ -218,11 +234,31 @@ pub fn just_panic() {
     UNDEF_PANIC.store(true, std::sync::atomic::Ordering::SeqCst);
 }
 
+pub trait AsU128: Sized {
+    fn to_u128(self) -> u128;
+    fn from_u128(val: u128) -> Self;
+}
+
+macro_rules! impl_as_u128 {
+    ($($t:ty),*) => {
+        $(
+            impl AsU128 for $t {
+                fn to_u128(self) -> u128 { self as u128 }
+                fn from_u128(val: u128) -> Self { val as $t }
+            }
+        )*
+    };
+}
+
+impl_as_u128!(u8, u16, u32, u64, u128);
+
 pub trait BitUtils {
     fn single_bit(self, idx: u8) -> u8;
     fn bits_get(self, start: u8, len: u8) -> Self;
     /// Set a single bit to 1
     fn bit_set(self, idx: u8) -> Self;
+    /// This should be only used for unsigned types
+    fn replicate<T: AsU128>(self, repeat: u8) -> T;
 }
 
 macro_rules! impl_bit_utils {
@@ -236,8 +272,15 @@ macro_rules! impl_bit_utils {
                 fn bits_get(self, start: u8, len: u8) -> Self {
                     bits_get_u128(self as u128, start, len) as Self
                 }
-                    fn bit_set(self, idx: u8) -> Self {
+
+                fn bit_set(self, idx: u8) -> Self {
                     self | (1 << idx)
+                }
+
+                fn replicate<T:AsU128>(self,repeat:u8) -> T {
+                    let size_of = size_of::<T>() as u8;
+                    let res = replicate_bits_128(self as u128,size_of,repeat);
+                    T::from_u128(res)
                 }
             }
         )*
@@ -257,8 +300,15 @@ macro_rules! impl_bit_utils_signed {
                 fn bits_get(self, start: u8, len: u8) -> Self {
                     bits_get_u128(self as $unsigned as u128, start, len) as Self
                 }
+
                 fn bit_set(self, idx: u8) -> Self {
                     self | (1 << idx)
+                }
+
+               fn replicate<T:AsU128>(self,repeat:u8) -> T {
+                    let size_of = size_of::<T>() as u8;
+                    let res = replicate_bits_128(self as u128,size_of,repeat);
+                    T::from_u128(res)
                 }
             }
         )*
