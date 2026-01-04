@@ -1,7 +1,10 @@
 use std::ops::Not;
 
 use crate::{
-    cpu::{Cpu, ExceptionLevel, PstateField}, data_processing::add_with_carry, get_bits_ct, utils::{bits_get, sign_extend, zero_extend}
+    cpu::{Cpu, ExceptionLevel, PstateField},
+    data_processing::add_with_carry,
+    get_bits_ct,
+    utils::{bits_get, sign_extend, zero_extend},
 };
 
 pub fn condition_holds(cpu: &Cpu, cond: u8) -> bool {

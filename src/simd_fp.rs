@@ -3,6 +3,7 @@ use crate::{
     data_processing::shift_lsl,
     get_bits_ct,
     instruction::{InstDesc, Instruction},
+    load_and_store::{ExtendType, extend_register},
     simd_fp_instr::{
         dup_general_instruction, instruction_ldp_simd_fp, instruction_ldr_simd_fp,
         str_imd_fp_instruction, str_pair_fp_instruction,
@@ -605,6 +606,59 @@ impl LdrSimdFpUnsignedOffset {
     pub const LDR_SIMD_FP_UNSIGNED_OFFSET: InstDesc = InstDesc {
         mask: 0b0011_1111_0110_0000_0000_0000_0000_0000,
         value: 0b0011_1101_0100_0000_0000_0000_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+/// Store SIMD&FP register (register offset)
+#[derive(Debug, Clone, Copy)]
+pub struct StrSimdRegOffset {
+    pub size: u8,
+    pub opc: u8,
+    pub rm: u8,
+    pub option: u8,
+    pub s: u8,
+    pub rn: u8,
+    pub rt: u8,
+}
+
+impl StrSimdRegOffset {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        if self.option.single_bit(1) == 0 {
+            panic!("Undefined");
+        }
+        if self.opc.single_bit(1) == 1 && self.size != 0 {
+            panic!("Undefined");
+        }
+
+        let scale = if self.opc.single_bit(1) == 1 { 4 } else { self.size };
+
+        let extend_type = ExtendType::from_u8(self.option);
+
+        let shift = if self.s == 1 { scale } else { 0 };
+
+        let datasize = 8 << scale;
+        let offset = extend_register(cpu, self.rm, extend_type, shift, 64);
+
+        let mut address = cpu.address_for_rn(self.rn);
+        address = address.wrapping_add(offset);
+        cpu.mmu
+            .write_memory_128bit(address.try_into().unwrap(), cpu.v_read(self.rn.into(), datasize));
+    }
+    pub const fn decode(word: u32) -> Instruction {
+        let size = get_bits_ct!(word, 30, 2) as u8;
+        let opc = get_bits_ct!(word, 22, 2) as u8;
+        let rm = get_bits_ct!(word, 16, 5) as u8;
+        let option = get_bits_ct!(word, 13, 3) as u8;
+        let s = get_bits_ct!(word, 12, 1) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rt = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::StrSimdRegOffset(Self { size, opc, rm, option, s, rn, rt })
+    }
+
+    pub const STR_SIMD_REG_OFFSET: InstDesc = InstDesc {
+        mask: 0b0011_1111_0110_0000_0000_1100_0000_0000,
+        value: 0b0011_1100_0010_0000_0000_1000_0000_0000,
         decode: Self::decode,
     };
 }

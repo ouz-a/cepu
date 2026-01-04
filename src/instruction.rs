@@ -5,7 +5,8 @@ use std::{
 
 use crate::{
     branch_exc_sys_instr::{
-        Bcond, Bl, Blr, Br, Branch, Bti, Cbnz, Cbz, Ccmpi, Csdb, Csinc, Csinv, Dmb, Eret, Mrs, MsrImm, MsrReg, Ret, Sevl, Smc, Svc, Sys, Tbnz, Tbz, Wfe, Wfi, Xpaclri, Yield
+        Bcond, Bl, Blr, Br, Branch, Bti, Cbnz, Cbz, Ccmpi, Csdb, Csinc, Csinv, Dmb, Eret, Mrs,
+        MsrImm, MsrReg, Ret, Sevl, Smc, Svc, Sys, Tbnz, Tbz, Wfe, Wfi, Xpaclri, Yield,
     },
     cpu::Cpu,
     imm_instr::{AddImmediate, Extr, Movk, Movn, Movz, Sbc, SubImmediate, Subs},
@@ -35,7 +36,7 @@ use crate::{
         DupGeneral, LdpSimdFpPostIndex, LdpSimdFpPreIndex, LdpSimdFpSignedOffset,
         LdrSimdFpPostIndex, LdrSimdFpPreIndex, LdrSimdFpUnsignedOffset, Movi, StrImdFpPostIndex,
         StrImdFpPreIndex, StrImdFpUnsignedOffset, StrPairFpPostIndex, StrPairFpPreIndex,
-        StrPairFpSignedOffset,
+        StrPairFpSignedOffset, StrSimdRegOffset,
     },
 };
 
@@ -270,6 +271,7 @@ define_instructions!(
     // ----- Simd, FP -----
     Movi(Movi),
     DupGeneral(DupGeneral),
+    StrSimdRegOffset(StrSimdRegOffset),
     StrImdFpPostIndex(StrImdFpPostIndex),
     StrImdFpPreIndex(StrImdFpPreIndex),
     StrImdFpUnsignedOffset(StrImdFpUnsignedOffset),
@@ -483,6 +485,7 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     // ----- Simd, FP -----
     Movi::MOVI,
     DupGeneral::DUP_GENERAL,
+    StrSimdRegOffset::STR_SIMD_REG_OFFSET,
     StrImdFpPostIndex::STR_IMD_FP_POST_INDEX,
     StrImdFpPreIndex::STR_IMD_FP_PRE_INDEX,
     StrImdFpUnsignedOffset::STR_IMD_FP_UNSIGNED_OFFSET,

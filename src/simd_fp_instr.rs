@@ -61,11 +61,11 @@ pub fn str_pair_fp_instruction(
 
     let address2 = address.wrapping_add(dbytes.into());
     if datasize == 128 {
-        cpu.mmu.write_memory_128bit(address as usize, cpu.v_read(rt.into(), 16));
+        cpu.mmu.write_memory_128bit(address as usize, cpu.v_read(rt.into(), 128));
         if cpu.mmu.faulted {
             return;
         }
-        cpu.mmu.write_memory_128bit(address2 as usize, cpu.v_read(rt2.into(), 16));
+        cpu.mmu.write_memory_128bit(address2 as usize, cpu.v_read(rt2.into(), 128));
         if cpu.mmu.faulted {
             return;
         }
@@ -73,7 +73,7 @@ pub fn str_pair_fp_instruction(
         cpu.mmu.write_memory(
             address as usize,
             (datasize / 8).into(),
-            cpu.x_read(rt.into(), datasize),
+            cpu.v_read(rt.into(), datasize) as u64,
         );
         if cpu.mmu.faulted {
             return;
@@ -81,7 +81,7 @@ pub fn str_pair_fp_instruction(
         cpu.mmu.write_memory(
             address2 as usize,
             (datasize / 8).into(),
-            cpu.x_read(rt2.into(), datasize),
+            cpu.v_read(rt2.into(), datasize) as u64,
         );
         if cpu.mmu.faulted {
             return;

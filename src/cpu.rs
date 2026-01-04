@@ -585,7 +585,10 @@ impl Cpu {
         );
 
         if !self.pstate.current_el.is_el1() && !el0_accessible {
-            println!("\r\n[MSR] EL0 trying to write privileged register: {:?} (comp={:#x})", register, comp);
+            println!(
+                "\r\n[MSR] EL0 trying to write privileged register: {:?} (comp={:#x})",
+                register, comp
+            );
             UNDEF_PANIC.store(true, Ordering::SeqCst);
         }
         match register {
