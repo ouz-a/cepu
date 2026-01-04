@@ -142,17 +142,15 @@ impl StrImdFpUnsignedOffset {
         }
 
         let scale = if self.opc.single_bit(1) == 1 { 4 } else { self.size };
-        let wback = false;
-        let postindex = false;
-        let offset = shift_lsl(sign_extend(self.imm12.into(), 12), scale);
+        let offset = (self.imm12 as u64) << scale;
         let datasize = 8 << scale;
 
-        str_imd_fp_instruction(cpu, self.rn, self.rt, datasize, postindex, wback, offset);
+        str_imd_fp_instruction(cpu, self.rn, self.rt, datasize, false, false, offset);
     }
     pub const fn decode(word: u32) -> Instruction {
         let size = get_bits_ct!(word, 30, 2) as u8;
-        let opc = get_bits_ct!(word, 22, 1) as u8;
-        let imm12 = get_bits_ct!(word, 12, 9) as u16;
+        let opc = get_bits_ct!(word, 22, 2) as u8;
+        let imm12 = get_bits_ct!(word, 10, 12) as u16;
         let rn = get_bits_ct!(word, 5, 5) as u8;
         let rt = get_bits_ct!(word, 0, 5) as u8;
         Instruction::StrImdFpUnsignedOffset(Self { size, opc, imm12, rn, rt })

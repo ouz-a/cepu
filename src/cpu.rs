@@ -572,10 +572,22 @@ impl Cpu {
             | ((sys_crm as u64) << 8)
             | (sys_op2 as u64);
 
-        if !self.pstate.current_el.is_el1() {
-            panic!("Insufficient privilege");
-        }
         let register: MsrRegisters = comp.into();
+
+        let el0_accessible = matches!(
+            register,
+            MsrRegisters::TpidrEl0
+                | MsrRegisters::TpidrroEl0
+                | MsrRegisters::CntpCvalEl0
+                | MsrRegisters::CntpCtlEl0
+                | MsrRegisters::Fpcr
+                | MsrRegisters::Fpsr
+        );
+
+        if !self.pstate.current_el.is_el1() && !el0_accessible {
+            println!("\r\n[MSR] EL0 trying to write privileged register: {:?} (comp={:#x})", register, comp);
+            UNDEF_PANIC.store(true, Ordering::SeqCst);
+        }
         match register {
             MsrRegisters::Unknown => {
                 UNDEF_PANIC.store(true, Ordering::Relaxed);

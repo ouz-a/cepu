@@ -64,6 +64,7 @@ pub fn run_block(cpu: &mut Cpu) {
             }
             dec.exec(cpu, old_pc);
             if cpu.mmu.faulted {
+                pc = old_pc;
                 cpu.handle_data_abort(&mut pc);
                 continue;
             }

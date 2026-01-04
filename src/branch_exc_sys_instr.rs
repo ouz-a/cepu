@@ -885,12 +885,23 @@ impl Svc {
 
         let offset = if cpu.pstate.current_el == ExceptionLevel::EL0 {
             0x400
-        } else {
+        } else if cpu.pstate.sp == 1 {
             0x200
+        } else {
+            0x000
         };
 
+        // X8 = syscall number on ARM64
+        let syscall_nr = cpu.x_read(8, 64);
+        println!(
+            "\r\n[SVC] syscall={} (x0={:#x}) | ELR={:#x}",
+            syscall_nr,
+            cpu.x_read(0, 64),
+            cpu.elr_el1
+        );
+
         cpu.pstate.daif_disable();
-        
+
         cpu.pstate.current_el = ExceptionLevel::EL1;
         cpu.pstate.sp = 1;
         cpu.branch_taken = true;
