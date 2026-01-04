@@ -8,7 +8,7 @@ use crate::{
         Bcond, Bl, Blr, Br, Branch, Bti, Cbnz, Cbz, Ccmpi, Csinc, Csinv, Dmb, Eret, Mrs, MsrImm, MsrReg, Ret, Sevl, Smc, Svc, Sys, Tbnz, Tbz, Wfe, Wfi, Xpaclri, Yield
     },
     cpu::Cpu,
-    imm_instr::{AddImmediate, Extr, Movk, Movn, Movz, SubImmediate, Subs},
+    imm_instr::{AddImmediate, Extr, Movk, Movn, Movz, Sbc, SubImmediate, Subs},
     load_store_instr::{
         Ldar, Ldaxr, LdpPostIndex, LdpPreIndex, LdpSignedOffset, LdpswPostIndex, LdpswPreIndex,
         LdpswSignedOffset, LdrImmPostIdx, LdrImmPreIdx, LdrImmUnOffset, LdrLit, LdrReg, LdrUnpriv,
@@ -99,6 +99,7 @@ define_instructions!(
     Ccmpi(Ccmpi),
     CcmpRegister(CcmpRegister),
     Subs(Subs),
+    Sbc(Sbc),
     SubsExtendedReg(SubsExtendedReg),
     SubExtendedReg(SubExtendedReg),
     SubsShiftedReg(SubsShiftedReg),
@@ -310,6 +311,7 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     Ccmpi::CCMPI,
     CcmpRegister::CCMP_REGISTER,
     Subs::SUBS,
+    Sbc::SBC,
     SubsExtendedReg::SUBS_EXTENDED_REG,
     SubExtendedReg::SUB_EXTENDED_REG,
     SubsShiftedReg::SUBS_SHIFTED_REG,

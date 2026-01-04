@@ -1,8 +1,10 @@
+use std::ops::Not;
+
 use crate::{
     cpu::Cpu,
     data_processing::{
-        instruction_add_immediate, instruction_imm_sub, instruction_imm_subs, instruction_movk,
-        instruction_movn, instruction_movz,
+        add_with_carry, instruction_add_immediate, instruction_imm_sub, instruction_imm_subs,
+        instruction_movk, instruction_movn, instruction_movz,
     },
     get_bits_ct,
     instruction::*,
@@ -153,6 +155,46 @@ impl Subs {
     pub const SUBS: InstDesc = InstDesc {
         mask: 0b0111_1111_1000_0000_0000_0000_0000_0000,
         value: 0b0111_0001_0000_0000_0000_0000_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+/// Subtract with carry
+#[derive(Debug, Clone, Copy)]
+pub struct Sbc {
+    pub sf: bool,
+    pub rm: u8,
+    pub rn: u8,
+    pub rd: u8,
+}
+
+impl Sbc {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let datasize = 32 << self.sf as u8;
+
+        if datasize == 32 {
+            let op1 = cpu.x_read(self.rn.into(), datasize);
+            let op2 = (cpu.x_read(self.rm.into(), datasize) as u32).not();
+            let op2 = op2 as u64;
+            let res = add_with_carry(op1, op2, cpu.pstate.c as u64, 32);
+            cpu.x_write(self.rd.into(), res.result, true);
+        } else {
+            let op1 = cpu.x_read(self.rn.into(), datasize);
+            let op2 = (cpu.x_read(self.rm.into(), datasize)).not();
+            let res = add_with_carry(op1, op2, cpu.pstate.c as u64, 64);
+            cpu.x_write(self.rd.into(), res.result, true);
+        }
+    }
+    pub const fn decode(word: u32) -> Instruction {
+        let sf = get_bits_ct!(word, 31, 1) == 1;
+        let rm = get_bits_ct!(word, 16, 5) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rd = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::Sbc(Self { sf, rm, rn, rd })
+    }
+    pub const SBC: InstDesc = InstDesc {
+        mask: 0b0111_1111_1110_0000_1111_1100_0000_0000,
+        value: 0b0101_1010_0000_0000_0000_0000_0000_0000,
         decode: Self::decode,
     };
 }
