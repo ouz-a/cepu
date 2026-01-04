@@ -129,14 +129,14 @@ pub struct Cpu {
     sp_el3: u64,
 
     // --- Exception Link Registers (return address after exception) ---
-    elr_el1: u64,
-    elr_el2: u64,
-    elr_el3: u64,
+    pub elr_el1: u64,
+    pub elr_el2: u64,
+    pub elr_el3: u64,
 
     // --- Saved Program Status Registers (saved PSTATE on exception entry) ---
-    spsr_el1: u64,
-    spsr_el2: u64,
-    spsr_el3: u64,
+    pub spsr_el1: u64,
+    pub spsr_el2: u64,
+    pub spsr_el3: u64,
 
     // ========================================================================
     // SYSTEM CONTROL & CONFIGURATION
@@ -165,7 +165,7 @@ pub struct Cpu {
     // ========================================================================
     /// Vector Base Address Register EL1 (base address of exception vector
     /// table)
-    vbar_el1: u64,
+    pub vbar_el1: u64,
     /// Exception Syndrome Register EL1 (exception class and details)
     pub esr_el1: u64,
     /// Fault Address Register EL1 (virtual address that caused fault)
@@ -1114,14 +1114,14 @@ impl PState {
         self.masked_i
     }
 
-    fn daif_disable(&mut self) {
+    pub fn daif_disable(&mut self) {
         self.masked_d = true;
         self.masked_a = true;
         self.masked_i = true;
         self.masked_f = true;
     }
 
-    fn set_to_exception(&mut self) {
+    pub fn set_to_exception(&mut self) {
         self.daif_disable();
         self.il = false;
         self.sp = 1;

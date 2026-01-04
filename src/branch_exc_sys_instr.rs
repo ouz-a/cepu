@@ -849,3 +849,44 @@ fn compute_sys_op_at(pat: u16) -> SysOpAt {
     }
     SysOpAt { access, stage, el }
 }
+
+/// Supervisor call
+#[derive(Debug, Clone, Copy)]
+pub struct Svc {
+    pub imm16: u16,
+}
+
+impl Svc {
+    pub fn exec(self, cpu: &mut Cpu, old_pc: u64) {
+        cpu.elr_el1 = old_pc.wrapping_add(4);
+
+        cpu.spsr_el1 = cpu.spsr_from_pstate();
+
+        // 0x15 -> SVC
+        cpu.esr_el1 = (0x15 << 26) | (1 << 25) | (self.imm16 as u64);
+
+        let offset = if cpu.pstate.current_el == ExceptionLevel::EL0 {
+            0x400
+        } else {
+            0x200
+        };
+
+        cpu.pstate.daif_disable();
+        
+        cpu.pstate.current_el = ExceptionLevel::EL1;
+        cpu.pstate.sp = 1;
+        cpu.branch_taken = true;
+        cpu.branch_target = cpu.vbar_el1 + offset;
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let imm16 = get_bits_ct!(word, 5, 16) as u16;
+        Instruction::Svc(Self { imm16 })
+    }
+
+    pub const SVC: InstDesc = InstDesc {
+        mask: 0b1111_1111_1110_0000_0000_0000_0001_1111,
+        value: 0b1101_0100_0000_0000_0000_0000_0000_0001,
+        decode: Self::decode,
+    };
+}
