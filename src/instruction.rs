@@ -33,10 +33,10 @@ use crate::{
         Umulh,
     },
     simd_fp::{
-        DupGeneral, LdpSimdFpPostIndex, LdpSimdFpPreIndex, LdpSimdFpSignedOffset,
-        LdrSimdFpPostIndex, LdrSimdFpPreIndex, LdrSimdFpUnsignedOffset, Movi, StrImdFpPostIndex,
-        StrImdFpPreIndex, StrImdFpUnsignedOffset, StrPairFpPostIndex, StrPairFpPreIndex,
-        StrPairFpSignedOffset, StrSimdRegOffset, SturSimdUnscaledOffset,
+        DupGeneral, Ld1NoOffset, Ld1PostIndex, LdpSimdFpPostIndex, LdpSimdFpPreIndex,
+        LdpSimdFpSignedOffset, LdrSimdFpPostIndex, LdrSimdFpPreIndex, LdrSimdFpUnsignedOffset,
+        Movi, StrImdFpPostIndex, StrImdFpPreIndex, StrImdFpUnsignedOffset, StrPairFpPostIndex,
+        StrPairFpPreIndex, StrPairFpSignedOffset, StrSimdRegOffset, SturSimdUnscaledOffset,
     },
 };
 
@@ -282,6 +282,8 @@ define_instructions!(
     LdrSimdFpPostIndex(LdrSimdFpPostIndex),
     LdrSimdFpPreIndex(LdrSimdFpPreIndex),
     LdrSimdFpUnsignedOffset(LdrSimdFpUnsignedOffset),
+    Ld1NoOffset(Ld1NoOffset),
+    Ld1PostIndex(Ld1PostIndex),
 );
 
 pub const DESCR: &[InstDesc] = &sort_by_specificity([
@@ -497,6 +499,8 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     LdrSimdFpPostIndex::LDR_SIMD_FP_POST_INDEX,
     LdrSimdFpPreIndex::LDR_SIMD_FP_PRE_INDEX,
     LdrSimdFpUnsignedOffset::LDR_SIMD_FP_UNSIGNED_OFFSET,
+    Ld1NoOffset::LD1_NO_OFFSET,
+    Ld1PostIndex::LD1_POST_INDEX,
 ]);
 
 const fn sort_by_specificity<const N: usize>(mut arr: [InstDesc; N]) -> [InstDesc; N] {

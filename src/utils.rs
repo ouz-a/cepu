@@ -220,6 +220,20 @@ fn ones_masked(n: u32, width: u8) -> u64 {
     zero_extend(ones, width)
 }
 
+// Read element
+pub fn elem_get(vec: u128, e: usize, esize: usize) -> u64 {
+    let shift = e * esize;
+    let mask = (1u128 << esize) - 1;
+    ((vec >> shift) & mask) as u64
+}
+
+// Write element
+pub fn elem_set(vec: u128, e: usize, esize: usize, val: u64) -> u128 {
+    let shift = e * esize;
+    let mask = (1u128 << esize) - 1;
+    (vec & !(mask << shift)) | ((val as u128 & mask) << shift)
+}
+
 pub trait Utils {
     fn datasize_sf(self) -> u8;
 }

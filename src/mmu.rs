@@ -46,7 +46,7 @@ impl Mmu {
     pub fn write_memory_128bit(&mut self, address: usize, value: u128) -> PhyMemStatus {
         let lo = value;
         let high = (value >> 64) as u64;
-        self.write_memory(address, 8, lo.try_into().unwrap());
+        self.write_memory(address, 8, lo as u64);
         self.write_memory(address + 8, 8, high)
     }
     pub fn read_memory_128bit(&mut self, address: usize) -> (PhyMemStatus, u128) {

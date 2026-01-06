@@ -26,7 +26,7 @@ pub fn str_imd_fp_instruction(
     }
 
     if datasize == 128 {
-        cpu.mmu.write_memory_128bit(address as usize, cpu.v_read(rt.into(), datasize / 8));
+        cpu.mmu.write_memory_128bit(address as usize, cpu.v_read(rt.into(), datasize));
         if cpu.mmu.faulted {
             return;
         }

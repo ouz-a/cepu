@@ -8,7 +8,7 @@ use crate::{
         dup_general_instruction, instruction_ldp_simd_fp, instruction_ldr_simd_fp,
         str_imd_fp_instruction, str_pair_fp_instruction,
     },
-    utils::{BitUtils, bits_get, sign_extend},
+    utils::{BitUtils, bits_get, elem_set, sign_extend},
 };
 
 /// Duplicate general-purpose register to vector
@@ -28,7 +28,7 @@ impl DupGeneral {
         if bits_get(self.imm5.into(), 0, 4) == 0b1000 && !self.q {
             panic!("Undefined")
         }
-        let size = bits_get(self.imm5.into(), 0, 3).trailing_zeros();
+        let size = bits_get(self.imm5.into(), 0, 4).trailing_zeros();
 
         let esize = 8 << size;
         let datasize = 64 << self.q as u8;
@@ -643,7 +643,7 @@ impl StrSimdRegOffset {
         let mut address = cpu.address_for_rn(self.rn);
         address = address.wrapping_add(offset);
         cpu.mmu
-            .write_memory_128bit(address.try_into().unwrap(), cpu.v_read(self.rn.into(), datasize));
+            .write_memory_128bit(address.try_into().unwrap(), cpu.v_read(self.rt.into(), datasize));
     }
     pub const fn decode(word: u32) -> Instruction {
         let size = get_bits_ct!(word, 30, 2) as u8;
@@ -713,4 +713,142 @@ impl SturSimdUnscaledOffset {
         value: 0b0011_1100_0000_0000_0000_0000_0000_0000,
         decode: Self::decode,
     };
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct Ld1NoOffset {
+    pub q: u8,
+    pub opcode: u8,
+    pub size: u8,
+    pub rn: u8,
+    pub rt: u8,
+}
+
+impl Ld1NoOffset {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let datasize = 64 << self.q;
+        let esize = 8 << self.size;
+        let elements = datasize / esize;
+
+        // number of iterations
+        let rpt;
+        match self.opcode {
+            0b0010 => rpt = 4,
+            0b0110 => rpt = 3,
+            0b1010 => rpt = 2,
+            0b0111 => rpt = 1,
+            _ => panic!("Undefined"),
+        }
+
+        instruction_ld1(cpu, self.rn, 0, self.rt, elements, esize, datasize, rpt, false);
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let q = get_bits_ct!(word, 30, 1) as u8;
+        let opcode = get_bits_ct!(word, 12, 4) as u8;
+        let size = get_bits_ct!(word, 10, 2) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rt = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::Ld1NoOffset(Self { q, opcode, size, rn, rt })
+    }
+
+    pub const LD1_NO_OFFSET: InstDesc = InstDesc {
+        mask: 0b1011_1111_1111_1111_0010_0000_0000_0000,
+        value: 0b0000_1100_0100_0000_0010_0000_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct Ld1PostIndex {
+    pub q: u8,
+    pub opcode: u8,
+    pub size: u8,
+    pub rm:u8,
+    pub rn: u8,
+    pub rt: u8,
+}
+
+impl Ld1PostIndex {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let datasize = 64 << self.q;
+        let esize = 8 << self.size;
+        let elements = datasize / esize;
+
+        // number of iterations
+        let rpt;
+        match self.opcode {
+            0b0010 => rpt = 4,
+            0b0110 => rpt = 3,
+            0b1010 => rpt = 2,
+            0b0111 => rpt = 1,
+            _ => panic!("Undefined"),
+        }
+
+        instruction_ld1(cpu, self.rn, self.rm, self.rt, elements, esize, datasize, rpt, true);
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let q = get_bits_ct!(word, 30, 1) as u8;
+        let rm = get_bits_ct!(word,16,5) as u8;
+        let opcode = get_bits_ct!(word, 12, 4) as u8;
+        let size = get_bits_ct!(word, 10, 2) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rt = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::Ld1PostIndex(Self { q,rm, opcode, size, rn, rt })
+    }
+
+    pub const LD1_POST_INDEX: InstDesc = InstDesc {
+        mask: 0b1011_1111_1110_0000_0010_0000_0000_0000,
+        value: 0b0000_1100_1100_0000_0010_0000_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+pub fn instruction_ld1(
+    cpu: &mut Cpu,
+    rn: u8,
+    rm: u8,
+    rt: u8,
+    elements: u8,
+    esize: u8,
+    datasize: u8,
+    rpt: u8,
+    wback: bool,
+) {
+    let ebytes = esize / 8;
+
+    let mut address = cpu.address_for_rn(rn);
+
+    let mut offs: u64 = 0;
+
+    for r in 0..rpt {
+        for e in 0..elements {
+            let mut tt = (rt + r) % 32;
+            // selem
+            for _ in 0..1 {
+                let rval = cpu.v_read(tt.into(), datasize);
+                let eaddr = address.wrapping_add(offs);
+                let val = cpu.mmu.read_memory(eaddr as usize, ebytes.into()).1;
+                if cpu.mmu.faulted {
+                    return;
+                }
+                let rval = elem_set(rval, e.try_into().unwrap(), esize.try_into().unwrap(), val);
+                cpu.v_write(tt.into(), datasize, rval);
+                offs = offs.wrapping_add(ebytes.into());
+                tt = (tt + 1) % 32;
+            }
+        }
+    }
+    if wback {
+        if rm != 31 {
+            offs = cpu.x_read(rm.into(), 64);
+        }
+        address = address.wrapping_add(offs);
+        if rn == 31 {
+            cpu.sp_write(address);
+        } else {
+            cpu.x_write(rn.into(), address, false);
+        }
+    }
 }
