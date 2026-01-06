@@ -34,7 +34,7 @@ pub fn str_imd_fp_instruction(
         cpu.mmu.write_memory(
             address as usize,
             (datasize / 8).into(),
-            cpu.x_read(rt.into(), datasize),
+            cpu.v_read(rt.into(), datasize) as u64,
         );
     }
     if wback {

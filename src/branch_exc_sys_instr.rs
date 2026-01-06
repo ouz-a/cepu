@@ -876,6 +876,8 @@ pub struct Svc {
 
 impl Svc {
     pub fn exec(self, cpu: &mut Cpu, old_pc: u64) {
+        // Clear exclusive monitor on exception entry.
+        cpu.monitor.off();
         cpu.elr_el1 = old_pc.wrapping_add(4);
 
         cpu.spsr_el1 = cpu.spsr_from_pstate();
