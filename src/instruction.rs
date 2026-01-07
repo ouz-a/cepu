@@ -33,7 +33,10 @@ use crate::{
         Umulh,
     },
     simd_fp::{
-        DupGeneral, Ld1NoOffset, Ld1PostIndex, LdpSimdFpPostIndex, LdpSimdFpPreIndex, LdpSimdFpSignedOffset, LdrSimdFpPostIndex, LdrSimdFpPreIndex, LdrSimdFpUnsignedOffset, Movi, StrImdFpPostIndex, StrImdFpPreIndex, StrImdFpUnsignedOffset, StrPairFpPostIndex, StrPairFpPreIndex, StrPairFpSignedOffset, StrSimdRegOffset, SturSimdUnscaledOffset
+        DupGeneral, Ld1NoOffset, Ld1PostIndex, LdpSimdFpPostIndex, LdpSimdFpPreIndex,
+        LdpSimdFpSignedOffset, LdrSimdFpPostIndex, LdrSimdFpPreIndex, LdrSimdFpUnsignedOffset,
+        Movi, StrImdFpPostIndex, StrImdFpPreIndex, StrImdFpUnsignedOffset, StrPairFpPostIndex,
+        StrPairFpPreIndex, StrPairFpSignedOffset, StrSimdRegOffset, SturSimdUnscaledOffset,
     },
 };
 

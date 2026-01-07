@@ -764,7 +764,7 @@ pub struct Ld1PostIndex {
     pub q: u8,
     pub opcode: u8,
     pub size: u8,
-    pub rm:u8,
+    pub rm: u8,
     pub rn: u8,
     pub rt: u8,
 }
@@ -790,12 +790,12 @@ impl Ld1PostIndex {
 
     pub const fn decode(word: u32) -> Instruction {
         let q = get_bits_ct!(word, 30, 1) as u8;
-        let rm = get_bits_ct!(word,16,5) as u8;
+        let rm = get_bits_ct!(word, 16, 5) as u8;
         let opcode = get_bits_ct!(word, 12, 4) as u8;
         let size = get_bits_ct!(word, 10, 2) as u8;
         let rn = get_bits_ct!(word, 5, 5) as u8;
         let rt = get_bits_ct!(word, 0, 5) as u8;
-        Instruction::Ld1PostIndex(Self { q,rm, opcode, size, rn, rt })
+        Instruction::Ld1PostIndex(Self { q, rm, opcode, size, rn, rt })
     }
 
     pub const LD1_POST_INDEX: InstDesc = InstDesc {
