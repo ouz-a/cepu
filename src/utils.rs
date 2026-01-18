@@ -271,6 +271,9 @@ pub trait BitUtils {
     fn bits_get(self, start: u8, len: u8) -> Self;
     /// Set a single bit to 1
     fn bit_set(self, idx: u8) -> Self;
+    /// Sets `len` bits starting at position `start` to lower `len` bits of
+    /// `bits`
+    fn bits_set(self, start: u8, len: u8, bits: u128) -> Self;
     /// This should be only used for unsigned types
     fn replicate<T: AsU128>(self, repeat: u8) -> T;
 }
@@ -289,6 +292,13 @@ macro_rules! impl_bit_utils {
 
                 fn bit_set(self, idx: u8) -> Self {
                     self | (1 << idx)
+                }
+
+                fn bits_set(self, start: u8, len: u8, bits: u128) -> Self {
+                    let val = self as u128;
+                    let mask = if len >= 128 { u128::MAX } else { (1u128 << len) - 1 };
+                    let clear_mask = !(mask << start);
+                    ((val & clear_mask) | ((bits & mask) << start)) as Self
                 }
 
                 fn replicate<T:AsU128>(self,repeat:u8) -> T {
@@ -317,6 +327,13 @@ macro_rules! impl_bit_utils_signed {
 
                 fn bit_set(self, idx: u8) -> Self {
                     self | (1 << idx)
+                }
+
+                fn bits_set(self, start: u8, len: u8, bits: u128) -> Self {
+                    let val = self as $unsigned as u128;
+                    let mask = if len >= 128 { u128::MAX } else { (1u128 << len) - 1 };
+                    let clear_mask = !(mask << start);
+                    ((val & clear_mask) | ((bits & mask) << start)) as Self
                 }
 
                fn replicate<T:AsU128>(self,repeat:u8) -> T {

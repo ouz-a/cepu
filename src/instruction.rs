@@ -33,10 +33,11 @@ use crate::{
         Umulh,
     },
     simd_fp::{
-        DupGeneral, Ld1NoOffset, Ld1PostIndex, LdpSimdFpPostIndex, LdpSimdFpPreIndex,
-        LdpSimdFpSignedOffset, LdrSimdFpPostIndex, LdrSimdFpPreIndex, LdrSimdFpUnsignedOffset,
-        Movi, StrImdFpPostIndex, StrImdFpPreIndex, StrImdFpUnsignedOffset, StrPairFpPostIndex,
-        StrPairFpPreIndex, StrPairFpSignedOffset, StrSimdRegOffset, SturSimdUnscaledOffset,
+        CmeqScalar, CmeqVector, DupGeneral, Ld1NoOffset, Ld1PostIndex, LdpSimdFpPostIndex,
+        LdpSimdFpPreIndex, LdpSimdFpSignedOffset, LdrSimdFpPostIndex, LdrSimdFpPreIndex,
+        LdrSimdFpUnsignedOffset, Movi, StrImdFpPostIndex, StrImdFpPreIndex, StrImdFpUnsignedOffset,
+        StrPairFpPostIndex, StrPairFpPreIndex, StrPairFpSignedOffset, StrSimdRegOffset,
+        SturSimdUnscaledOffset,
     },
 };
 
@@ -270,6 +271,8 @@ define_instructions!(
     Stxrb(Stxrb),
     // ----- Simd, FP -----
     Movi(Movi),
+    CmeqVector(CmeqVector),
+    CmeqScalar(CmeqScalar),
     DupGeneral(DupGeneral),
     StrSimdRegOffset(StrSimdRegOffset),
     StrImdFpPostIndex(StrImdFpPostIndex),
@@ -487,6 +490,8 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     Stxrb::STXRB,
     // ----- Simd, FP -----
     Movi::MOVI,
+    CmeqVector::CMEQ_VECTOR,
+    CmeqScalar::CMEQ_SCALAR,
     DupGeneral::DUP_GENERAL,
     StrSimdRegOffset::STR_SIMD_REG_OFFSET,
     StrImdFpPostIndex::STR_IMD_FP_POST_INDEX,
