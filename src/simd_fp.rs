@@ -870,7 +870,7 @@ impl CmeqScalar {
 
 pub fn instruction_cmeq(cpu: &mut Cpu, rn: u8, rd: u8, esize: u8, datasize: u8, elements: u8) {
     let mut result = 0;
-    let operand = cpu.v_read(rn.try_into().unwrap(), datasize);
+    let operand = cpu.v_read(rn.into(), datasize);
 
     for e in 0..elements {
         let element = operand.bits_get(e, esize);
@@ -880,7 +880,7 @@ pub fn instruction_cmeq(cpu: &mut Cpu, rn: u8, rd: u8, esize: u8, datasize: u8, 
             result = result.bits_set(e, esize, 0b0.replicate(esize));
         };
     }
-    cpu.v_write(rd.try_into().unwrap(), datasize, result);
+    cpu.v_write(rd.into(), datasize, result);
 }
 
 pub fn instruction_ld1(
