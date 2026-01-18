@@ -1,4 +1,5 @@
 #![feature(int_lowest_highest_one)]
+#![allow(clippy::too_many_arguments)]
 
 use std::{
     collections::VecDeque, path::PathBuf, str::FromStr, sync::atomic::Ordering, time::Duration,

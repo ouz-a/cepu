@@ -122,7 +122,7 @@ impl Mmu {
     ) -> usize {
         self.faulted = true;
         self.fault_va = va;
-        self.fault_level = (39 - entry_idx) / ENTRY_IDX_WIDTH as u8;
+        self.fault_level = (39 - entry_idx) / ENTRY_IDX_WIDTH;
         self.fault_type = fault_type;
         self.fault_is_write = matches!(access_type, AccessType::Write);
         if fault_type == FaultType::Translation {
@@ -152,7 +152,7 @@ impl Mmu {
                 return true;
             }
             0b10 => {
-                if !(unpriv || (!unpriv && is_write)) {
+                if !unpriv && !is_write {
                     return true;
                 }
             }
@@ -188,7 +188,7 @@ impl Mmu {
 
         for level in levels.into_iter() {
             let page_table_address =
-                bits_get_in_place(descriptor, PAGE_OFFSET_WIDTH as u8, DESCR_ADDR_WIDTH) as usize;
+                bits_get_in_place(descriptor, PAGE_OFFSET_WIDTH, DESCR_ADDR_WIDTH) as usize;
 
             let entry_address = page_table_address + get_entry_offset(va, level);
             descriptor = self.bus.read_memory(entry_address, ENTRY_SIZE.into()).1;
@@ -240,7 +240,7 @@ impl Mmu {
 }
 
 pub fn get_entry_offset(va: usize, entry_idx: u64) -> usize {
-    (va.bits_get(entry_idx as u8, ENTRY_IDX_WIDTH as u8) * ENTRY_SIZE as usize) as usize
+    va.bits_get(entry_idx as u8, ENTRY_IDX_WIDTH) * ENTRY_SIZE as usize
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]

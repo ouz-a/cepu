@@ -107,7 +107,7 @@ impl Gic {
                 let base_irq = req_index * 32;
 
                 let mut result: u32 = 0;
-                for i in 0..32 as usize {
+                for i in 0..32_usize {
                     if self.interrupts[base_irq as usize + i].enabled {
                         result |= 1 << i;
                     }
@@ -121,7 +121,7 @@ impl Gic {
                 let base_irq = req_index * 32;
 
                 let mut result: u32 = 0;
-                for i in 0..32 as usize {
+                for i in 0..32_usize {
                     if self.interrupts[base_irq as usize + i].enabled {
                         result |= 1 << i;
                     }
@@ -140,7 +140,7 @@ impl Gic {
                 let base_irq = req_index * 16;
 
                 let mut result: u32 = 0;
-                for i in 0..16 as usize {
+                for i in 0..16_usize {
                     if self.interrupts[base_irq as usize + i].is_1n {
                         result |= 1 << (i * 2);
                     }

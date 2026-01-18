@@ -702,7 +702,7 @@ impl Sys {
                     2 => 2,
                     _ => 3,
                 } as u64;
-                let fst = 0b0001_00u64 | level;
+                let fst = 0b00_0100_u64 | level;
                 cpu.par_el1 = 0;
                 cpu.par_el1 |= 1; // F
                 cpu.par_el1 |= fst << 1; // FS

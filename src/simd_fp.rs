@@ -379,14 +379,14 @@ pub struct Movi {
 impl Movi {
     pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
         let datasize = 64 << self.q;
-        let imm8 = (self.a as u8) << 7
-            | (self.b as u8) << 6
-            | (self.c as u8) << 5
-            | (self.d as u8) << 4
-            | (self.e as u8) << 3
-            | (self.f as u8) << 2
-            | (self.g as u8) << 1
-            | (self.h as u8);
+        let imm8 = self.a << 7
+            | self.b << 6
+            | self.c << 5
+            | self.d << 4
+            | self.e << 3
+            | self.f << 2
+            | self.g << 1
+            | self.h;
         let imm64 = adv_simd_expand_imm(self.op, self.cmode, imm8);
         if datasize == 128 {
             let imm: u128 = imm64.replicate(2);
@@ -730,14 +730,13 @@ impl Ld1NoOffset {
         let elements = datasize / esize;
 
         // number of iterations
-        let rpt;
-        match self.opcode {
-            0b0010 => rpt = 4,
-            0b0110 => rpt = 3,
-            0b1010 => rpt = 2,
-            0b0111 => rpt = 1,
+        let rpt = match self.opcode {
+            0b0010 => 4,
+            0b0110 => 3,
+            0b1010 => 2,
+            0b0111 => 1,
             _ => panic!("Undefined"),
-        }
+        };
 
         instruction_ld1(cpu, self.rn, 0, self.rt, elements, esize, datasize, rpt, false);
     }
@@ -775,14 +774,13 @@ impl Ld1PostIndex {
         let elements = datasize / esize;
 
         // number of iterations
-        let rpt;
-        match self.opcode {
-            0b0010 => rpt = 4,
-            0b0110 => rpt = 3,
-            0b1010 => rpt = 2,
-            0b0111 => rpt = 1,
+        let rpt = match self.opcode {
+            0b0010 => 4,
+            0b0110 => 3,
+            0b1010 => 2,
+            0b0111 => 1,
             _ => panic!("Undefined"),
-        }
+        };
 
         instruction_ld1(cpu, self.rn, self.rm, self.rt, elements, esize, datasize, rpt, true);
     }
@@ -832,7 +830,7 @@ pub fn instruction_ld1(
                 if cpu.mmu.faulted {
                     return;
                 }
-                let rval = elem_set(rval, e.try_into().unwrap(), esize.try_into().unwrap(), val);
+                let rval = elem_set(rval, e.into(), esize.into(), val);
                 cpu.v_write(tt.into(), datasize, rval);
                 offs = offs.wrapping_add(ebytes.into());
                 tt = (tt + 1) % 32;

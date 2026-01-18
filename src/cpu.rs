@@ -266,8 +266,7 @@ pub struct Cpu {
 
 impl Cpu {
     pub fn init() -> Self {
-        let mut cpu = Self::default();
-        cpu.uart_debug = String::new();
+        let mut cpu = Self { uart_debug: String::new(), ..Default::default() };
         cpu.pstate.sp = 1;
 
         cpu.sp_el0 = 0x100000; // 1MB
@@ -891,7 +890,7 @@ impl Cpu {
                 self.x_write(t.into(), self.id_isar0_el1, false);
             }
             MrsRegisters::CntvCtlEl0 => {
-                self.x_write(t.into(), self.timer.cntv_ctl_el0.into(), false);
+                self.x_write(t.into(), self.timer.cntv_ctl_el0, false);
             }
             MrsRegisters::CntvCvalEl0 => {
                 self.x_write(t.into(), self.timer.cntp_cval_el0, false);

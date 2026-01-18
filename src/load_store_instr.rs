@@ -1727,9 +1727,7 @@ impl Stxr {
         let elsize = 8 << self.size;
         let dbytes = elsize / 8;
 
-        if self.rs == self.rt {
-            panic!("Oh no");
-        } else if self.rn == self.rs && self.rn != 31 {
+        if self.rs == self.rt || (self.rn == self.rs && self.rn != 31) {
             panic!("Oh no");
         }
 
@@ -1781,9 +1779,7 @@ impl Stxrb {
         let elsize = 8;
         let dbytes = 1;
 
-        if self.rs == self.rt {
-            panic!("Oh no");
-        } else if self.rn == self.rs && self.rn != 31 {
+        if self.rs == self.rt || (self.rn == self.rs && self.rn != 31) {
             panic!("Oh no");
         }
 
@@ -2077,9 +2073,7 @@ impl Stlxr {
         let elsize = 8 << self.size;
         let dbytes = elsize / 8;
 
-        if self.rs == self.rt {
-            panic!("Oh no");
-        } else if self.rn == self.rs && self.rn != 31 {
+        if self.rs == self.rt || (self.rn == self.rs && self.rn != 31) {
             panic!("Oh no");
         }
 

@@ -7,7 +7,7 @@ pub fn dup_general_instruction(cpu: &mut Cpu, rn: u8, rd: u8, esize: u8, datasiz
     for e in 0..elements {
         result |= (element as u128) << (e * esize);
     }
-    cpu.v_write(rd.into(), datasize as u8, result);
+    cpu.v_write(rd.into(), datasize, result);
 }
 
 pub fn str_imd_fp_instruction(

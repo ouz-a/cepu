@@ -217,7 +217,7 @@ pub fn instruction_stp(
         cpu.x_read(t2.into(), datasize)
     };
 
-    let address2 = address.wrapping_add(dbytes.into()) as u64;
+    let address2 = address.wrapping_add(dbytes.into());
     cpu.write_memory(address as usize, dbytes.into(), data1);
     if cpu.mmu.faulted {
         return;
