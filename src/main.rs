@@ -47,7 +47,7 @@ pub fn run_block(cpu: &mut Cpu) {
             cpu.handle_interrupts(&mut pc);
             let old_pc = pc;
             let word = if cpu.mmu.enabled {
-                cpu.mmu.read_memory(old_pc as usize, 4).1 as u32
+                cpu.read_memory(old_pc as usize, 4).1 as u32
             } else {
                 read_32(old_pc as usize)
             };
@@ -124,6 +124,7 @@ pub fn run_block(cpu: &mut Cpu) {
 fn main() {
     validate_tables(DESCR);
     let mut cpu = Cpu::init();
+
     //validate_and_load_elf_header(&mut cpu, Path::new("./.executables/boot.elf"));
     load_device_blob(&mut cpu, &PathBuf::from_str("/Users/ouz/code/cepu_now/cepu.dtb").unwrap());
     load_kernel_image(&mut cpu, &PathBuf::from_str("/Users/ouz/code/cepu_now/Image").unwrap());

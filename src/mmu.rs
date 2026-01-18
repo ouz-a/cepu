@@ -1,8 +1,24 @@
 use crate::{
     bus::Bus,
+    cpu::ExceptionLevel,
     memory::PhyMemStatus,
-    utils::{bits_get, bits_get_in_place},
+    utils::{BitUtils, bits_get, bits_get_in_place},
 };
+
+pub const ENTRY_IDX_WIDTH: u8 = 9;
+
+/// Descriptor is 64 bits
+/// 64 / 8 == 8
+pub const ENTRY_SIZE: u8 = 8;
+pub const PAGE_OFFSET_WIDTH: u8 = 12;
+pub const DESCR_ADDR_WIDTH: u8 = 36;
+
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum FaultType {
+    #[default]
+    Translation,
+    Permission,
+}
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Mmu {
@@ -18,12 +34,22 @@ pub struct Mmu {
     pub faulted: bool,
     pub fault_va: usize,
     pub fault_level: u8,
+    pub fault_type: FaultType,
+    /// Fault Status Code
+    pub fsc: u8,
+    /// Was it a write that caused the fault (for WnR bit)
+    pub fault_is_write: bool,
 }
 
 impl Mmu {
-    pub fn read_memory(&mut self, address: usize, size: usize) -> (PhyMemStatus, u64) {
+    pub(crate) fn mmu_read(
+        &mut self,
+        address: usize,
+        size: usize,
+        current_el: ExceptionLevel,
+    ) -> (PhyMemStatus, u64) {
         if self.enabled {
-            let pa = self.page_walk(address);
+            let pa = self.page_walk(address, AccessType::Read, current_el);
             if self.faulted {
                 return (PhyMemStatus::default(), 0);
             }
@@ -32,9 +58,16 @@ impl Mmu {
             self.bus.read_memory(address, size)
         }
     }
-    pub fn write_memory(&mut self, address: usize, size: usize, value: u64) -> PhyMemStatus {
+
+    pub(crate) fn mmu_write(
+        &mut self,
+        address: usize,
+        size: usize,
+        value: u64,
+        current_el: ExceptionLevel,
+    ) -> PhyMemStatus {
         if self.enabled {
-            let pa = self.page_walk(address);
+            let pa = self.page_walk(address, AccessType::Write, current_el);
             if self.faulted {
                 return PhyMemStatus::default();
             }
@@ -43,20 +76,32 @@ impl Mmu {
             self.bus.write_memory(address, size, value)
         }
     }
-    pub fn write_memory_128bit(&mut self, address: usize, value: u128) -> PhyMemStatus {
+
+    pub(crate) fn mmu_write_128bit(
+        &mut self,
+        address: usize,
+        value: u128,
+        current_el: ExceptionLevel,
+    ) -> PhyMemStatus {
         let lo = value;
         let high = (value >> 64) as u64;
-        self.write_memory(address, 8, lo as u64);
-        self.write_memory(address + 8, 8, high)
+        self.mmu_write(address, 8, lo as u64, current_el);
+        self.mmu_write(address + 8, 8, high, current_el)
     }
-    pub fn read_memory_128bit(&mut self, address: usize) -> (PhyMemStatus, u128) {
-        let (_, lo) = self.read_memory(address, 8);
+
+    pub(crate) fn mmu_read_128bit(
+        &mut self,
+        address: usize,
+        current_el: ExceptionLevel,
+    ) -> (PhyMemStatus, u128) {
+        let (_, lo) = self.mmu_read(address, 8, current_el);
         if self.faulted {
             return (PhyMemStatus::default(), 0);
         }
-        let (status, hi) = self.read_memory(address + 8, 8);
+        let (status, hi) = self.mmu_read(address + 8, 8, current_el);
         (status, lo as u128 | ((hi as u128) << 64))
     }
+
     fn which_base(&self, va: usize) -> usize {
         let top_bits = bits_get(va as u64, 48, 16);
 
@@ -68,57 +113,140 @@ impl Mmu {
         base_add as usize
     }
 
-    pub fn page_walk(&mut self, va: usize) -> usize {
+    pub fn handle_fault(
+        &mut self,
+        va: usize,
+        entry_idx: u8,
+        fault_type: FaultType,
+        access_type: AccessType,
+    ) -> usize {
+        self.faulted = true;
+        self.fault_va = va;
+        self.fault_level = (39 - entry_idx) / ENTRY_IDX_WIDTH as u8;
+        self.fault_type = fault_type;
+        self.fault_is_write = matches!(access_type, AccessType::Write);
+        if fault_type == FaultType::Translation {
+            self.fsc = 0b000100 | self.fault_level;
+        } else {
+            self.fsc = 0b001100 | self.fault_level;
+        }
+        0
+    }
+    pub fn has_access(
+        &mut self,
+        descriptor: u64,
+        access_type: AccessType,
+        current_el: ExceptionLevel,
+    ) -> bool {
+        let unpriv = current_el.is_el0();
+        let is_write = matches!(access_type, AccessType::Write);
+        let ap: u8 = descriptor.bits_get(6, 2) as u8;
+
+        match ap {
+            0b0 => {
+                if !unpriv {
+                    return true;
+                }
+            }
+            0b01 => {
+                return true;
+            }
+            0b10 => {
+                if !(unpriv || (!unpriv && is_write)) {
+                    return true;
+                }
+            }
+            0b11 => {
+                if !is_write {
+                    return true;
+                }
+            }
+            _ => {
+                panic!("Wrong ap");
+            }
+        }
+        false
+    }
+
+    pub fn page_walk(
+        &mut self,
+        va: usize,
+        access_type: AccessType,
+        current_el: ExceptionLevel,
+    ) -> usize {
+        let first_level = 39;
+        let levels = [30, 21, 12];
         let base_add = self.which_base(va);
-        let mut entry_idx = 39;
-        let mut descript_bits = 18;
-        let entry = base_add + (bits_get(va as u64, 39, 9) * 8) as usize;
-        let mut descriptor = self.bus.read_memory(entry, 8).1;
+        let mut block_width = 18;
+
+        let entry = base_add + get_entry_offset(va, first_level);
+        let mut descriptor = self.bus.read_memory(entry, ENTRY_SIZE as usize).1;
+
         if DescriptorKind::from(descriptor) == DescriptorKind::Invalid {
-            self.faulted = true;
-            self.fault_va = va;
-            self.fault_level = (entry_idx - 12) / 9;
-            return 0;
+            return self.handle_fault(va, first_level as u8, FaultType::Translation, access_type);
         }
 
-        loop {
-            let table = bits_get_in_place(descriptor, 12, 36) as usize;
-            entry_idx -= 9;
+        for level in levels.into_iter() {
+            let page_table_address =
+                bits_get_in_place(descriptor, PAGE_OFFSET_WIDTH as u8, DESCR_ADDR_WIDTH) as usize;
 
-            let entry = table + (bits_get(va as u64, entry_idx, 9) * 8) as usize;
-            descriptor = self.bus.read_memory(entry, 8).1;
-            if entry_idx == 12 {
-                if DescriptorKind::from(descriptor) == DescriptorKind::Invalid {
-                    self.faulted = true;
-                    self.fault_va = va;
-                    self.fault_level = 3;
-                    return 0;
-                }
-                let page_addr = bits_get_in_place(descriptor, 12, 36);
+            let entry_address = page_table_address + get_entry_offset(va, level);
+            descriptor = self.bus.read_memory(entry_address, ENTRY_SIZE.into()).1;
 
-                let page_offset = bits_get(va.try_into().unwrap(), 0, entry_idx);
-                let final_physical_addr = page_addr + page_offset;
-                return final_physical_addr as usize;
-            }
             match DescriptorKind::from(descriptor) {
-                DescriptorKind::Invalid => {
-                    self.faulted = true;
-                    self.fault_va = va;
-                    self.fault_level = (entry_idx - 12) / 9;
-                    return 0;
-                }
                 DescriptorKind::Block => {
-                    let block_base = bits_get_in_place(descriptor, entry_idx, descript_bits);
-                    let offset = bits_get(va.try_into().unwrap(), 0, entry_idx);
-                    let pa = (block_base + offset) as usize;
+                    if !self.has_access(descriptor, access_type, current_el) {
+                        return self.handle_fault(
+                            va,
+                            level as u8,
+                            FaultType::Permission,
+                            access_type,
+                        );
+                    }
+                    let block_base_address =
+                        bits_get_in_place(descriptor, level as u8, block_width);
+                    let offset = bits_get(va.try_into().unwrap(), 0, level as u8);
+                    let pa = (block_base_address + offset) as usize;
                     return pa;
                 }
-                DescriptorKind::Reserved => panic!("Invalid memory"),
-                DescriptorKind::TablePage => {}
+                DescriptorKind::TablePage => {
+                    if level == 12 {
+                        if !self.has_access(descriptor, access_type, current_el) {
+                            return self.handle_fault(
+                                va,
+                                level as u8,
+                                FaultType::Permission,
+                                access_type,
+                            );
+                        }
+                        let block_base_address =
+                            bits_get_in_place(descriptor, level as u8, block_width);
+                        let offset = bits_get(va.try_into().unwrap(), 0, level as u8);
+                        let pa = (block_base_address + offset) as usize;
+                        return pa;
+                    }
+                }
+                DescriptorKind::Invalid => {
+                    return self.handle_fault(va, level as u8, FaultType::Translation, access_type);
+                }
+                DescriptorKind::Reserved => panic!("Invalid Memory"),
             }
-            descript_bits += 9;
+
+            block_width += 9;
         }
+
+        0
     }
+}
+
+pub fn get_entry_offset(va: usize, entry_idx: u64) -> usize {
+    (va.bits_get(entry_idx as u8, ENTRY_IDX_WIDTH as u8) * ENTRY_SIZE as usize) as usize
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum AccessType {
+    Read,
+    Write,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]

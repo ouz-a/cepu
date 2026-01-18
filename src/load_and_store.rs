@@ -69,7 +69,7 @@ pub fn instruction_ldr_imm_base(
     let data = if wb_unknown {
         panic!("Unpredictable");
     } else {
-        cpu.mmu.read_memory(address as usize, datasize / 8)
+        cpu.read_memory(address as usize, datasize / 8)
     };
     if cpu.mmu.faulted {
         return;
@@ -125,11 +125,11 @@ pub fn instruction_ldp(
     }
 
     let address2 = address + dbytes as u64;
-    let data1 = cpu.mmu.read_memory(address as usize, dbytes.into());
+    let data1 = cpu.read_memory(address as usize, dbytes.into());
     if cpu.mmu.faulted {
         return;
     }
-    let data2 = cpu.mmu.read_memory(address2 as usize, dbytes.into());
+    let data2 = cpu.read_memory(address2 as usize, dbytes.into());
     if cpu.mmu.faulted {
         return;
     }
@@ -159,11 +159,11 @@ pub fn instruction_stnp(cpu: &mut Cpu, rt: u8, rt2: u8, rn: u8, datasize: u8, of
     let data1 = cpu.x_read(rt.into(), datasize);
     let data2 = cpu.x_read(rt2.into(), datasize);
 
-    cpu.mmu.write_memory(address as usize, dbytes.into(), data1);
+    cpu.write_memory(address as usize, dbytes.into(), data1);
     if cpu.mmu.faulted {
         return;
     }
-    cpu.mmu.write_memory(address_2 as usize, dbytes.into(), data2);
+    cpu.write_memory(address_2 as usize, dbytes.into(), data2);
     if cpu.mmu.faulted {}
 }
 
@@ -218,11 +218,11 @@ pub fn instruction_stp(
     };
 
     let address2 = address.wrapping_add(dbytes.into()) as u64;
-    cpu.mmu.write_memory(address as usize, dbytes.into(), data1);
+    cpu.write_memory(address as usize, dbytes.into(), data1);
     if cpu.mmu.faulted {
         return;
     }
-    cpu.mmu.write_memory(address2 as usize, dbytes.into(), data2);
+    cpu.write_memory(address2 as usize, dbytes.into(), data2);
     if cpu.mmu.faulted {
         return;
     }
@@ -269,7 +269,7 @@ pub fn instruction_ldr_register(
 
     address = address.wrapping_add(offset);
 
-    let (_, data) = cpu.mmu.read_memory(address as usize, (datasize / 8) as usize);
+    let (_, data) = cpu.read_memory(address as usize, (datasize / 8) as usize);
     if cpu.mmu.faulted {
         return;
     }
@@ -288,7 +288,7 @@ pub fn instruction_ldr_literal(cpu: &mut Cpu, t: u8, size: u8, offset: u64, _old
     );
 
     let is_64b = size * 8 >= 64;
-    let (_, word) = cpu.mmu.read_memory(address as usize, size as usize);
+    let (_, word) = cpu.read_memory(address as usize, size as usize);
     if cpu.mmu.faulted {
         return;
     }
@@ -313,7 +313,7 @@ pub fn instruction_str_halfword_imm(
     }
 
     let data = cpu.x_read(t.into(), 16);
-    cpu.mmu.write_memory(address as usize, 2, data);
+    cpu.write_memory(address as usize, 2, data);
     if cpu.mmu.faulted {
         return;
     }
@@ -361,7 +361,7 @@ pub fn instruction_str_imm_un_off(
 
     let data =
         if rt_unknown { panic!("Unpredictable") } else { cpu.x_read(t as usize, datasize as u8) };
-    cpu.mmu.write_memory(address as usize, datasize / 8, data);
+    cpu.write_memory(address as usize, datasize / 8, data);
     if cpu.mmu.faulted {
         return;
     }
@@ -406,7 +406,7 @@ pub fn instruction_strb_imm_un_off(
     }
 
     let data = if rt_unknown { panic!("Unpredictable") } else { cpu.x_read(t as usize, 8) };
-    cpu.mmu.write_memory(address as usize, 1, data);
+    cpu.write_memory(address as usize, 1, data);
     if cpu.mmu.faulted {
         return;
     }
@@ -448,7 +448,7 @@ pub fn instruction_str_register(
     }
     address = address.wrapping_add(offset);
 
-    cpu.mmu.write_memory(address as usize, (datasize / 8).into(), cpu.x_read(t.into(), datasize));
+    cpu.write_memory(address as usize, (datasize / 8).into(), cpu.x_read(t.into(), datasize));
     if cpu.mmu.faulted {}
 }
 
@@ -504,7 +504,7 @@ pub fn instruction_ldrsw_imm(
         address = address.wrapping_add(offset);
     }
 
-    let data = cpu.mmu.read_memory(address.try_into().unwrap(), 4).1;
+    let data = cpu.read_memory(address.try_into().unwrap(), 4).1;
     if cpu.mmu.faulted {
         return;
     }
@@ -541,7 +541,7 @@ pub fn instruction_ldrh_imm(
         address = address.wrapping_add(offset);
     }
 
-    let data = cpu.mmu.read_memory(address.try_into().unwrap(), 2).1;
+    let data = cpu.read_memory(address.try_into().unwrap(), 2).1;
     if cpu.mmu.faulted {
         return;
     }
@@ -579,7 +579,7 @@ pub fn instruction_ldrsh_imm(
         address = address.wrapping_add(offset);
     }
 
-    let data = cpu.mmu.read_memory(address.try_into().unwrap(), 2).1;
+    let data = cpu.read_memory(address.try_into().unwrap(), 2).1;
     if cpu.mmu.faulted {
         return;
     }
@@ -617,7 +617,7 @@ pub fn instruction_ldrsb_imm(
         address = address.wrapping_add(offset);
     }
 
-    let data = cpu.mmu.read_memory(address.try_into().unwrap(), 1).1;
+    let data = cpu.read_memory(address.try_into().unwrap(), 1).1;
     if cpu.mmu.faulted {
         return;
     }
@@ -658,11 +658,11 @@ pub fn instruction_ldpsw(
     }
 
     let address_2 = address.wrapping_add(dbytes);
-    let data1 = cpu.mmu.read_memory(address.try_into().unwrap(), dbytes.try_into().unwrap()).1;
+    let data1 = cpu.read_memory(address.try_into().unwrap(), dbytes.try_into().unwrap()).1;
     if cpu.mmu.faulted {
         return;
     }
-    let data2 = cpu.mmu.read_memory(address_2.try_into().unwrap(), dbytes.try_into().unwrap()).1;
+    let data2 = cpu.read_memory(address_2.try_into().unwrap(), dbytes.try_into().unwrap()).1;
     if cpu.mmu.faulted {
         return;
     }

@@ -642,8 +642,7 @@ impl StrSimdRegOffset {
 
         let mut address = cpu.address_for_rn(self.rn);
         address = address.wrapping_add(offset);
-        cpu.mmu
-            .write_memory_128bit(address.try_into().unwrap(), cpu.v_read(self.rt.into(), datasize));
+        cpu.write_memory_128bit(address.try_into().unwrap(), cpu.v_read(self.rt.into(), datasize));
     }
     pub const fn decode(word: u32) -> Instruction {
         let size = get_bits_ct!(word, 30, 2) as u8;
@@ -686,12 +685,12 @@ impl SturSimdUnscaledOffset {
         let mut address = cpu.address_for_rn(self.rn);
         address = address.wrapping_add(offset);
         if datasize == 128 {
-            cpu.mmu.write_memory_128bit(
+            cpu.write_memory_128bit(
                 address.try_into().unwrap(),
                 cpu.v_read(self.rt.into(), datasize),
             );
         } else {
-            cpu.mmu.write_memory(
+            cpu.write_memory(
                 address.try_into().unwrap(),
                 datasize as usize / 8,
                 cpu.v_read(self.rt.into(), datasize) as u64,
@@ -829,7 +828,7 @@ pub fn instruction_ld1(
             for _ in 0..1 {
                 let rval = cpu.v_read(tt.into(), datasize);
                 let eaddr = address.wrapping_add(offs);
-                let val = cpu.mmu.read_memory(eaddr as usize, ebytes.into()).1;
+                let val = cpu.read_memory(eaddr as usize, ebytes.into()).1;
                 if cpu.mmu.faulted {
                     return;
                 }

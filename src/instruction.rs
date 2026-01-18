@@ -607,7 +607,6 @@ pub fn decode(word: u32) -> Instruction {
         }
         i += 1;
     }
-    std::process::exit(1);
     UNDEF_PANIC.store(true, std::sync::atomic::Ordering::SeqCst);
     Instruction::Nop(Nop)
 }

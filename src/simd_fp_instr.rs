@@ -26,12 +26,12 @@ pub fn str_imd_fp_instruction(
     }
 
     if datasize == 128 {
-        cpu.mmu.write_memory_128bit(address as usize, cpu.v_read(rt.into(), datasize));
+        cpu.write_memory_128bit(address as usize, cpu.v_read(rt.into(), datasize));
         if cpu.mmu.faulted {
             return;
         }
     } else {
-        cpu.mmu.write_memory(
+        cpu.write_memory(
             address as usize,
             (datasize / 8).into(),
             cpu.v_read(rt.into(), datasize) as u64,
@@ -61,16 +61,16 @@ pub fn str_pair_fp_instruction(
 
     let address2 = address.wrapping_add(dbytes.into());
     if datasize == 128 {
-        cpu.mmu.write_memory_128bit(address as usize, cpu.v_read(rt.into(), 128));
+        cpu.write_memory_128bit(address as usize, cpu.v_read(rt.into(), 128));
         if cpu.mmu.faulted {
             return;
         }
-        cpu.mmu.write_memory_128bit(address2 as usize, cpu.v_read(rt2.into(), 128));
+        cpu.write_memory_128bit(address2 as usize, cpu.v_read(rt2.into(), 128));
         if cpu.mmu.faulted {
             return;
         }
     } else {
-        cpu.mmu.write_memory(
+        cpu.write_memory(
             address as usize,
             (datasize / 8).into(),
             cpu.v_read(rt.into(), datasize) as u64,
@@ -78,7 +78,7 @@ pub fn str_pair_fp_instruction(
         if cpu.mmu.faulted {
             return;
         }
-        cpu.mmu.write_memory(
+        cpu.write_memory(
             address2 as usize,
             (datasize / 8).into(),
             cpu.v_read(rt2.into(), datasize) as u64,
@@ -119,22 +119,22 @@ pub fn instruction_ldp_simd_fp(
 
     let (data1, data2): (u128, u128) = if datasize == 128 {
         // 128-bit loads require special handling
-        let (_, d1) = cpu.mmu.read_memory_128bit(address.try_into().unwrap());
+        let (_, d1) = cpu.read_memory_128bit(address.try_into().unwrap());
         if cpu.mmu.faulted {
             return;
         }
-        let (_, d2) = cpu.mmu.read_memory_128bit(address_2.try_into().unwrap());
+        let (_, d2) = cpu.read_memory_128bit(address_2.try_into().unwrap());
         if cpu.mmu.faulted {
             return;
         }
         (d1, d2)
     } else {
         // 32-bit or 64-bit loads
-        let (_, d1) = cpu.mmu.read_memory(address.try_into().unwrap(), dbytes.into());
+        let (_, d1) = cpu.read_memory(address.try_into().unwrap(), dbytes.into());
         if cpu.mmu.faulted {
             return;
         }
-        let (_, d2) = cpu.mmu.read_memory(address_2.try_into().unwrap(), dbytes.into());
+        let (_, d2) = cpu.read_memory(address_2.try_into().unwrap(), dbytes.into());
         if cpu.mmu.faulted {
             return;
         }
@@ -173,7 +173,7 @@ pub fn instruction_ldr_simd_fp(
     }
 
     let data1 = if datasize == 128 {
-        let (_, d1) = cpu.mmu.read_memory_128bit(address.try_into().unwrap());
+        let (_, d1) = cpu.read_memory_128bit(address.try_into().unwrap());
         if cpu.mmu.faulted {
             return;
         }
@@ -182,7 +182,7 @@ pub fn instruction_ldr_simd_fp(
         }
         d1
     } else {
-        let (_, d1) = cpu.mmu.read_memory(address.try_into().unwrap(), dbytes.into());
+        let (_, d1) = cpu.read_memory(address.try_into().unwrap(), dbytes.into());
         if cpu.mmu.faulted {
             return;
         }

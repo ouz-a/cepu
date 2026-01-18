@@ -9,6 +9,7 @@ use crate::{
     cpu::{Cpu, ExceptionLevel, PstateField},
     get_bits_ct,
     instruction::{InstDesc, Instruction},
+    mmu::AccessType,
     utils::{bits_get, sign_extend, zero_extend},
 };
 
@@ -652,7 +653,6 @@ impl Blr {
 }
 
 // TODO: SYS requires organization
-
 #[derive(Clone, Copy, Debug)]
 pub struct Sys {
     pub word: u32,
@@ -690,7 +690,8 @@ impl Sys {
             let prev_fault_level = cpu.mmu.fault_level;
 
             cpu.mmu.faulted = false;
-            let pa = cpu.mmu.page_walk(va as usize);
+            // TODO: This is totally wrong please fix it
+            let pa = cpu.mmu.page_walk(va as usize, AccessType::Read, cpu.pstate.current_el);
             let at_faulted = cpu.mmu.faulted;
             let at_fault_level = cpu.mmu.fault_level;
 

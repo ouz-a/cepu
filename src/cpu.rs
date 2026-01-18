@@ -8,7 +8,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use crate::{get_bits_ct, instruction::UNDEF_PANIC, mmu::Mmu, utils::align};
+use crate::{get_bits_ct, instruction::UNDEF_PANIC, memory::PhyMemStatus, mmu::Mmu, utils::align};
 pub const MEM_TOP: usize = crate::memory::MEMORY_SIZE;
 
 static START: OnceLock<Instant> = OnceLock::new();
@@ -351,6 +351,22 @@ impl Cpu {
         self.mmu.faulted
     }
 
+    pub fn read_memory(&mut self, address: usize, size: usize) -> (PhyMemStatus, u64) {
+        self.mmu.mmu_read(address, size, self.pstate.current_el)
+    }
+
+    pub fn write_memory(&mut self, address: usize, size: usize, value: u64) -> PhyMemStatus {
+        self.mmu.mmu_write(address, size, value, self.pstate.current_el)
+    }
+
+    pub fn write_memory_128bit(&mut self, address: usize, value: u128) -> PhyMemStatus {
+        self.mmu.mmu_write_128bit(address, value, self.pstate.current_el)
+    }
+
+    pub fn read_memory_128bit(&mut self, address: usize) -> (PhyMemStatus, u128) {
+        self.mmu.mmu_read_128bit(address, self.pstate.current_el)
+    }
+
     pub fn memory_op_safe(&self, address: u64, dbytes: u8) -> bool {
         self.monitor.safe(address, dbytes)
     }
@@ -377,7 +393,8 @@ impl Cpu {
         self.spsr_el1 = self.spsr_from_pstate();
         self.far_el1 = self.mmu.fault_va.try_into().unwrap();
         let ec = if self.pstate.current_el == ExceptionLevel::EL0 { 0x24 } else { 0x25 };
-        self.esr_el1 = (ec << 26) | (1u64 << 25) | (self.mmu.fault_level as u64 + 4);
+        let wnr = if self.mmu.fault_is_write { 1u64 << 6 } else { 0 };
+        self.esr_el1 = (ec << 26) | (1u64 << 25) | wnr | (self.mmu.fsc as u64);
         self.pstate.daif_disable();
         let offset = if self.pstate.current_el == ExceptionLevel::EL0 { 0x400 } else { 0x200 };
         self.pstate.set_to_exception();
@@ -391,7 +408,7 @@ impl Cpu {
         self.spsr_el1 = self.spsr_from_pstate();
         self.far_el1 = self.mmu.fault_va.try_into().unwrap();
         let ec = if self.pstate.current_el == ExceptionLevel::EL0 { 0x20 } else { 0x21 };
-        self.esr_el1 = (ec << 26) | (1u64 << 25) | (self.mmu.fault_level as u64 + 4);
+        self.esr_el1 = (ec << 26) | (1u64 << 25) | (self.mmu.fsc as u64);
         self.pstate.daif_disable();
         let offset = if self.pstate.current_el == ExceptionLevel::EL0 { 0x400 } else { 0x200 };
         self.pstate.set_to_exception();

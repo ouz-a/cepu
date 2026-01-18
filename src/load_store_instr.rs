@@ -418,7 +418,7 @@ impl StrbRegister {
 
         address = address.wrapping_add(offset);
 
-        cpu.mmu.write_memory(address as usize, 1, cpu.x_read(self.rt.into(), 8));
+        cpu.write_memory(address as usize, 1, cpu.x_read(self.rt.into(), 8));
     }
 
     pub const fn decode(word: u32) -> Instruction {
@@ -499,7 +499,7 @@ impl Strh {
 
         address = address.wrapping_add(offset);
 
-        cpu.mmu.write_memory(address as usize, 2, cpu.x_read(self.rt.into(), 16));
+        cpu.write_memory(address as usize, 2, cpu.x_read(self.rt.into(), 16));
         if cpu.mmu.faulted {}
     }
 
@@ -996,7 +996,7 @@ impl LdrUnpriv {
         let mut address =
             if self.rn == 31 { cpu.sp_read() } else { cpu.x_read(self.rn.into(), 64) };
         address = address.wrapping_add(offset);
-        let data = cpu.mmu.read_memory(address as usize, datasize / 8);
+        let data = cpu.read_memory(address as usize, datasize / 8);
         if cpu.mmu.faulted {
             return;
         }
@@ -1034,7 +1034,7 @@ impl Ldur {
         let mut address =
             if self.rn == 31 { cpu.sp_read() } else { cpu.x_read(self.rn.into(), 64) };
         address = address.wrapping_add(offset);
-        let data = cpu.mmu.read_memory(address as usize, datasize / 8);
+        let data = cpu.read_memory(address as usize, datasize / 8);
         if cpu.mmu.faulted {
             return;
         }
@@ -1072,7 +1072,7 @@ impl Stur {
             if self.rn == 31 { cpu.sp_read() } else { cpu.x_read(self.rn.into(), 64) };
         address = address.wrapping_add(offset);
         let val = cpu.x_read(self.rt.into(), datasize);
-        cpu.mmu.write_memory(address as usize, (datasize / 8).into(), val);
+        cpu.write_memory(address as usize, (datasize / 8).into(), val);
         if cpu.mmu.faulted {}
     }
     pub const fn decode(word: u32) -> Instruction {
@@ -1109,7 +1109,7 @@ impl Sturh {
 
         let val = cpu.x_read(self.rt.into(), datasize);
 
-        cpu.mmu.write_memory(address as usize, (datasize / 8).into(), val);
+        cpu.write_memory(address as usize, (datasize / 8).into(), val);
 
         if cpu.mmu.faulted {}
     }
@@ -1141,7 +1141,7 @@ impl Stlrh {
 
         let val = cpu.x_read(self.rt.into(), datasize);
 
-        cpu.mmu.write_memory(address as usize, (datasize / 8).into(), val);
+        cpu.write_memory(address as usize, (datasize / 8).into(), val);
 
         if cpu.mmu.faulted {}
     }
@@ -1172,7 +1172,7 @@ impl LdrbUnsignedOff {
         let mut address =
             if self.rn == 31 { cpu.sp_read() } else { cpu.x_read(self.rn.into(), 64) };
         address = address.wrapping_add(offset);
-        let data = cpu.mmu.read_memory(address as usize, 1);
+        let data = cpu.read_memory(address as usize, 1);
         if cpu.mmu.faulted {
             return;
         }
@@ -1205,7 +1205,7 @@ impl LdrbPostIndex {
 
         let mut address =
             if self.rn == 31 { cpu.sp_read() } else { cpu.x_read(self.rn.into(), 64) };
-        let data = cpu.mmu.read_memory(address as usize, 1);
+        let data = cpu.read_memory(address as usize, 1);
         if cpu.mmu.faulted {
             return;
         }
@@ -1246,7 +1246,7 @@ impl LdrbPreIndex {
         let mut address =
             if self.rn == 31 { cpu.sp_read() } else { cpu.x_read(self.rn.into(), 64) };
         address = address.wrapping_add(offset);
-        let data = cpu.mmu.read_memory(address as usize, 1);
+        let data = cpu.read_memory(address as usize, 1);
         if cpu.mmu.faulted {
             return;
         }
@@ -1295,7 +1295,7 @@ impl LdrswRegister {
             if self.rn == 31 { cpu.sp_read() } else { cpu.x_read(self.rn.into(), 64) };
         address = address.wrapping_add(offset);
 
-        let data = cpu.mmu.read_memory(address.try_into().unwrap(), 4);
+        let data = cpu.read_memory(address.try_into().unwrap(), 4);
         if cpu.mmu.faulted {
             return;
         }
@@ -1338,7 +1338,7 @@ impl LdrbRegister {
             if self.rn == 31 { cpu.sp_read() } else { cpu.x_read(self.rn.into(), 64) };
         address = address.wrapping_add(offset);
 
-        let data = cpu.mmu.read_memory(address.try_into().unwrap(), 1);
+        let data = cpu.read_memory(address.try_into().unwrap(), 1);
         if cpu.mmu.faulted {
             return;
         }
@@ -1382,7 +1382,7 @@ impl LdrhRegister {
             if self.rn == 31 { cpu.sp_read() } else { cpu.x_read(self.rn.into(), 64) };
         address = address.wrapping_add(offset);
 
-        let data = cpu.mmu.read_memory(address.try_into().unwrap(), 2);
+        let data = cpu.read_memory(address.try_into().unwrap(), 2);
         if cpu.mmu.faulted {
             return;
         }
@@ -1421,7 +1421,7 @@ impl Ldurb {
 
         address = address.wrapping_add(offset);
 
-        let data = cpu.mmu.read_memory(address as usize, 1);
+        let data = cpu.read_memory(address as usize, 1);
         if cpu.mmu.faulted {
             return;
         }
@@ -1458,7 +1458,7 @@ impl Ldurh {
 
         address = address.wrapping_add(offset);
 
-        let data = cpu.mmu.read_memory(address as usize, 2);
+        let data = cpu.read_memory(address as usize, 2);
         if cpu.mmu.faulted {
             return;
         }
@@ -1495,7 +1495,7 @@ impl Ldursw {
 
         address = address.wrapping_add(offset);
 
-        let data = cpu.mmu.read_memory(address as usize, 4);
+        let data = cpu.read_memory(address as usize, 4);
         if cpu.mmu.faulted {
             return;
         }
@@ -1534,7 +1534,7 @@ impl Sturb {
         address = address.wrapping_add(offset);
 
         let val = cpu.x_read(self.rt.into(), 8);
-        cpu.mmu.write_memory(address.try_into().unwrap(), 1, val);
+        cpu.write_memory(address.try_into().unwrap(), 1, val);
         if cpu.mmu.faulted {}
     }
     pub const fn decode(word: u32) -> Instruction {
@@ -1585,7 +1585,7 @@ impl Ldaxr {
         let address = if self.rn == 31 { cpu.sp_read() } else { cpu.x_read(self.rn.into(), 64) };
 
         cpu.monitor.set(address, dbytes as u8);
-        let data = cpu.mmu.read_memory(address.try_into().unwrap(), dbytes);
+        let data = cpu.read_memory(address.try_into().unwrap(), dbytes);
         if cpu.mmu.faulted {
             return;
         }
@@ -1624,7 +1624,7 @@ impl Ldxr {
         let address = if self.rn == 31 { cpu.sp_read() } else { cpu.x_read(self.rn.into(), 64) };
 
         cpu.monitor.set(address, dbytes as u8);
-        let data = cpu.mmu.read_memory(address.try_into().unwrap(), dbytes);
+        let data = cpu.read_memory(address.try_into().unwrap(), dbytes);
         if cpu.mmu.faulted {
             return;
         }
@@ -1656,7 +1656,7 @@ impl Ldxrb {
         let address = if self.rn == 31 { cpu.sp_read() } else { cpu.x_read(self.rn.into(), 64) };
 
         cpu.monitor.set(address, 1);
-        let data = cpu.mmu.read_memory(address.try_into().unwrap(), 1);
+        let data = cpu.read_memory(address.try_into().unwrap(), 1);
         if cpu.mmu.faulted {
             return;
         }
@@ -1693,7 +1693,7 @@ impl Ldar {
 
         let address = if self.rn == 31 { cpu.sp_read() } else { cpu.x_read(self.rn.into(), 64) };
 
-        let data = cpu.mmu.read_memory(address.try_into().unwrap(), dbytes);
+        let data = cpu.read_memory(address.try_into().unwrap(), dbytes);
         if cpu.mmu.faulted {
             return;
         }
@@ -1738,7 +1738,7 @@ impl Stxr {
         let data = cpu.x_read(self.rt.into(), elsize);
 
         let status = if cpu.monitor.safe(address, dbytes) {
-            cpu.mmu.write_memory(address as usize, dbytes.into(), data);
+            cpu.write_memory(address as usize, dbytes.into(), data);
             0u64
         } else {
             1u64
@@ -1792,7 +1792,7 @@ impl Stxrb {
         let data = cpu.x_read(self.rt.into(), elsize);
 
         let status = if cpu.monitor.safe(address, dbytes) {
-            cpu.mmu.write_memory(address as usize, dbytes.into(), data);
+            cpu.write_memory(address as usize, dbytes.into(), data);
             0u64
         } else {
             1u64
@@ -2015,7 +2015,7 @@ impl StlrNoOffset {
 
         let data = cpu.x_read(self.rt.into(), elsize);
 
-        cpu.mmu.write_memory(address.try_into().unwrap(), dbytres.into(), data);
+        cpu.write_memory(address.try_into().unwrap(), dbytres.into(), data);
         if cpu.mmu.faulted {}
     }
 
@@ -2046,7 +2046,7 @@ impl Stlrb {
 
         let data = cpu.x_read(self.rt.into(), 8);
 
-        cpu.mmu.write_memory(address.try_into().unwrap(), 1, data);
+        cpu.write_memory(address.try_into().unwrap(), 1, data);
         if cpu.mmu.faulted {}
     }
 
@@ -2088,7 +2088,7 @@ impl Stlxr {
         let data = cpu.x_read(self.rt.into(), elsize);
 
         let status = if cpu.monitor.safe(address, dbytes) {
-            cpu.mmu.write_memory(address as usize, dbytes.into(), data);
+            cpu.write_memory(address as usize, dbytes.into(), data);
             0u64
         } else {
             1u64
@@ -2427,7 +2427,7 @@ impl LdrsbReg {
 
         let address = address.wrapping_add(offset) as usize;
 
-        let data = cpu.mmu.read_memory(address, 1).1;
+        let data = cpu.read_memory(address, 1).1;
 
         if cpu.mmu.faulted {
             return;
@@ -2473,7 +2473,7 @@ impl Ldxp {
 
         cpu.monitor.set(address, dbytes);
         if elsize == 32 {
-            let data = cpu.mmu.read_memory(address.try_into().unwrap(), dbytes.into()).1;
+            let data = cpu.read_memory(address.try_into().unwrap(), dbytes.into()).1;
             if cpu.memory_op_faulted() {
                 return;
             }
@@ -2484,11 +2484,11 @@ impl Ldxp {
             cpu.x_write(self.rt2.into(), top, elsize == 32);
         } else {
             let address2 = address.wrapping_add(8);
-            let data1 = cpu.mmu.read_memory(address.try_into().unwrap(), 8);
+            let data1 = cpu.read_memory(address.try_into().unwrap(), 8);
             if cpu.memory_op_faulted() {
                 return;
             }
-            let data2 = cpu.mmu.read_memory(address2.try_into().unwrap(), 8);
+            let data2 = cpu.read_memory(address2.try_into().unwrap(), 8);
             if cpu.memory_op_faulted() {
                 return;
             }
@@ -2535,7 +2535,7 @@ impl Stlxp {
                 let bot = cpu.x_read(self.rt.into(), elsize);
                 let top = cpu.x_read(self.rt2.into(), elsize);
 
-                cpu.mmu.write_memory(address.try_into().unwrap(), dbytes.into(), (top << 32) | bot);
+                cpu.write_memory(address.try_into().unwrap(), dbytes.into(), (top << 32) | bot);
                 if cpu.memory_op_faulted() {
                     return;
                 }
@@ -2544,12 +2544,12 @@ impl Stlxp {
                 let bot = cpu.x_read(self.rt.into(), elsize);
                 let top = cpu.x_read(self.rt2.into(), elsize);
 
-                cpu.mmu.write_memory(address.try_into().unwrap(), 8, bot);
+                cpu.write_memory(address.try_into().unwrap(), 8, bot);
                 if cpu.memory_op_faulted() {
                     return;
                 }
 
-                cpu.mmu.write_memory((address + 8).try_into().unwrap(), 8, top);
+                cpu.write_memory((address + 8).try_into().unwrap(), 8, top);
                 if cpu.memory_op_faulted() {
                     return;
                 }
@@ -2611,7 +2611,7 @@ impl Stxp {
                 let bot = cpu.x_read(self.rt.into(), elsize);
                 let top = cpu.x_read(self.rt2.into(), elsize);
 
-                cpu.mmu.write_memory(address.try_into().unwrap(), dbytes.into(), (top << 32) | bot);
+                cpu.write_memory(address.try_into().unwrap(), dbytes.into(), (top << 32) | bot);
                 if cpu.memory_op_faulted() {
                     return;
                 }
@@ -2620,12 +2620,12 @@ impl Stxp {
                 let bot = cpu.x_read(self.rt.into(), elsize);
                 let top = cpu.x_read(self.rt2.into(), elsize);
 
-                cpu.mmu.write_memory(address.try_into().unwrap(), 8, bot);
+                cpu.write_memory(address.try_into().unwrap(), 8, bot);
                 if cpu.memory_op_faulted() {
                     return;
                 }
 
-                cpu.mmu.write_memory((address + 8).try_into().unwrap(), 8, top);
+                cpu.write_memory((address + 8).try_into().unwrap(), 8, top);
                 if cpu.memory_op_faulted() {
                     return;
                 }
