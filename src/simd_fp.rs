@@ -4,11 +4,8 @@ use crate::{
     get_bits_ct,
     instruction::{InstDesc, Instruction},
     load_and_store::{ExtendType, extend_register},
-    simd_fp_instr::{
-        dup_general_instruction, instruction_ldp_simd_fp, instruction_ldr_simd_fp,
-        str_imd_fp_instruction, str_pair_fp_instruction,
-    },
-    utils::{BitUtils, bits_get, elem_set, sign_extend},
+    simd_fp_instr::*,
+    utils::{BitUtils, bits_get, sign_extend},
 };
 
 /// Duplicate general-purpose register to vector
@@ -866,67 +863,4 @@ impl CmeqScalar {
         value: 0b0101_1110_1110_0000_1001_1000_0000_0000,
         decode: Self::decode,
     };
-}
-
-pub fn instruction_cmeq(cpu: &mut Cpu, rn: u8, rd: u8, esize: u8, datasize: u8, elements: u8) {
-    let mut result = 0;
-    let operand = cpu.v_read(rn.into(), datasize);
-
-    for e in 0..elements {
-        let element = operand.bits_get(e, esize);
-        if element == 0 {
-            result = result.bits_set(e, esize, 0b1.replicate(esize));
-        } else {
-            result = result.bits_set(e, esize, 0b0.replicate(esize));
-        };
-    }
-    cpu.v_write(rd.into(), datasize, result);
-}
-
-pub fn instruction_ld1(
-    cpu: &mut Cpu,
-    rn: u8,
-    rm: u8,
-    rt: u8,
-    elements: u8,
-    esize: u8,
-    datasize: u8,
-    rpt: u8,
-    wback: bool,
-) {
-    let ebytes = esize / 8;
-
-    let mut address = cpu.address_for_rn(rn);
-
-    let mut offs: u64 = 0;
-
-    for r in 0..rpt {
-        for e in 0..elements {
-            let mut tt = (rt + r) % 32;
-            // selem
-            for _ in 0..1 {
-                let rval = cpu.v_read(tt.into(), datasize);
-                let eaddr = address.wrapping_add(offs);
-                let val = cpu.read_memory(eaddr as usize, ebytes.into()).1;
-                if cpu.mmu.faulted {
-                    return;
-                }
-                let rval = elem_set(rval, e.into(), esize.into(), val);
-                cpu.v_write(tt.into(), datasize, rval);
-                offs = offs.wrapping_add(ebytes.into());
-                tt = (tt + 1) % 32;
-            }
-        }
-    }
-    if wback {
-        if rm != 31 {
-            offs = cpu.x_read(rm.into(), 64);
-        }
-        address = address.wrapping_add(offs);
-        if rn == 31 {
-            cpu.sp_write(address);
-        } else {
-            cpu.x_write(rn.into(), address, false);
-        }
-    }
 }

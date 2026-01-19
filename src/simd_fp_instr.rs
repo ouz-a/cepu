@@ -1,4 +1,4 @@
-use crate::cpu::Cpu;
+use crate::{cpu::Cpu, utils::*};
 
 pub fn dup_general_instruction(cpu: &mut Cpu, rn: u8, rd: u8, esize: u8, datasize: u8) {
     let element = cpu.x_read(rn.into(), esize);
@@ -193,5 +193,68 @@ pub fn instruction_ldr_simd_fp(
 
     if wback {
         cpu.handle_wback_postindex(postindex, address, offset, datasize, rn);
+    }
+}
+
+pub fn instruction_cmeq(cpu: &mut Cpu, rn: u8, rd: u8, esize: u8, datasize: u8, elements: u8) {
+    let mut result = 0;
+    let operand = cpu.v_read(rn.into(), datasize);
+
+    for e in 0..elements {
+        let element = operand.bits_get(e, esize);
+        if element == 0 {
+            result = result.bits_set(e, esize, 0b1.replicate(esize));
+        } else {
+            result = result.bits_set(e, esize, 0b0.replicate(esize));
+        };
+    }
+    cpu.v_write(rd.into(), datasize, result);
+}
+
+pub fn instruction_ld1(
+    cpu: &mut Cpu,
+    rn: u8,
+    rm: u8,
+    rt: u8,
+    elements: u8,
+    esize: u8,
+    datasize: u8,
+    rpt: u8,
+    wback: bool,
+) {
+    let ebytes = esize / 8;
+
+    let mut address = cpu.address_for_rn(rn);
+
+    let mut offs: u64 = 0;
+
+    for r in 0..rpt {
+        for e in 0..elements {
+            let mut tt = (rt + r) % 32;
+            // selem
+            for _ in 0..1 {
+                let rval = cpu.v_read(tt.into(), datasize);
+                let eaddr = address.wrapping_add(offs);
+                let val = cpu.read_memory(eaddr as usize, ebytes.into()).1;
+                if cpu.mmu.faulted {
+                    return;
+                }
+                let rval = elem_set(rval, e.into(), esize.into(), val);
+                cpu.v_write(tt.into(), datasize, rval);
+                offs = offs.wrapping_add(ebytes.into());
+                tt = (tt + 1) % 32;
+            }
+        }
+    }
+    if wback {
+        if rm != 31 {
+            offs = cpu.x_read(rm.into(), 64);
+        }
+        address = address.wrapping_add(offs);
+        if rn == 31 {
+            cpu.sp_write(address);
+        } else {
+            cpu.x_write(rn.into(), address, false);
+        }
     }
 }
