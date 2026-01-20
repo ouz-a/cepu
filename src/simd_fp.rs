@@ -935,27 +935,41 @@ impl CmeqRegScalar {
     };
 }
 
-pub fn instruction_cmeq_req(
-    cpu: &mut Cpu,
-    rn: u8,
-    rm: u8,
-    rd: u8,
-    esize: u8,
-    datasize: u8,
-    elements: u8,
-) {
-    let mut result = 0;
-    let operand1 = cpu.v_read(rn.into(), datasize);
-    let operand2 = cpu.v_read(rm.into(), datasize);
+/// Bitwise insert if true
+#[derive(Debug, Clone, Copy)]
+pub struct BitwiseInsert {
+    pub q: u8,
+    pub rm: u8,
+    pub rn: u8,
+    pub rd: u8,
+}
 
-    for e in 0..elements {
-        let element1 = operand1.bits_get(e, esize);
-        let element2 = operand2.bits_get(e, esize);
-        if element1 == element2 {
-            result = result.bits_set(e, esize, 0b1.replicate(esize));
-        } else {
-            result = result.bits_set(e, esize, 0b0.replicate(esize));
-        };
+impl BitwiseInsert {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let datasize = 64 << self.q;
+        let operand1 = cpu.v_read(self.rd.into(), datasize);
+        let operand2 = cpu.v_read(self.rm.into(), datasize);
+        let operand3 = cpu.v_read(self.rn.into(), datasize);
+
+        let xor_op1_op3 = operand1 ^ operand3;
+        let xor_and_op2 = xor_op1_op3 & operand2;
+
+        let val = operand1 ^ xor_and_op2;
+
+        cpu.v_write(self.rd.into(), datasize, val);
     }
-    cpu.v_write(rd.into(), datasize, result);
+
+    pub fn decode(word: u32) -> Instruction {
+        let q = get_bits_ct!(word, 30, 1) as u8;
+        let rm = get_bits_ct!(word, 16, 5) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rd = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::BitwiseInsert(Self { q, rm, rn, rd })
+    }
+
+    pub const BITWISE_INSERT: InstDesc = InstDesc {
+        mask: 0b1011_1111_1110_0000_1111_1100_0000_0000,
+        value: 0b0010_1110_1010_0000_0001_1100_0000_0000,
+        decode: Self::decode,
+    };
 }

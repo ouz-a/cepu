@@ -33,8 +33,8 @@ use crate::{
         Umulh,
     },
     simd_fp::{
-        CmeqRegScalar, CmeqRegVector, CmeqScalar, CmeqVector, DupGeneral, Ld1NoOffset,
-        Ld1PostIndex, LdpSimdFpPostIndex, LdpSimdFpPreIndex, LdpSimdFpSignedOffset,
+        BitwiseInsert, CmeqRegScalar, CmeqRegVector, CmeqScalar, CmeqVector, DupGeneral,
+        Ld1NoOffset, Ld1PostIndex, LdpSimdFpPostIndex, LdpSimdFpPreIndex, LdpSimdFpSignedOffset,
         LdrSimdFpPostIndex, LdrSimdFpPreIndex, LdrSimdFpUnsignedOffset, Movi, StrImdFpPostIndex,
         StrImdFpPreIndex, StrImdFpUnsignedOffset, StrPairFpPostIndex, StrPairFpPreIndex,
         StrPairFpSignedOffset, StrSimdRegOffset, SturSimdUnscaledOffset,
@@ -271,6 +271,7 @@ define_instructions!(
     Stxrb(Stxrb),
     // ----- Simd, FP -----
     Movi(Movi),
+    BitwiseInsert(BitwiseInsert),
     CmeqVector(CmeqVector),
     CmeqScalar(CmeqScalar),
     CmeqRegVector(CmeqRegVector),
@@ -492,6 +493,7 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     Stxrb::STXRB,
     // ----- Simd, FP -----
     Movi::MOVI,
+    BitwiseInsert::BITWISE_INSERT,
     CmeqVector::CMEQ_VECTOR,
     CmeqScalar::CMEQ_SCALAR,
     CmeqRegScalar::CMEQ_REG_SCALAR,

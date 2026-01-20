@@ -258,3 +258,29 @@ pub fn instruction_ld1(
         }
     }
 }
+
+pub fn instruction_cmeq_req(
+    cpu: &mut Cpu,
+    rn: u8,
+    rm: u8,
+    rd: u8,
+    esize: u8,
+    datasize: u8,
+    elements: u8,
+) {
+    let mut result = 0;
+    let operand1 = cpu.v_read(rn.into(), datasize);
+    let operand2 = cpu.v_read(rm.into(), datasize);
+
+    for e in 0..elements {
+        let element1 = operand1.bits_get(e, esize);
+        let element2 = operand2.bits_get(e, esize);
+        if element1 == element2 {
+            result = result.bits_set(e, esize, 0b1.replicate(esize));
+        } else {
+            result = result.bits_set(e, esize, 0b0.replicate(esize));
+        };
+    }
+    cpu.v_write(rd.into(), datasize, result);
+}
+
