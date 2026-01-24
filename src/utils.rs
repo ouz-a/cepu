@@ -220,14 +220,21 @@ fn ones_masked(n: u32, width: u8) -> u64 {
     zero_extend(ones, width)
 }
 
-// Read element
+/// Read element `e` of size `esize` bits from a vector.
+/// Mirrors ARM's `Elem[vector, e, esize]` accessor.
+///
+/// Think of it like `vec.chunks(esize).nth(e)` - divides the bits into
+/// fixed-size chunks and returns the e-th one.
 pub fn elem_get(vec: u128, e: usize, esize: usize) -> u64 {
     let shift = e * esize;
     let mask = (1u128 << esize) - 1;
     ((vec >> shift) & mask) as u64
 }
 
-// Write element
+/// Write `val` into element `e` of size `esize` bits in a vector.
+/// Mirrors ARM's `Elem[vector, e, esize] = val` accessor.
+///
+/// Think of it like `vec.chunks_mut(esize).nth(e) = val`.
 pub fn elem_set(vec: u128, e: usize, esize: usize, val: u64) -> u128 {
     let shift = e * esize;
     let mask = (1u128 << esize) - 1;

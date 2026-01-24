@@ -201,11 +201,11 @@ pub fn instruction_cmeq(cpu: &mut Cpu, rn: u8, rd: u8, esize: u8, datasize: u8, 
     let operand = cpu.v_read(rn.into(), datasize);
 
     for e in 0..elements {
-        let element = operand.bits_get(e, esize);
+        let element = elem_get(operand, e as usize, esize as usize);
         if element == 0 {
-            result = result.bits_set(e, esize, 0b1.replicate(esize));
+            result = elem_set(result, e as usize, esize as usize, 0b1u64.replicate(esize));
         } else {
-            result = result.bits_set(e, esize, 0b0.replicate(esize));
+            result = elem_set(result, e as usize, esize as usize, 0b0u64.replicate(esize));
         };
     }
     cpu.v_write(rd.into(), datasize, result);
@@ -273,14 +273,13 @@ pub fn instruction_cmeq_req(
     let operand2 = cpu.v_read(rm.into(), datasize);
 
     for e in 0..elements {
-        let element1 = operand1.bits_get(e, esize);
-        let element2 = operand2.bits_get(e, esize);
+        let element1 = elem_get(operand1, e as usize, esize as usize);
+        let element2 = elem_get(operand2, e as usize, esize as usize);
         if element1 == element2 {
-            result = result.bits_set(e, esize, 0b1.replicate(esize));
+            result = elem_set(result, e as usize, esize as usize, 0b1u64.replicate(esize));
         } else {
-            result = result.bits_set(e, esize, 0b0.replicate(esize));
+            result = elem_set(result, e as usize, esize as usize, 0b0u64.replicate(esize));
         };
     }
     cpu.v_write(rd.into(), datasize, result);
 }
-

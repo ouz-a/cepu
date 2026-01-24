@@ -5,7 +5,7 @@ use crate::{
     instruction::{InstDesc, Instruction},
     load_and_store::{ExtendType, extend_register},
     simd_fp_instr::*,
-    utils::{BitUtils, bits_get, sign_extend},
+    utils::{BitUtils, bits_get, elem_get, elem_set, sign_extend},
 };
 
 /// Duplicate general-purpose register to vector
@@ -970,6 +970,77 @@ impl BitwiseInsert {
     pub const BITWISE_INSERT: InstDesc = InstDesc {
         mask: 0b1011_1111_1110_0000_1111_1100_0000_0000,
         value: 0b0010_1110_1010_0000_0001_1100_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+/// Shift right narrow (immediate)
+#[derive(Debug, Clone, Copy)]
+pub struct Shrn {
+    pub q: u8,
+    pub immh: u8,
+    pub immb: u8,
+    pub rn: u8,
+    pub rd: u8,
+}
+
+impl Shrn {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        // Maybe we should use assert for these ?
+        // TODO
+        if self.immh == 0 {
+            panic!("See asimdim");
+        }
+        if self.immh.single_bit(3) == 1 {
+            panic!("Undefined");
+        }
+
+        let highest_set_bit = self.immh.bits_get(0, 3).highest_one().unwrap();
+        let esize = 8 << highest_set_bit;
+        let datasize = 64;
+        let part = self.q;
+        let elements = datasize / esize;
+
+        let immh_immb = (self.immh << 3) | self.immb;
+        let shift = (2 * esize) - (immh_immb);
+
+        let operand = cpu.v_read(self.rn.into(), datasize * 2);
+
+        let mut result: u128 = 0;
+        for e in 0..elements {
+            let element = elem_get(operand, e as usize, (esize * 2) as usize) >> shift;
+            let element = element.bits_get(0, esize);
+            result = elem_set(result, e as usize, esize as usize, element);
+        }
+        cpu.v_part_write(self.rd.into(), part, datasize, result);
+    }
+
+    pub fn decode(word: u32) -> Instruction {
+        let q = get_bits_ct!(word, 30, 1) as u8;
+        let immh = get_bits_ct!(word, 19, 4) as u8;
+        let immb = get_bits_ct!(word, 16, 3) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rd = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::Shrn(Self { q, immh, immb, rn, rd })
+    }
+
+    // Split into 3 variants to exclude immh=0000 (asimdimm/MOVI) and immh=1xxx (RESERVED)
+    // immh = 01xx (32-bit elements)
+    pub const SHRN_01XX: InstDesc = InstDesc {
+        mask:  0b1011_1111_1110_0000_1111_1100_0000_0000,
+        value: 0b0000_1111_0010_0000_1000_0100_0000_0000,
+        decode: Self::decode,
+    };
+    // immh = 001x (16-bit elements)
+    pub const SHRN_001X: InstDesc = InstDesc {
+        mask:  0b1011_1111_1111_0000_1111_1100_0000_0000,
+        value: 0b0000_1111_0001_0000_1000_0100_0000_0000,
+        decode: Self::decode,
+    };
+    // immh = 0001 (8-bit elements)
+    pub const SHRN_0001: InstDesc = InstDesc {
+        mask:  0b1011_1111_1111_1000_1111_1100_0000_0000,
+        value: 0b0000_1111_0000_1000_1000_0100_0000_0000,
         decode: Self::decode,
     };
 }

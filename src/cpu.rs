@@ -8,7 +8,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use crate::{get_bits_ct, instruction::UNDEF_PANIC, memory::PhyMemStatus, mmu::Mmu, utils::align};
+use crate::{get_bits_ct, instruction::UNDEF_PANIC, memory::PhyMemStatus, mmu::Mmu, utils::*};
 pub const MEM_TOP: usize = crate::memory::MEMORY_SIZE;
 
 static START: OnceLock<Instant> = OnceLock::new();
@@ -543,11 +543,24 @@ impl Cpu {
         self.v[n] & mask
     }
 
-    pub fn v_write(&mut self, n: usize, width: u8, value: u128) {
-        assert!(n < VPRS);
+    pub fn v_write(&mut self, destination: usize, width: u8, value: u128) {
+        assert!(destination < VPRS);
         assert!(width <= 128 && width.is_multiple_of(8));
         let mask = if width == 128 { !0u128 } else { (1u128 << width) - 1 };
-        self.v[n] = value & mask;
+        self.v[destination] = value & mask;
+    }
+
+    pub fn v_part_write(&mut self, destination: usize, part: u8, width: u8, value: u128) {
+        assert!(part == 1 || part == 0);
+        if part == 0 {
+            assert!(width < 128);
+            self.v_write(destination, width, value);
+        } else {
+            assert_eq!(width, 64);
+            let vreg = self.v_read(destination, 64);
+            let value_half = value.bits_get(0, 64);
+            self.v_write(destination, 128, (value_half << 64) | vreg);
+        }
     }
 
     /// When n == 31 we return 0

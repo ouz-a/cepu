@@ -35,9 +35,9 @@ use crate::{
     simd_fp::{
         BitwiseInsert, CmeqRegScalar, CmeqRegVector, CmeqScalar, CmeqVector, DupGeneral,
         Ld1NoOffset, Ld1PostIndex, LdpSimdFpPostIndex, LdpSimdFpPreIndex, LdpSimdFpSignedOffset,
-        LdrSimdFpPostIndex, LdrSimdFpPreIndex, LdrSimdFpUnsignedOffset, Movi, StrImdFpPostIndex,
-        StrImdFpPreIndex, StrImdFpUnsignedOffset, StrPairFpPostIndex, StrPairFpPreIndex,
-        StrPairFpSignedOffset, StrSimdRegOffset, SturSimdUnscaledOffset,
+        LdrSimdFpPostIndex, LdrSimdFpPreIndex, LdrSimdFpUnsignedOffset, Movi, Shrn,
+        StrImdFpPostIndex, StrImdFpPreIndex, StrImdFpUnsignedOffset, StrPairFpPostIndex,
+        StrPairFpPreIndex, StrPairFpSignedOffset, StrSimdRegOffset, SturSimdUnscaledOffset,
     },
 };
 
@@ -271,6 +271,7 @@ define_instructions!(
     Stxrb(Stxrb),
     // ----- Simd, FP -----
     Movi(Movi),
+    Shrn(Shrn),
     BitwiseInsert(BitwiseInsert),
     CmeqVector(CmeqVector),
     CmeqScalar(CmeqScalar),
@@ -493,6 +494,9 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     Stxrb::STXRB,
     // ----- Simd, FP -----
     Movi::MOVI,
+    Shrn::SHRN_01XX,
+    Shrn::SHRN_001X,
+    Shrn::SHRN_0001,
     BitwiseInsert::BITWISE_INSERT,
     CmeqVector::CMEQ_VECTOR,
     CmeqScalar::CMEQ_SCALAR,
