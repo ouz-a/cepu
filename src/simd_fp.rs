@@ -8,6 +8,25 @@ use crate::{
     utils::{BitUtils, bits_get, elem_get, elem_set, sign_extend},
 };
 
+/// Floating-point convert/move instruction types.
+#[derive(Clone, Copy, Debug)]
+pub enum FpConvOp {
+    CvtFtoI,
+    CvtItoF,
+    CvtFtoIJs,
+    MovFtoI,
+    MovItoF,
+}
+
+/// Floating-point min/max instruction types.
+#[derive(Clone, Copy, Debug)]
+pub enum FpMaxMinOp {
+    Max,
+    Min,
+    MaxNum,
+    MinNum,
+}
+
 /// Duplicate general-purpose register to vector
 #[derive(Clone, Copy, Debug)]
 pub struct DupGeneral {
@@ -821,7 +840,7 @@ impl CmeqVector {
         instruction_cmeq(cpu, self.rn, self.rd, esize, datasize, elements);
     }
 
-    pub fn decode(word: u32) -> Instruction {
+    pub const fn decode(word: u32) -> Instruction {
         let rn = get_bits_ct!(word, 5, 5) as u8;
         let q = get_bits_ct!(word, 30, 1) as u8;
         let size = get_bits_ct!(word, 22, 2) as u8;
@@ -852,7 +871,7 @@ impl CmeqScalar {
         instruction_cmeq(cpu, self.rn, self.rd, esize, datasize, elements);
     }
 
-    pub fn decode(word: u32) -> Instruction {
+    pub const fn decode(word: u32) -> Instruction {
         let rn = get_bits_ct!(word, 5, 5) as u8;
         let rd = get_bits_ct!(word, 0, 5) as u8;
         Instruction::CmeqScalar(Self { rn, rd })
@@ -888,7 +907,7 @@ impl CmeqRegVector {
         instruction_cmeq_req(cpu, self.rn, self.rm, self.rd, esize, datasize, elements);
     }
 
-    pub fn decode(word: u32) -> Instruction {
+    pub const fn decode(word: u32) -> Instruction {
         let q = get_bits_ct!(word, 30, 1) as u8;
         let size = get_bits_ct!(word, 22, 2) as u8;
         let rm = get_bits_ct!(word, 16, 5) as u8;
@@ -921,7 +940,7 @@ impl CmeqRegScalar {
         instruction_cmeq_req(cpu, self.rn, self.rm, self.rd, esize, datasize, elements);
     }
 
-    pub fn decode(word: u32) -> Instruction {
+    pub const fn decode(word: u32) -> Instruction {
         let rm = get_bits_ct!(word, 16, 5) as u8;
         let rn = get_bits_ct!(word, 5, 5) as u8;
         let rd = get_bits_ct!(word, 0, 5) as u8;
@@ -959,7 +978,7 @@ impl BitwiseInsert {
         cpu.v_write(self.rd.into(), datasize, val);
     }
 
-    pub fn decode(word: u32) -> Instruction {
+    pub const fn decode(word: u32) -> Instruction {
         let q = get_bits_ct!(word, 30, 1) as u8;
         let rm = get_bits_ct!(word, 16, 5) as u8;
         let rn = get_bits_ct!(word, 5, 5) as u8;
@@ -1015,7 +1034,7 @@ impl Shrn {
         cpu.v_part_write(self.rd.into(), part, datasize, result);
     }
 
-    pub fn decode(word: u32) -> Instruction {
+    pub const fn decode(word: u32) -> Instruction {
         let q = get_bits_ct!(word, 30, 1) as u8;
         let immh = get_bits_ct!(word, 19, 4) as u8;
         let immb = get_bits_ct!(word, 16, 3) as u8;
@@ -1024,23 +1043,105 @@ impl Shrn {
         Instruction::Shrn(Self { q, immh, immb, rn, rd })
     }
 
-    // Split into 3 variants to exclude immh=0000 (asimdimm/MOVI) and immh=1xxx (RESERVED)
-    // immh = 01xx (32-bit elements)
+    // Split into 3 variants to exclude immh=0000 (asimdimm/MOVI) and immh=1xxx
+    // (RESERVED) immh = 01xx (32-bit elements)
     pub const SHRN_01XX: InstDesc = InstDesc {
-        mask:  0b1011_1111_1110_0000_1111_1100_0000_0000,
+        mask: 0b1011_1111_1110_0000_1111_1100_0000_0000,
         value: 0b0000_1111_0010_0000_1000_0100_0000_0000,
         decode: Self::decode,
     };
     // immh = 001x (16-bit elements)
     pub const SHRN_001X: InstDesc = InstDesc {
-        mask:  0b1011_1111_1111_0000_1111_1100_0000_0000,
+        mask: 0b1011_1111_1111_0000_1111_1100_0000_0000,
         value: 0b0000_1111_0001_0000_1000_0100_0000_0000,
         decode: Self::decode,
     };
     // immh = 0001 (8-bit elements)
     pub const SHRN_0001: InstDesc = InstDesc {
-        mask:  0b1011_1111_1111_1000_1111_1100_0000_0000,
+        mask: 0b1011_1111_1111_1000_1111_1100_0000_0000,
         value: 0b0000_1111_0000_1000_1000_0100_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+/// Floating-point move to or from general-purpose register without conversion
+#[derive(Debug, Clone, Copy)]
+pub struct FmovGeneral {
+    pub sf: u8,
+    pub ftype: u8,
+    pub rmode: u8,
+    pub opcode: u8,
+    pub rn: u8,
+    pub rd: u8,
+}
+
+impl FmovGeneral {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let opcode_rmode = (0b11 << 2) | self.rmode;
+        if self.ftype == 0b10 && opcode_rmode != 0b1101 {
+            panic!("Undefined")
+        }
+
+        let intsize = 32 << self.sf;
+        let fltsize = if self.ftype == 0b10 { 64 } else { 8 << (self.ftype ^ 0b10) };
+        let part = self.rmode.bits_get(0, 1) as u8;
+        let op;
+        match opcode_rmode {
+            // FMOV
+            0b11_00 => {
+                if fltsize != 16 && fltsize != intsize {
+                    panic!("Undefined");
+                }
+                op = if self.opcode.bits_get(0, 1) == 1 {
+                    FpConvOp::MovItoF
+                } else {
+                    FpConvOp::MovFtoI
+                }
+            }
+            0b11_01 => {
+                if intsize != 64 || self.ftype != 0b10 {
+                    panic!("Undefined");
+                }
+                op = if self.opcode.bits_get(0, 1) == 1 {
+                    FpConvOp::MovItoF
+                } else {
+                    FpConvOp::MovFtoI
+                }
+            }
+            _ => panic!("Unreachable"),
+        }
+
+        match op {
+            FpConvOp::MovFtoI => {
+                let fltval = cpu.v_part_read(self.rn.into(), part, fltsize) as u64;
+                cpu.x_write(self.rd.into(), fltval, intsize == 32);
+            }
+            FpConvOp::MovItoF => {
+                let intval = cpu.x_read(self.rn.into(), intsize.into());
+                cpu.v_part_write(
+                    self.rd.into(),
+                    part,
+                    fltsize.into(),
+                    intval.bits_get(0, fltsize).into(),
+                );
+            }
+            _ => panic!("Unreachable"),
+        }
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let sf = get_bits_ct!(word, 31, 1) as u8;
+        let ftype = get_bits_ct!(word, 22, 2) as u8;
+        let rmode = get_bits_ct!(word, 19, 2) as u8;
+        let opcode = get_bits_ct!(word, 16, 3) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rd = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::FmovGeneral(Self { sf, ftype, rmode, opcode, rn, rd })
+    }
+
+    pub const FMOV_GENERAL: InstDesc = InstDesc {
+        mask: 0b0111_1111_0011_0110_1111_1100_0000_0000,
+        value: 0b0001_1110_0010_0110_0000_0000_0000_0000,
         decode: Self::decode,
     };
 }

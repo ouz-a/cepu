@@ -563,6 +563,18 @@ impl Cpu {
         }
     }
 
+    pub fn v_part_read(&mut self, destination: usize, part: u8, width: u8) -> u128 {
+        assert!(part == 1 || part == 0);
+        if part == 0 {
+            assert!(width < 128);
+            return self.v_read(destination, width);
+        } else {
+            assert!(width == 32 || width == 64);
+            let vreg = self.v_read(destination, 128);
+            return vreg.bits_get(width * 2, width);
+        }
+    }
+
     /// When n == 31 we return 0
     pub fn x_read(&self, n: usize, width: u8) -> u64 {
         assert!(n < GPRS);
