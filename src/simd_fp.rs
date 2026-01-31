@@ -1213,3 +1213,68 @@ impl FmovGeneral {
         decode: Self::decode,
     };
 }
+
+/// Unsigned maximum pairwise
+#[derive(Debug, Clone, Copy)]
+pub struct Umaxp {
+    pub q: u8,
+    pub size: u8,
+    pub rm: u8,
+    pub rn: u8,
+    pub rd: u8,
+}
+
+impl Umaxp {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        if self.size == 0b11 {
+            panic!("Undefined");
+        }
+        let esize = 8 << self.size;
+        let datasize = 64 << self.q;
+        let elements = datasize / esize;
+
+        let mut result = 0;
+        let operand1 = cpu.v_read(self.rn.into(), datasize);
+        let operand2 = cpu.v_read(self.rm.into(), datasize);
+
+        // Pairwise operation: conceptually concat = operand2:operand1
+        // Indices 0..elements are in operand1, indices elements..2*elements are in operand2
+        for e in 0..elements {
+            let idx1 = (2 * e) as usize;
+            let idx2 = (2 * e + 1) as usize;
+            let elements = elements as usize;
+
+            let element1 = if idx1 < elements {
+                elem_get(operand1, idx1, esize as usize)
+            } else {
+                elem_get(operand2, idx1 - elements, esize as usize)
+            };
+
+            let element2 = if idx2 < elements {
+                elem_get(operand1, idx2, esize as usize)
+            } else {
+                elem_get(operand2, idx2 - elements, esize as usize)
+            };
+
+            let max = element1.max(element2);
+            result = elem_set(result, e as usize, esize as usize, max.bits_get(0, esize));
+        }
+
+        cpu.v_write(self.rd.into(), datasize, result);
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let q = get_bits_ct!(word, 30, 1) as u8;
+        let size = get_bits_ct!(word, 22, 2) as u8;
+        let rm = get_bits_ct!(word, 16, 5) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rd = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::Umaxp(Self { q, size, rm, rn, rd })
+    }
+
+    pub const UMAXP: InstDesc = InstDesc {
+        mask: 0b1011_1111_0010_0000_1111_1100_0000_0000,
+        value: 0b0010_1110_0010_0000_1010_0100_0000_0000,
+        decode: Self::decode,
+    };
+}

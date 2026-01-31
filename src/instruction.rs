@@ -38,7 +38,7 @@ use crate::{
         LdpSimdFpPreIndex, LdpSimdFpSignedOffset, LdrSimdFpPostIndex, LdrSimdFpPreIndex,
         LdrSimdFpUnsignedOffset, Movi, Shrn, StrImdFpPostIndex, StrImdFpPreIndex,
         StrImdFpUnsignedOffset, StrPairFpPostIndex, StrPairFpPreIndex, StrPairFpSignedOffset,
-        StrSimdRegOffset, SturSimdUnscaledOffset,
+        StrSimdRegOffset, SturSimdUnscaledOffset, Umaxp,
     },
 };
 
@@ -272,6 +272,7 @@ define_instructions!(
     Stxrb(Stxrb),
     // ----- Simd, FP -----
     Movi(Movi),
+    Umaxp(Umaxp),
     CmhsRegisterScalar(CmhsRegisterScalar),
     CmhsRegisterVector(CmhsRegisterVector),
     FmovGeneral(FmovGeneral),
@@ -498,6 +499,7 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     Stxrb::STXRB,
     // ----- Simd, FP -----
     Movi::MOVI,
+    Umaxp::UMAXP,
     CmhsRegisterScalar::CMHS_REGISTER_SCALAR,
     CmhsRegisterVector::CMHS_REGISTER_VECTOR,
     FmovGeneral::FMOV_GENERAL,
