@@ -33,12 +33,12 @@ use crate::{
         Umulh,
     },
     simd_fp::{
-        BitwiseInsert, CmeqRegScalar, CmeqRegVector, CmeqScalar, CmeqVector, DupGeneral,
-        FmovGeneral, Ld1NoOffset, Ld1PostIndex, LdpSimdFpPostIndex, LdpSimdFpPreIndex,
-        LdpSimdFpSignedOffset, LdrSimdFpPostIndex, LdrSimdFpPreIndex, LdrSimdFpUnsignedOffset,
-        Movi, Shrn, StrImdFpPostIndex, StrImdFpPreIndex, StrImdFpUnsignedOffset,
-        StrPairFpPostIndex, StrPairFpPreIndex, StrPairFpSignedOffset, StrSimdRegOffset,
-        SturSimdUnscaledOffset,
+        BitwiseInsert, CmeqRegScalar, CmeqRegVector, CmeqScalar, CmeqVector, CmhsRegisterScalar,
+        CmhsRegisterVector, DupGeneral, FmovGeneral, Ld1NoOffset, Ld1PostIndex, LdpSimdFpPostIndex,
+        LdpSimdFpPreIndex, LdpSimdFpSignedOffset, LdrSimdFpPostIndex, LdrSimdFpPreIndex,
+        LdrSimdFpUnsignedOffset, Movi, Shrn, StrImdFpPostIndex, StrImdFpPreIndex,
+        StrImdFpUnsignedOffset, StrPairFpPostIndex, StrPairFpPreIndex, StrPairFpSignedOffset,
+        StrSimdRegOffset, SturSimdUnscaledOffset,
     },
 };
 
@@ -272,6 +272,8 @@ define_instructions!(
     Stxrb(Stxrb),
     // ----- Simd, FP -----
     Movi(Movi),
+    CmhsRegisterScalar(CmhsRegisterScalar),
+    CmhsRegisterVector(CmhsRegisterVector),
     FmovGeneral(FmovGeneral),
     Shrn(Shrn),
     BitwiseInsert(BitwiseInsert),
@@ -496,6 +498,8 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     Stxrb::STXRB,
     // ----- Simd, FP -----
     Movi::MOVI,
+    CmhsRegisterScalar::CMHS_REGISTER_SCALAR,
+    CmhsRegisterVector::CMHS_REGISTER_VECTOR,
     FmovGeneral::FMOV_GENERAL,
     Shrn::SHRN_01XX,
     Shrn::SHRN_001X,

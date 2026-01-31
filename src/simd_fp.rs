@@ -818,8 +818,76 @@ impl Ld1PostIndex {
     };
 }
 
+/// Compare unsigned higher or same (vector)
 #[derive(Debug, Clone, Copy)]
+pub struct CmhsRegisterVector {
+    pub q: u8,
+    pub size: u8,
+    pub rm: u8,
+    pub rn: u8,
+    pub rd: u8,
+}
+
+impl CmhsRegisterVector {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let size_and_q = (self.size << 1) | self.q;
+        if size_and_q == 0b110 {
+            panic!("Undefiend");
+        }
+        let esize = 8 << self.size;
+        let datasize = 64 << self.q;
+        let elements = datasize / esize;
+        instruction_cmhs_register(cpu, self.rn, self.rm, self.rd, esize, datasize, elements);
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let q = get_bits_ct!(word, 30, 1) as u8;
+        let size = get_bits_ct!(word, 22, 2) as u8;
+        let rm = get_bits_ct!(word, 16, 5) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rd = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::CmhsRegisterVector(Self { q, size, rm, rn, rd })
+    }
+
+    pub const CMHS_REGISTER_VECTOR: InstDesc = InstDesc {
+        mask: 0b1011_1111_0010_0000_1111_1100_0000_0000,
+        value: 0b0010_1110_0010_0000_0011_1100_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+/// Compare unsigned higher or same (vector)
+#[derive(Debug, Clone, Copy)]
+pub struct CmhsRegisterScalar {
+    pub rm: u8,
+    pub rn: u8,
+    pub rd: u8,
+}
+
+impl CmhsRegisterScalar {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let esize = 8 << 0b11;
+        let datasize = esize;
+        let elements = 1;
+        instruction_cmhs_register(cpu, self.rn, self.rm, self.rd, esize, datasize, elements);
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let rm = get_bits_ct!(word, 16, 5) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rd = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::CmhsRegisterScalar(Self { rm, rn, rd })
+    }
+
+    pub const CMHS_REGISTER_SCALAR: InstDesc = InstDesc {
+        mask: 0b1111_1111_1110_0000_1111_1100_0000_0000,
+        value: 0b0111_1110_1110_0000_0011_1100_0000_0000,
+        decode: Self::decode,
+    };
+}
+
 /// Compare bitwise equal to zero (vector)
+#[derive(Debug, Clone, Copy)]
 pub struct CmeqVector {
     pub rn: u8,
     pub q: u8,

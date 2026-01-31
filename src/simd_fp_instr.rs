@@ -283,3 +283,28 @@ pub fn instruction_cmeq_req(
     }
     cpu.v_write(rd.into(), datasize, result);
 }
+
+pub fn instruction_cmhs_register(
+    cpu: &mut Cpu,
+    rn: u8,
+    rm: u8,
+    rd: u8,
+    esize: u8,
+    datasize: u8,
+    elements: u8,
+) {
+    let mut result = 0;
+    let operand1 = cpu.v_read(rn.into(), datasize);
+    let operand2 = cpu.v_read(rm.into(), datasize);
+
+    for e in 0..elements {
+        let element1 = elem_get(operand1, e as usize, esize as usize);
+        let element2 = elem_get(operand2, e as usize, esize as usize);
+        if element1 >= element2 {
+            result = elem_set(result, e as usize, esize as usize, 0b1u64.replicate(esize));
+        } else {
+            result = elem_set(result, e as usize, esize as usize, 0b0u64.replicate(esize));
+        };
+    }
+    cpu.v_write(rd.into(), datasize, result);
+}
