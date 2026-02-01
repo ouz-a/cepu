@@ -556,7 +556,8 @@ impl Bti {
 
 /// Check feature status
 /// CHKFEAT X16 - checks which features are enabled
-/// Since we don't implement FEAT_GCS, X16 remains unchanged (all features "not enabled")
+/// Since we don't implement FEAT_GCS, X16 remains unchanged (all features "not
+/// enabled")
 #[derive(Debug, Clone, Copy)]
 pub struct Chkfeat;
 

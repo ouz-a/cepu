@@ -543,11 +543,11 @@ impl Cpu {
         self.v[n] & mask
     }
 
-    pub fn v_write(&mut self, destination: usize, width: u8, value: u128) {
-        assert!(destination < VPRS);
+    pub fn v_write(&mut self, destination_register: usize, width: u8, value: u128) {
+        assert!(destination_register < VPRS);
         assert!(width <= 128 && width.is_multiple_of(8));
         let mask = if width == 128 { !0u128 } else { (1u128 << width) - 1 };
-        self.v[destination] = value & mask;
+        self.v[destination_register] = value & mask;
     }
 
     pub fn v_part_write(&mut self, destination: usize, part: u8, width: u8, value: u128) {

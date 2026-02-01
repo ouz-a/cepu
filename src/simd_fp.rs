@@ -1228,12 +1228,7 @@ impl FmovGeneral {
             }
             FpConvOp::MovItoF => {
                 let intval = cpu.x_read(self.rn.into(), intsize);
-                cpu.v_part_write(
-                    self.rd.into(),
-                    part,
-                    fltsize,
-                    intval.bits_get(0, fltsize).into(),
-                );
+                cpu.v_part_write(self.rd.into(), part, fltsize, intval.bits_get(0, fltsize).into());
             }
             _ => panic!("Unreachable"),
         }
@@ -1318,6 +1313,58 @@ impl Umaxp {
     pub const UMAXP: InstDesc = InstDesc {
         mask: 0b1011_1111_0010_0000_1111_1100_0000_0000,
         value: 0b0010_1110_0010_0000_1010_0100_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+/// Load SIMD&FP register (unscaled offset)
+#[derive(Debug, Clone, Copy)]
+pub struct LdurSimd {
+    pub size: u8,
+    pub opc: u8,
+    pub imm9: u16,
+    pub rn: u8,
+    pub rt: u8,
+}
+
+impl LdurSimd {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let second_opc_bit = self.opc.single_bit(1);
+        if second_opc_bit == 1 && self.size != 0b00 {
+            panic!("Undefined");
+        }
+        let scale = if second_opc_bit == 1 { 4 } else { self.size };
+        let offset = sign_extend(self.imm9.into(), 9);
+
+        let datasize = 8 << scale;
+
+        let address = cpu.address_for_rn(self.rn);
+
+        let address = address.wrapping_add(offset);
+
+        let val;
+
+        if datasize == 128 {
+            val = cpu.read_memory_128bit(address as usize).1;
+        } else {
+            val = (cpu.read_memory(address as usize, datasize / 8).1) as u128;
+        }
+
+        cpu.v_write(self.rt.into(), datasize as u8, val);
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let size = get_bits_ct!(word, 30, 2) as u8;
+        let opc = get_bits_ct!(word, 22, 2) as u8;
+        let imm9 = get_bits_ct!(word, 12, 9) as u16;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rt = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::LdurSimd(Self { size, opc, imm9, rn, rt })
+    }
+
+    pub const LDUR_SIMD: InstDesc = InstDesc {
+        mask: 0b0011_1111_0110_0000_0000_1100_0000_0000,
+        value: 0b0011_1100_0100_0000_0000_0000_0000_0000,
         decode: Self::decode,
     };
 }
