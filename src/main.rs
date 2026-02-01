@@ -10,7 +10,8 @@ use crate::{
     cpu::{BATCH, Cpu, INSTRUCTION_SIZE, monotonic_ns},
     image::{load_device_blob, load_initramfs, load_kernel_image},
     instruction::{
-        DESCR, UNDEF_PANIC, capture_trace, decode, print_undefined_trace, validate_tables,
+        CURRENT_PC, DESCR, UNDEF_PANIC, capture_trace, decode, print_undefined_trace,
+        validate_tables,
     },
     memory::{MEMORY_SIZE, read_32},
 };
@@ -63,6 +64,7 @@ pub fn run_block(cpu: &mut Cpu) {
                 print_undefined_trace(how_many, &mut trace);
                 std::process::exit(1);
             }
+            CURRENT_PC.store(old_pc, Ordering::Relaxed);
             dec.exec(cpu, old_pc);
             if cpu.mmu.faulted {
                 pc = old_pc;

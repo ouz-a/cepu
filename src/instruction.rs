@@ -33,10 +33,10 @@ use crate::{
         Umulh,
     },
     simd_fp::{
-        BitwiseInsert, CmeqRegScalar, CmeqRegVector, CmeqScalar, CmeqVector, CmhsRegisterScalar,
-        CmhsRegisterVector, DupGeneral, FmovGeneral, Ld1NoOffset, Ld1PostIndex, LdpSimdFpPostIndex,
-        LdpSimdFpPreIndex, LdpSimdFpSignedOffset, LdrSimdFpPostIndex, LdrSimdFpPreIndex,
-        LdrSimdFpUnsignedOffset, Movi, Shrn, StrImdFpPostIndex, StrImdFpPreIndex,
+        AsimdModImm, BitwiseInsert, CmeqRegScalar, CmeqRegVector, CmeqScalar, CmeqVector,
+        CmhsRegisterScalar, CmhsRegisterVector, DupGeneral, FmovGeneral, Ld1NoOffset, Ld1PostIndex,
+        LdpSimdFpPostIndex, LdpSimdFpPreIndex, LdpSimdFpSignedOffset, LdrSimdFpPostIndex,
+        LdrSimdFpPreIndex, LdrSimdFpUnsignedOffset, Shrn, StrImdFpPostIndex, StrImdFpPreIndex,
         StrImdFpUnsignedOffset, StrPairFpPostIndex, StrPairFpPreIndex, StrPairFpSignedOffset,
         StrSimdRegOffset, SturSimdUnscaledOffset, Umaxp,
     },
@@ -271,7 +271,7 @@ define_instructions!(
     Stxr(Stxr),
     Stxrb(Stxrb),
     // ----- Simd, FP -----
-    Movi(Movi),
+    AsimdModImm(AsimdModImm),
     Umaxp(Umaxp),
     CmhsRegisterScalar(CmhsRegisterScalar),
     CmhsRegisterVector(CmhsRegisterVector),
@@ -498,7 +498,7 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     Stxr::STXR,
     Stxrb::STXRB,
     // ----- Simd, FP -----
-    Movi::MOVI,
+    AsimdModImm::ASIMD_MOD_IMM,
     Umaxp::UMAXP,
     CmhsRegisterScalar::CMHS_REGISTER_SCALAR,
     CmhsRegisterVector::CMHS_REGISTER_VECTOR,
@@ -641,6 +641,7 @@ pub fn decode_undef(_: u32) -> Instruction {
 
 pub const UNDEF_DESC: InstDesc = InstDesc { mask: 0, value: 0, decode: decode_undef };
 pub static UNDEF_PANIC: AtomicBool = AtomicBool::new(false);
+pub static CURRENT_PC: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
 
 pub fn capture_trace(trace_holder: &mut VecDeque<(u64, u32)>, pc: u64, word: u32) {
     if trace_holder.len() >= 20 {

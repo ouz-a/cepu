@@ -281,8 +281,22 @@ pub trait BitUtils {
     /// Sets `len` bits starting at position `start` to lower `len` bits of
     /// `bits`
     fn bits_set(self, start: u8, len: u8, bits: u128) -> Self;
-    /// This should be only used for unsigned types
-    fn replicate<T: AsU128>(self, repeat: u8) -> T;
+
+    /// Replicate a pattern of `width` bits `times` times.
+    /// Width is explicit to avoid confusion.
+    ///
+    /// Example: `0xABu8.replicate_pattern::<u64>(8, 8)` → `0xABABABABABABABAB`
+    /// Example: `0x1234u16.replicate_pattern::<u64>(16, 4)` →
+    /// `0x1234123412341234`
+    fn replicate_pattern<T: AsU128>(self, width: u8, times: u8) -> T;
+
+    /// Expand a single bit (0 or 1) to `count` consecutive identical bits.
+    /// Only looks at the LSB of self.
+    ///
+    /// Example: `1u8.replicate_bit::<u8>(8)` → `0xFF`
+    /// Example: `0u8.replicate_bit::<u8>(8)` → `0x00`
+    /// Example: `1u8.replicate_bit::<u32>(16)` → `0x0000FFFF`
+    fn replicate_bit<T: AsU128>(self, count: u8) -> T;
 }
 
 macro_rules! impl_bit_utils {
@@ -308,9 +322,18 @@ macro_rules! impl_bit_utils {
                     ((val & clear_mask) | ((bits & mask) << start)) as Self
                 }
 
-                fn replicate<T:AsU128>(self,repeat:u8) -> T {
-                    let size_of = size_of::<T>() as u8;
-                    let res = replicate_bits_128(self as u128,size_of,repeat);
+                fn replicate_pattern<T: AsU128>(self, width: u8, times: u8) -> T {
+                    let res = replicate_bits_128(self as u128, width, times);
+                    T::from_u128(res)
+                }
+
+                fn replicate_bit<T: AsU128>(self, count: u8) -> T {
+                    let bit = (self as u128) & 1;
+                    let res = if bit != 0 {
+                        if count >= 128 { u128::MAX } else { (1u128 << count) - 1 }
+                    } else {
+                        0
+                    };
                     T::from_u128(res)
                 }
             }
@@ -343,9 +366,18 @@ macro_rules! impl_bit_utils_signed {
                     ((val & clear_mask) | ((bits & mask) << start)) as Self
                 }
 
-               fn replicate<T:AsU128>(self,repeat:u8) -> T {
-                    let size_of = size_of::<T>() as u8;
-                    let res = replicate_bits_128(self as u128,size_of,repeat);
+                fn replicate_pattern<T: AsU128>(self, width: u8, times: u8) -> T {
+                    let res = replicate_bits_128(self as $unsigned as u128, width, times);
+                    T::from_u128(res)
+                }
+
+                fn replicate_bit<T: AsU128>(self, count: u8) -> T {
+                    let bit = (self as $unsigned as u128) & 1;
+                    let res = if bit != 0 {
+                        if count >= 128 { u128::MAX } else { (1u128 << count) - 1 }
+                    } else {
+                        0
+                    };
                     T::from_u128(res)
                 }
             }
@@ -354,3 +386,41 @@ macro_rules! impl_bit_utils_signed {
 }
 
 impl_bit_utils_signed!((i8, u8), (i16, u16), (i32, u32), (i64, u64), (i128, u128), (isize, usize));
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_replicate_pattern() {
+        // 8-bit pattern replicated 8 times to fill 64 bits
+        assert_eq!(0xABu8.replicate_pattern::<u64>(8, 8), 0xABABABABABABABAB);
+
+        // 16-bit pattern replicated 4 times
+        assert_eq!(0x1234u16.replicate_pattern::<u64>(16, 4), 0x1234123412341234);
+
+        // 32-bit pattern replicated 2 times
+        assert_eq!(0x12345678u32.replicate_pattern::<u64>(32, 2), 0x1234567812345678);
+    }
+
+    #[test]
+    fn test_replicate_bit() {
+        // Expand 1 to 8 bits → 0xFF
+        assert_eq!(1u8.replicate_bit::<u8>(8), 0xFF);
+
+        // Expand 0 to 8 bits → 0x00
+        assert_eq!(0u8.replicate_bit::<u8>(8), 0x00);
+
+        // Expand 1 to 16 bits → 0xFFFF
+        assert_eq!(1u8.replicate_bit::<u32>(16), 0xFFFF);
+
+        // Expand 1 to 5 bits → 0x1F
+        assert_eq!(1u8.replicate_bit::<u32>(5), 0x1F);
+
+        // Only LSB matters - 0b10 has LSB=0
+        assert_eq!(2u8.replicate_bit::<u8>(8), 0x00);
+
+        // 0b11 has LSB=1
+        assert_eq!(3u8.replicate_bit::<u8>(8), 0xFF);
+    }
+}

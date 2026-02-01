@@ -375,9 +375,10 @@ impl LdpSimdFpSignedOffset {
     };
 }
 
-/// Move immediate (vector)
+/// Advanced SIMD modified immediate
+/// Handles MOVI, MVNI, ORR (immediate), BIC (immediate), FMOV (immediate)
 #[derive(Debug, Clone, Copy)]
-pub struct Movi {
+pub struct AsimdModImm {
     pub q: u8,
     pub op: u8,
     pub a: u8,
@@ -392,7 +393,7 @@ pub struct Movi {
     pub rd: u8,
 }
 
-impl Movi {
+impl AsimdModImm {
     pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
         let datasize = 64 << self.q;
         let imm8 = self.a << 7
@@ -404,12 +405,50 @@ impl Movi {
             | self.g << 1
             | self.h;
         let imm64 = adv_simd_expand_imm(self.op, self.cmode, imm8);
-        if datasize == 128 {
-            let imm: u128 = imm64.replicate(2);
-            cpu.v_write(self.rd.into(), 128, imm);
+
+        // Determine operation based on op and cmode
+        // ARM encoding table for asimdimm:
+        //   cmode=0xx0, 10x0, 110x: MOVI (op=0) or MVNI (op=1)
+        //   cmode=0xx1, 10x1:       ORR (op=0) or BIC (op=1)
+        //   cmode=1110:             MOVI (both op values)
+        //   cmode=1111:             FMOV (both op values)
+        //
+        // ORR/BIC condition: cmode[0]==1 AND cmode[3:2]!=11 (i.e., cmode < 12 && odd)
+        let is_orr_bic = (self.cmode & 1) == 1 && (self.cmode >> 2) != 0b11;
+
+        let imm128: u128 = if datasize == 128 {
+            // Replicate 64-bit value to 128 bits
+            (imm64 as u128) | ((imm64 as u128) << 64)
         } else {
-            cpu.v_write(self.rd.into(), 64, imm64 as u128);
-        }
+            imm64 as u128
+        };
+
+        let result: u128 = if self.cmode == 0b1111 {
+            // FMOV - move immediate to vector
+            imm128
+        } else if self.cmode == 0b1110 {
+            // MOVI - 8-bit or 64-bit immediate
+            imm128
+        } else if is_orr_bic {
+            // ORR (op=0) or BIC (op=1)
+            let old_val = cpu.v_read(self.rd.into(), datasize as u8);
+            if self.op == 0 {
+                old_val | imm128 // ORR
+            } else {
+                old_val & !imm128 // BIC
+            }
+        } else {
+            // MOVI (op=0) or MVNI (op=1)
+            if self.op == 0 {
+                imm128 // MOVI
+            } else {
+                // MVNI: invert and mask to datasize
+                let mask = if datasize == 128 { !0u128 } else { (1u128 << 64) - 1 };
+                !imm128 & mask
+            }
+        };
+
+        cpu.v_write(self.rd.into(), datasize as u8, result);
     }
 
     pub const fn decode(word: u32) -> Instruction {
@@ -425,10 +464,10 @@ impl Movi {
         let g = get_bits_ct!(word, 6, 1) as u8;
         let h = get_bits_ct!(word, 5, 1) as u8;
         let rd = get_bits_ct!(word, 0, 5) as u8;
-        Instruction::Movi(Self { q, op, a, b, c, cmode, d, e, f, g, h, rd })
+        Instruction::AsimdModImm(Self { q, op, a, b, c, cmode, d, e, f, g, h, rd })
     }
 
-    pub const MOVI: InstDesc = InstDesc {
+    pub const ASIMD_MOD_IMM: InstDesc = InstDesc {
         mask: 0b1001_1111_1111_1000_0000_1100_0000_0000,
         value: 0b0000_1111_0000_0000_0000_0100_0000_0000,
         decode: Self::decode,
@@ -440,78 +479,81 @@ pub fn adv_simd_expand_imm(op: u8, cmode: u8, imm8: u8) -> u64 {
 
     match cmode.bits_get(1, 3) {
         0b000 => {
-            imm64 = (imm8 as u32).replicate::<u64>(2);
+            // 32-bit element: imm8 zero-extended, replicated 2x to fill 64 bits
+            imm64 = (imm8 as u32).replicate_pattern::<u64>(32, 2);
         }
         0b001 => {
-            let imm8 = imm8 as u32;
-            let imm8 = imm8 << 8;
-            imm64 = imm8.replicate::<u64>(2);
+            // 32-bit element: imm8 << 8, replicated 2x
+            let imm32 = (imm8 as u32) << 8;
+            imm64 = imm32.replicate_pattern::<u64>(32, 2);
         }
         0b010 => {
-            let imm8 = imm8 as u32;
-            let imm8 = imm8 << 16;
-            imm64 = imm8.replicate::<u64>(2);
+            // 32-bit element: imm8 << 16, replicated 2x
+            let imm32 = (imm8 as u32) << 16;
+            imm64 = imm32.replicate_pattern::<u64>(32, 2);
         }
         0b011 => {
-            let imm8 = imm8 as u32;
-            let imm8 = imm8 << 24;
-            imm64 = imm8.replicate::<u64>(2);
+            // 32-bit element: imm8 << 24, replicated 2x
+            let imm32 = (imm8 as u32) << 24;
+            imm64 = imm32.replicate_pattern::<u64>(32, 2);
         }
         0b100 => {
-            let imm8 = imm8 as u16;
-            imm64 = imm8.replicate::<u64>(4);
+            // 16-bit element: imm8 in low byte, replicated 4x
+            imm64 = (imm8 as u16).replicate_pattern::<u64>(16, 4);
         }
         0b101 => {
-            let imm8 = imm8 as u16;
-            let imm8 = imm8 << 8;
-            imm64 = imm8.replicate::<u64>(4);
+            // 16-bit element: imm8 in high byte, replicated 4x
+            let imm16 = (imm8 as u16) << 8;
+            imm64 = imm16.replicate_pattern::<u64>(16, 4);
         }
         0b110 => {
             if cmode.single_bit(0) == 0 {
-                let imm8 = imm8 as u32;
-                let ones: u32 = 0b1.replicate(8);
-                let imm8 = (imm8 << 8) | ones;
-                imm64 = imm8.replicate::<u64>(2);
+                // 32-bit element: (imm8 << 8) | 0xFF, replicated 2x
+                let imm32 = ((imm8 as u32) << 8) | 0xFF;
+                imm64 = imm32.replicate_pattern::<u64>(32, 2);
             } else {
-                let imm8 = imm8 as u32;
-                let ones: u32 = 0b1.replicate(16);
-                let imm8 = (imm8 << 16) | ones;
-                imm64 = imm8.replicate::<u64>(2);
+                // 32-bit element: (imm8 << 16) | 0xFFFF, replicated 2x
+                let imm32 = ((imm8 as u32) << 16) | 0xFFFF;
+                imm64 = imm32.replicate_pattern::<u64>(32, 2);
             }
         }
         0b111 => {
             if cmode.single_bit(0) == 0 && op == 0 {
-                imm64 = imm8.replicate::<u64>(8);
+                // 8-bit element: imm8 replicated 8x
+                imm64 = imm8.replicate_pattern::<u64>(8, 8);
             }
             if cmode.single_bit(0) == 0 && op == 1 {
-                let imm8a: u8 = imm8.single_bit(7).replicate(8);
-                let imm8b: u8 = imm8.single_bit(6).replicate(8);
-                let imm8c: u8 = imm8.single_bit(5).replicate(8);
-                let imm8d: u8 = imm8.single_bit(4).replicate(8);
-                let imm8e: u8 = imm8.single_bit(3).replicate(8);
-                let imm8f: u8 = imm8.single_bit(2).replicate(8);
-                let imm8g: u8 = imm8.single_bit(1).replicate(8);
-                let imm8h: u8 = imm8.single_bit(0).replicate(8);
+                // 64-bit element: each bit of imm8 expanded to a byte
+                let imm8a: u8 = imm8.single_bit(7).replicate_bit(8);
+                let imm8b: u8 = imm8.single_bit(6).replicate_bit(8);
+                let imm8c: u8 = imm8.single_bit(5).replicate_bit(8);
+                let imm8d: u8 = imm8.single_bit(4).replicate_bit(8);
+                let imm8e: u8 = imm8.single_bit(3).replicate_bit(8);
+                let imm8f: u8 = imm8.single_bit(2).replicate_bit(8);
+                let imm8g: u8 = imm8.single_bit(1).replicate_bit(8);
+                let imm8h: u8 = imm8.single_bit(0).replicate_bit(8);
                 imm64 =
                     u64::from_be_bytes([imm8a, imm8b, imm8c, imm8d, imm8e, imm8f, imm8g, imm8h]);
             }
             if cmode.single_bit(0) == 1 && op == 0 {
+                // FMOV (single): IEEE 754 single-precision
                 let bit7 = imm8.single_bit(7) as u32;
                 let bit6 = imm8.single_bit(6) as u32;
-                let bits5_0 = imm8.bits_get(0, 5) as u32;
+                let bits5_0 = imm8.bits_get(0, 6) as u32;
                 let imm32: u32 = (bit7 << 31)
                     | ((bit6 ^ 1) << 30)
-                    | (bit6.replicate::<u32>(5) << 25)
+                    | (bit6.replicate_bit::<u32>(5) << 25)
                     | (bits5_0 << 19);
-                imm64 = imm32.replicate(2);
+                imm64 = imm32.replicate_pattern::<u64>(32, 2);
             }
             if cmode.single_bit(0) == 1 && op == 1 {
+                // FMOV (double): IEEE 754 double-precision
                 let bit7 = imm8.single_bit(7) as u64;
                 let bit6 = imm8.single_bit(6) as u64;
-                let bits5_0 = imm8.bits_get(0, 5) as u64;
+                let bits5_0 = imm8.bits_get(0, 6) as u64;
                 imm64 = (bit7 << 63)
                     | ((bit6 ^ 1) << 62)
-                    | (bit6.replicate::<u64>(8) << 54)
+                    | (bit6.replicate_bit::<u64>(8) << 54)
                     | (bits5_0 << 48);
             }
         }
@@ -1152,7 +1194,7 @@ impl FmovGeneral {
 
         let intsize = 32 << self.sf;
         let fltsize = if self.ftype == 0b10 { 64 } else { 8 << (self.ftype ^ 0b10) };
-        let part = self.rmode.bits_get(0, 1) as u8;
+        let part = self.rmode.bits_get(0, 1);
         let op;
         match opcode_rmode {
             // FMOV
@@ -1185,11 +1227,11 @@ impl FmovGeneral {
                 cpu.x_write(self.rd.into(), fltval, intsize == 32);
             }
             FpConvOp::MovItoF => {
-                let intval = cpu.x_read(self.rn.into(), intsize.into());
+                let intval = cpu.x_read(self.rn.into(), intsize);
                 cpu.v_part_write(
                     self.rd.into(),
                     part,
-                    fltsize.into(),
+                    fltsize,
                     intval.bits_get(0, fltsize).into(),
                 );
             }
@@ -1238,7 +1280,8 @@ impl Umaxp {
         let operand2 = cpu.v_read(self.rm.into(), datasize);
 
         // Pairwise operation: conceptually concat = operand2:operand1
-        // Indices 0..elements are in operand1, indices elements..2*elements are in operand2
+        // Indices 0..elements are in operand1, indices elements..2*elements are in
+        // operand2
         for e in 0..elements {
             let idx1 = (2 * e) as usize;
             let idx2 = (2 * e + 1) as usize;

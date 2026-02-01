@@ -567,11 +567,11 @@ impl Cpu {
         assert!(part == 1 || part == 0);
         if part == 0 {
             assert!(width < 128);
-            return self.v_read(destination, width);
+            self.v_read(destination, width)
         } else {
             assert!(width == 32 || width == 64);
             let vreg = self.v_read(destination, 128);
-            return vreg.bits_get(width * 2, width);
+            vreg.bits_get(64, width)
         }
     }
 
