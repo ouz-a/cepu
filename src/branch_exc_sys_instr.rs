@@ -554,6 +554,29 @@ impl Bti {
     };
 }
 
+/// Check feature status
+/// CHKFEAT X16 - checks which features are enabled
+/// Since we don't implement FEAT_GCS, X16 remains unchanged (all features "not enabled")
+#[derive(Debug, Clone, Copy)]
+pub struct Chkfeat;
+
+impl Chkfeat {
+    pub fn exec(self, _cpu: &mut Cpu, _old_pc: u64) {
+        // X16 = X16 AND NOT(feat_en)
+        // Since feat_en = 0 (no features enabled), X16 remains unchanged
+    }
+
+    pub const fn decode(_word: u32) -> Instruction {
+        Instruction::Chkfeat(Self)
+    }
+
+    pub const CHKFEAT: InstDesc = InstDesc {
+        mask: 0b1111_1111_1111_1111_1111_1111_1111_1111,
+        value: 0b1101_0101_0000_0011_0010_0101_0001_1111,
+        decode: Self::decode,
+    };
+}
+
 /// Conditional select invert
 #[derive(Debug, Clone, Copy)]
 pub struct Csinv {
