@@ -1368,3 +1368,50 @@ impl LdurSimd {
         decode: Self::decode,
     };
 }
+
+/// EXT - Extract vector from pair of vectors
+#[derive(Debug, Clone, Copy)]
+pub struct Ext {
+    pub q: u8,
+    pub rm: u8,
+    pub imm4: u8,
+    pub rn: u8,
+    pub rd: u8,
+}
+
+impl Ext {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        if self.q == 0 && self.imm4.single_bit(3) == 1 {
+            panic!("Undefined");
+        }
+
+        let datasize = 64 << self.q;
+        let position = (8 * self.imm4) as u32;
+
+        let hi = cpu.v_read(self.rm.into(), datasize);
+        let lo = cpu.v_read(self.rn.into(), datasize);
+
+        let result = if position == 0 {
+            lo
+        } else {
+            (lo >> position) | (hi << (datasize as u32 - position))
+        };
+
+        cpu.v_write(self.rd.into(), datasize, result);
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let q = get_bits_ct!(word, 30, 1) as u8;
+        let rm = get_bits_ct!(word, 16, 5) as u8;
+        let imm4 = get_bits_ct!(word, 11, 4) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rd = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::Ext(Self { q, rm, imm4, rn, rd })
+    }
+
+    pub const EXT: InstDesc = InstDesc {
+        mask: 0b1011_1111_0010_0000_1000_0100_0000_0000,
+        value: 0b0010_1110_0000_0000_0000_0000_0000_0000,
+        decode: Self::decode,
+    };
+}

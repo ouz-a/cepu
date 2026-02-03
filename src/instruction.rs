@@ -34,11 +34,11 @@ use crate::{
     },
     simd_fp::{
         AsimdModImm, BitwiseInsert, CmeqRegScalar, CmeqRegVector, CmeqScalar, CmeqVector,
-        CmhsRegisterScalar, CmhsRegisterVector, DupGeneral, FmovGeneral, Ld1NoOffset, Ld1PostIndex,
-        LdpSimdFpPostIndex, LdpSimdFpPreIndex, LdpSimdFpSignedOffset, LdrSimdFpPostIndex,
-        LdrSimdFpPreIndex, LdrSimdFpUnsignedOffset, LdurSimd, Shrn, StrImdFpPostIndex,
-        StrImdFpPreIndex, StrImdFpUnsignedOffset, StrPairFpPostIndex, StrPairFpPreIndex,
-        StrPairFpSignedOffset, StrSimdRegOffset, SturSimdUnscaledOffset, Umaxp,
+        CmhsRegisterScalar, CmhsRegisterVector, DupGeneral, Ext, FmovGeneral, Ld1NoOffset,
+        Ld1PostIndex, LdpSimdFpPostIndex, LdpSimdFpPreIndex, LdpSimdFpSignedOffset,
+        LdrSimdFpPostIndex, LdrSimdFpPreIndex, LdrSimdFpUnsignedOffset, LdurSimd, Shrn,
+        StrImdFpPostIndex, StrImdFpPreIndex, StrImdFpUnsignedOffset, StrPairFpPostIndex,
+        StrPairFpPreIndex, StrPairFpSignedOffset, StrSimdRegOffset, SturSimdUnscaledOffset, Umaxp,
     },
 };
 
@@ -298,6 +298,7 @@ define_instructions!(
     LdrSimdFpUnsignedOffset(LdrSimdFpUnsignedOffset),
     Ld1NoOffset(Ld1NoOffset),
     Ld1PostIndex(Ld1PostIndex),
+    Ext(Ext),
 );
 
 pub const DESCR: &[InstDesc] = &sort_by_specificity([
@@ -529,6 +530,7 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     LdrSimdFpUnsignedOffset::LDR_SIMD_FP_UNSIGNED_OFFSET,
     Ld1NoOffset::LD1_NO_OFFSET,
     Ld1PostIndex::LD1_POST_INDEX,
+    Ext::EXT,
 ]);
 
 const fn sort_by_specificity<const N: usize>(mut arr: [InstDesc; N]) -> [InstDesc; N] {
