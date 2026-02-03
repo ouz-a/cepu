@@ -51,7 +51,7 @@ impl DupGeneral {
         dup_general_instruction(cpu, self.rn, self.rd, esize, datasize);
     }
     pub const fn decode(word: u32) -> Instruction {
-        let q = get_bits_ct!(word, 31, 1) == 1;
+        let q = get_bits_ct!(word, 30, 1) == 1;
         let imm5 = get_bits_ct!(word, 16, 5) as u8;
         let rn = get_bits_ct!(word, 5, 5) as u8;
         let rd = get_bits_ct!(word, 0, 5) as u8;
