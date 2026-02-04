@@ -1542,3 +1542,70 @@ impl AddpScalar {
         decode: Self::decode,
     };
 }
+
+/// Load SIMD&FP register (register offset)
+#[derive(Debug, Clone, Copy)]
+pub struct LdrSimdRegOffset {
+    pub size: u8,
+    pub opc: u8,
+    pub rm: u8,
+    pub option: u8,
+    pub s: u8,
+    pub rn: u8,
+    pub rt: u8,
+}
+
+impl LdrSimdRegOffset {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        // option<1> must be 1 (sub-word index check)
+        if self.option.single_bit(1) == 0 {
+            panic!("Undefined");
+        }
+        // opc<1> == 1 && size != 00 is undefined
+        if self.opc.single_bit(1) == 1 && self.size != 0 {
+            panic!("Undefined");
+        }
+
+        let scale = if self.opc.single_bit(1) == 1 { 4 } else { self.size };
+        let extend_type = ExtendType::from_u8(self.option);
+        let shift = if self.s == 1 { scale } else { 0 };
+        let datasize: u8 = 8 << scale;
+
+        let offset = extend_register(cpu, self.rm, extend_type, shift, 64);
+        let mut address = cpu.address_for_rn(self.rn);
+        address = address.wrapping_add(offset);
+
+        let val = if datasize == 128 {
+            let (_, d) = cpu.read_memory_128bit(address as usize);
+            if cpu.mmu.faulted {
+                return;
+            }
+            d
+        } else {
+            let (_, d) = cpu.read_memory(address as usize, (datasize / 8) as usize);
+            if cpu.mmu.faulted {
+                return;
+            }
+            d as u128
+        };
+
+        cpu.v_write(self.rt.into(), datasize, val);
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let size = get_bits_ct!(word, 30, 2) as u8;
+        let opc = get_bits_ct!(word, 22, 2) as u8;
+        let rm = get_bits_ct!(word, 16, 5) as u8;
+        let option = get_bits_ct!(word, 13, 3) as u8;
+        let s = get_bits_ct!(word, 12, 1) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rt = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::LdrSimdRegOffset(Self { size, opc, rm, option, s, rn, rt })
+    }
+
+    pub const LDR_SIMD_REG_OFFSET: InstDesc = InstDesc {
+        mask: 0b0011_1111_0110_0000_0000_1100_0000_0000,
+        value: 0b0011_1100_0110_0000_0000_1000_0000_0000,
+        decode: Self::decode,
+    };
+}

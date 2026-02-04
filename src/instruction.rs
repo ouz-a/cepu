@@ -37,9 +37,9 @@ use crate::{
         CmeqRegVector, CmeqScalar, CmeqVector, CmhsRegisterScalar, CmhsRegisterVector, DupGeneral,
         Ext, FmovGeneral, Ld1NoOffset, Ld1PostIndex, LdpSimdFpPostIndex, LdpSimdFpPreIndex,
         LdpSimdFpSignedOffset, LdrSimdFpPostIndex, LdrSimdFpPreIndex, LdrSimdFpUnsignedOffset,
-        LdurSimd, Shrn, StrImdFpPostIndex, StrImdFpPreIndex, StrImdFpUnsignedOffset,
-        StrPairFpPostIndex, StrPairFpPreIndex, StrPairFpSignedOffset, StrSimdRegOffset,
-        SturSimdUnscaledOffset, Umaxp,
+        LdrSimdRegOffset, LdurSimd, Shrn, StrImdFpPostIndex, StrImdFpPreIndex,
+        StrImdFpUnsignedOffset, StrPairFpPostIndex, StrPairFpPreIndex, StrPairFpSignedOffset,
+        StrSimdRegOffset, SturSimdUnscaledOffset, Umaxp,
     },
 };
 
@@ -304,6 +304,7 @@ define_instructions!(
     LdrSimdFpPostIndex(LdrSimdFpPostIndex),
     LdrSimdFpPreIndex(LdrSimdFpPreIndex),
     LdrSimdFpUnsignedOffset(LdrSimdFpUnsignedOffset),
+    LdrSimdRegOffset(LdrSimdRegOffset),
     Ld1NoOffset(Ld1NoOffset),
     Ld1PostIndex(Ld1PostIndex),
     Ext(Ext),
@@ -543,6 +544,7 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     LdrSimdFpPostIndex::LDR_SIMD_FP_POST_INDEX,
     LdrSimdFpPreIndex::LDR_SIMD_FP_PRE_INDEX,
     LdrSimdFpUnsignedOffset::LDR_SIMD_FP_UNSIGNED_OFFSET,
+    LdrSimdRegOffset::LDR_SIMD_REG_OFFSET,
     Ld1NoOffset::LD1_NO_OFFSET,
     Ld1PostIndex::LD1_POST_INDEX,
     Ext::EXT,
