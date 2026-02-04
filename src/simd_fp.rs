@@ -1415,3 +1415,97 @@ impl Ext {
         decode: Self::decode,
     };
 }
+
+/// Add pairwise (vector)
+#[derive(Debug, Clone, Copy)]
+pub struct AddpVector {
+    pub q: u8,
+    pub size: u8,
+    pub rm: u8,
+    pub rn: u8,
+    pub rd: u8,
+}
+
+impl AddpVector {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let size_and_q = (self.size << 1) | self.q;
+        if size_and_q == 0b110 {
+            panic!("Undefined");
+        }
+        let esize = 8 << self.size;
+        let datasize = 64 << self.q;
+        let elements = datasize / esize;
+        let mut result = 0;
+        let operand1 = cpu.v_read(self.rn.into(), datasize);
+        let operand2 = cpu.v_read(self.rm.into(), datasize);
+
+        for e in 0..elements {
+            let idx1 = (2 * e) as usize;
+            let idx2 = (2 * e + 1) as usize;
+            let elements = elements as usize;
+
+            let element1 = if idx1 < elements {
+                elem_get(operand1, idx1, esize as usize)
+            } else {
+                elem_get(operand2, idx1 - elements, esize as usize)
+            };
+
+            let element2 = if idx2 < elements {
+                elem_get(operand1, idx2, esize as usize)
+            } else {
+                elem_get(operand2, idx2 - elements, esize as usize)
+            };
+
+            let val = element1 + element2;
+            result = elem_set(result, e as usize, esize as usize, val.bits_get(0, esize));
+        }
+        cpu.v_write(self.rd.into(), datasize, result);
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let q = get_bits_ct!(word, 30, 1) as u8;
+        let size = get_bits_ct!(word, 22, 2) as u8;
+        let rm = get_bits_ct!(word, 16, 5) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rd = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::AddpVector(Self { q, size, rm, rn, rd })
+    }
+
+    pub const ADDP_VECTOR: InstDesc = InstDesc {
+        mask: 0b1011_1111_0010_0000_1111_1100_0000_0000,
+        value: 0b0000_1110_0010_0000_1011_1100_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+/// Add pairwise (scalar)
+#[derive(Debug, Clone, Copy)]
+pub struct AddpScalar {
+    pub rn: u8,
+    pub rd: u8,
+}
+
+impl AddpScalar {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let datasize = 128;
+        let esize = 64;
+        let input = cpu.v_read(self.rn.into(), datasize);
+        let mut sum = 0u64;
+        for e in 0..(128 / esize) {
+            sum = sum.wrapping_add(elem_get(input, e, esize));
+        }
+        cpu.v_write(self.rd.into(), esize as u8, sum as u128);
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rd = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::AddpScalar(Self { rn, rd })
+    }
+
+    pub const ADDP_SCALAR: InstDesc = InstDesc {
+        mask: 0b1111_1111_1111_1111_1111_1100_0000_0000,
+        value: 0b0101_1110_1111_0001_1011_1000_0000_0000,
+        decode: Self::decode,
+    };
+}
