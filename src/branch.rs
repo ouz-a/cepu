@@ -115,6 +115,19 @@ pub fn instruction_ccmpi(cpu: &mut Cpu, datasize: u8, rn: u8, imm: u64, cond: u8
     cpu.pstate.set_flags_from_bits(flags);
 }
 
+/// CCMN (immediate) - Conditional compare negative
+/// If condition holds, sets flags from (Rn + imm), otherwise sets flags to nzcv
+pub fn instruction_ccmni(cpu: &mut Cpu, datasize: u8, rn: u8, imm: u64, cond: u8, flags: u8) {
+    let mut flags = flags;
+    if condition_holds(cpu, cond) {
+        let op1 = cpu.x_read(rn.into(), datasize);
+        let op2 = imm;
+        let res = add_with_carry(op1, op2, 0, datasize);
+        flags = res.flag_to_bits();
+    }
+    cpu.pstate.set_flags_from_bits(flags);
+}
+
 pub fn instruction_bl(cpu: &mut Cpu, offset: u64, old_pc: u64) {
     cpu.x_write(30, old_pc.wrapping_add(4), false);
     branch_to(cpu, old_pc.wrapping_add(offset), false, old_pc);

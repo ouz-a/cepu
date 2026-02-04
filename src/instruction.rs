@@ -5,8 +5,8 @@ use std::{
 
 use crate::{
     branch_exc_sys_instr::{
-        Bcond, Bl, Blr, Br, Branch, Bti, Cbnz, Cbz, Ccmpi, Chkfeat, Csdb, Csinc, Csinv, Dmb, Eret,
-        Mrs, MsrImm, MsrReg, Ret, Sevl, Smc, Svc, Sys, Tbnz, Tbz, Wfe, Wfi, Xpaclri, Yield,
+        Bcond, Bl, Blr, Br, Branch, Bti, Cbnz, Cbz, Ccmni, Ccmpi, Chkfeat, Csdb, Csinc, Csinv, Dmb,
+        Eret, Mrs, MsrImm, MsrReg, Ret, Sevl, Smc, Svc, Sys, Tbnz, Tbz, Wfe, Wfi, Xpaclri, Yield,
     },
     cpu::Cpu,
     imm_instr::{AddImmediate, Extr, Movk, Movn, Movz, Sbc, SubImmediate, Subs},
@@ -101,6 +101,7 @@ define_instructions!(
     AddImmediate(AddImmediate),
     AddShiftedReg(AddShiftedReg),
     Ccmpi(Ccmpi),
+    Ccmni(Ccmni),
     CcmpRegister(CcmpRegister),
     Subs(Subs),
     Sbc(Sbc),
@@ -342,6 +343,7 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     AddImmediate::ADD_IMMEDIATE,
     AddShiftedReg::ADD_SHIFTED_REG,
     Ccmpi::CCMPI,
+    Ccmni::CCMNI,
     CcmpRegister::CCMP_REGISTER,
     Subs::SUBS,
     Sbc::SBC,
