@@ -5,7 +5,7 @@ use crate::{
     instruction::{InstDesc, Instruction},
     load_and_store::{ExtendType, extend_register},
     simd_fp_instr::*,
-    utils::{BitUtils, bits_get, elem_get, elem_set, sign_extend},
+    utils::{bits_get, elem_get, elem_set, sign_extend, BitUtils},
 };
 
 /// Floating-point convert/move instruction types.
@@ -25,6 +25,67 @@ pub enum FpMaxMinOp {
     Min,
     MaxNum,
     MinNum,
+}
+
+/// Unsigned move vector element to general-purpose register
+/// MOV (alias when moving D lane to X register) / UMOV
+#[derive(Clone, Copy, Debug)]
+pub struct UmovAdvsimd {
+    pub q: bool,
+    pub imm5: u8,
+    pub rn: u8,
+    pub rd: u8,
+}
+
+impl UmovAdvsimd {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        // imm5 IN 'x0000' is UNDEFINED (reserved for ASIMDIMM group)
+        if bits_get(self.imm5.into(), 0, 4) == 0 {
+            panic!("Undefined: imm5<3:0> == 0000");
+        }
+
+        // Determine element size from lowest set bit in imm5<3:0>
+        let size = bits_get(self.imm5.into(), 0, 4).trailing_zeros();
+        let esize = 8 << size;
+        let datasize = if self.q { 64 } else { 32 };
+
+        // Validity checks per ARM spec
+        // datasize == 64 && esize < 64 → UNDEFINED
+        if datasize == 64 && esize < 64 {
+            panic!("Undefined: 64-bit destination requires 64-bit element");
+        }
+        // datasize == 32 && esize >= 64 → UNDEFINED
+        if datasize == 32 && esize >= 64 {
+            panic!("Undefined: 32-bit destination cannot have 64-bit element");
+        }
+
+        // Calculate index from imm5<4:size+1>
+        let index = bits_get(self.imm5.into(), (size + 1) as u8, 4 - size as u8) as usize;
+
+        // Determine vector slice size: 64 << imm5<4>
+        let idxdsize = 64 << ((self.imm5 >> 4) & 1);
+
+        // Read the element from the vector register
+        let operand = cpu.v_read(self.rn.into(), idxdsize);
+        let element = elem_get(operand, index, esize as usize);
+
+        // Zero-extend to destination size and write to general-purpose register
+        cpu.x_write(self.rd.into(), element as u64, datasize == 32);
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let q = get_bits_ct!(word, 30, 1) == 1;
+        let imm5 = get_bits_ct!(word, 16, 5) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rd = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::UmovAdvsimd(Self { q, imm5, rn, rd })
+    }
+
+    pub const UMOV_ADVSIMD: InstDesc = InstDesc {
+        mask: 0b1011_1111_1110_0000_1111_1100_0000_0000,
+        value: 0b0000_1110_0000_0000_0011_1100_0000_0000,
+        decode: Self::decode,
+    };
 }
 
 /// Duplicate general-purpose register to vector

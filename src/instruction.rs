@@ -39,7 +39,7 @@ use crate::{
         LdpSimdFpSignedOffset, LdrSimdFpPostIndex, LdrSimdFpPreIndex, LdrSimdFpUnsignedOffset,
         LdrSimdRegOffset, LdurSimd, Shrn, StrImdFpPostIndex, StrImdFpPreIndex,
         StrImdFpUnsignedOffset, StrPairFpPostIndex, StrPairFpPreIndex, StrPairFpSignedOffset,
-        StrSimdRegOffset, SturSimdUnscaledOffset, Umaxp, Uminp,
+        StrSimdRegOffset, SturSimdUnscaledOffset, Umaxp, Uminp, UmovAdvsimd,
     },
 };
 
@@ -297,6 +297,7 @@ define_instructions!(
     CmeqRegVector(CmeqRegVector),
     CmeqRegScalar(CmeqRegScalar),
     DupGeneral(DupGeneral),
+    UmovAdvsimd(UmovAdvsimd),
     StrSimdRegOffset(StrSimdRegOffset),
     StrImdFpPostIndex(StrImdFpPostIndex),
     StrImdFpPreIndex(StrImdFpPreIndex),
@@ -541,6 +542,7 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     CmeqRegScalar::CMEQ_REG_SCALAR,
     CmeqRegVector::CMEQ_REG_VECTOR,
     DupGeneral::DUP_GENERAL,
+    UmovAdvsimd::UMOV_ADVSIMD,
     StrSimdRegOffset::STR_SIMD_REG_OFFSET,
     StrImdFpPostIndex::STR_IMD_FP_POST_INDEX,
     StrImdFpPreIndex::STR_IMD_FP_PRE_INDEX,
