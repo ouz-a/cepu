@@ -20,7 +20,7 @@ pub enum FaultType {
     Permission,
 }
 
-#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Default, Debug)]
 pub struct Mmu {
     pub bus: Bus,
     pub enabled: bool,

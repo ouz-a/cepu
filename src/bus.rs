@@ -12,7 +12,7 @@ pub const GIC_CPU_END: usize = 0x8001_1FFF;
 pub const UART_RANGE_BEG: usize = 0x9000_0000;
 pub const UART_RANGE_END: usize = UART_RANGE_BEG + 4096;
 
-#[derive(Default, Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Default, Debug)]
 pub struct Bus {
     pub uart: Uart,
     pub gic: Gic,

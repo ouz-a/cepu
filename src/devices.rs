@@ -1,4 +1,7 @@
-use std::io::{self, Write};
+use std::{
+    collections::VecDeque,
+    io::{self, Write},
+};
 
 use crate::memory::PhyMemStatus;
 
@@ -101,16 +104,18 @@ impl FlatRegister {
 /// PL011
 ///
 /// https://developer.arm.com/documentation/ddi0183/latest/
-#[derive(Debug, Default, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Default)]
 pub struct Uart {
-    /// Data Register, offset: 0x00
+    /// Data Register, offset: 0x00 (for TX output)
     pub dr: u8,
     /// Flat Register, offset: 0x18
     pub fr: FlatRegister,
+    /// Receive FIFO for input characters
+    rx_fifo: VecDeque<u8>,
 }
 
 impl Uart {
-    pub fn read(&self, address: u8) -> (PhyMemStatus, u64) {
+    pub fn read(&mut self, address: u8) -> (PhyMemStatus, u64) {
         match address {
             // DR
             0..=0x08 => self.read_dr(),
@@ -134,11 +139,24 @@ impl Uart {
         }
     }
 
-    pub fn read_fr(&self) -> (PhyMemStatus, u64) {
+    pub fn read_fr(&mut self) -> (PhyMemStatus, u64) {
+        // Update rxfe flag based on whether rx_fifo is empty
+        self.fr.rxfe = self.rx_fifo.is_empty();
         (PhyMemStatus::default(), self.fr.to_bits() as u64)
     }
-    pub fn read_dr(&self) -> (PhyMemStatus, u64) {
-        (PhyMemStatus::default(), self.dr as u64)
+
+    pub fn read_dr(&mut self) -> (PhyMemStatus, u64) {
+        // Pop from rx_fifo if available, otherwise return 0
+        let byte = self.rx_fifo.pop_front().unwrap_or(0);
+        // Update rxfe flag
+        self.fr.rxfe = self.rx_fifo.is_empty();
+        (PhyMemStatus::default(), byte as u64)
+    }
+
+    /// Push a byte into the receive FIFO (called when stdin input is available)
+    pub fn push_input(&mut self, byte: u8) {
+        self.rx_fifo.push_back(byte);
+        self.fr.rxfe = false;
     }
 
     pub fn print(&mut self) {

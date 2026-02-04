@@ -14,6 +14,7 @@ use crate::{
         validate_tables,
     },
     memory::{MEMORY_SIZE, read_32},
+    terminal::RawTerminal,
 };
 
 pub mod branch;
@@ -34,9 +35,10 @@ pub mod mmu;
 pub mod register_instr;
 pub mod simd_fp;
 pub mod simd_fp_instr;
+pub mod terminal;
 pub mod utils;
 
-pub fn run_block(cpu: &mut Cpu) {
+pub fn run_block(cpu: &mut Cpu, terminal: &RawTerminal) {
     let mut batch_left = BATCH;
 
     let mut pc = cpu.pc;
@@ -91,6 +93,10 @@ pub fn run_block(cpu: &mut Cpu) {
             batch_left -= 1;
             if batch_left == 0 {
                 batch_left = BATCH;
+                // Check for stdin input periodically (not every instruction)
+                if let Some(byte) = terminal.try_read() {
+                    cpu.mmu.bus.uart.push_input(byte);
+                }
                 cpu.timer_device_tick();
             }
         } else {
@@ -132,5 +138,9 @@ fn main() {
     load_device_blob(&mut cpu, &PathBuf::from_str("/Users/ouz/code/cepu_now/cepu.dtb").unwrap());
     load_kernel_image(&mut cpu, &PathBuf::from_str("/Users/ouz/code/cepu_now/Image").unwrap());
     load_initramfs(&PathBuf::from_str("/Users/ouz/code/cepu_now/initramfs.cpio.gz").unwrap());
-    run_block(&mut cpu);
+
+    // Enter raw terminal mode for interactive input
+    let terminal = RawTerminal::new().expect("Failed to enter raw terminal mode");
+    run_block(&mut cpu, &terminal);
+    // Terminal is restored automatically when `terminal` is dropped
 }
