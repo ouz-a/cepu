@@ -182,7 +182,7 @@ impl Sbc {
             let op1 = cpu.x_read(self.rn.into(), datasize);
             let op2 = (cpu.x_read(self.rm.into(), datasize)).not();
             let res = add_with_carry(op1, op2, cpu.pstate.c as u64, 64);
-            cpu.x_write(self.rd.into(), res.result, true);
+            cpu.x_write(self.rd.into(), res.result, false);
         }
     }
     pub const fn decode(word: u32) -> Instruction {

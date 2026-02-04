@@ -224,6 +224,48 @@ impl StrhUnpriv {
     };
 }
 
+/// STTRB
+/// Store register byte (unprivileged)
+#[derive(Debug, Clone, Copy)]
+pub struct StrbUnpriv {
+    pub imm9: u16,
+    pub rn: u8,
+    pub rt: u8,
+}
+
+impl StrbUnpriv {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let offset = sign_extend(self.imm9.into(), 9);
+        let datasize = 8;
+        let tag_checked = self.rn != 31;
+        instruction_str_imm_un_off(
+            cpu,
+            self.rn,
+            self.rt,
+            datasize,
+            offset,
+            false,
+            false,
+            false,
+            tag_checked,
+            false,
+        );
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let imm9 = get_bits_ct!(word, 12, 9) as u16;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rt = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::StrbUnpriv(Self { imm9, rn, rt })
+    }
+
+    pub const STRB_UNPRIV: InstDesc = InstDesc {
+        mask: 0b1111_1111_1110_0000_0000_1100_0000_0000,
+        value: 0b0011_1000_0000_0000_0000_1000_0000_0000,
+        decode: Self::decode,
+    };
+}
+
 /// Store register (immediate) Pre-index
 #[derive(Debug, Clone, Copy)]
 pub struct StrImmPreIndex {
@@ -1054,6 +1096,82 @@ impl LdrUnpriv {
     pub const LDR_UNPRIV: InstDesc = InstDesc {
         mask: 0b1011_1111_1110_0000_0000_1100_0000_0000,
         value: 0b1011_1000_0100_0000_0000_1000_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+/// LDTRH
+/// Load register halfword (unprivileged)
+#[derive(Debug, Clone, Copy)]
+pub struct LdrhUnpriv {
+    pub imm9: u16,
+    pub rn: u8,
+    pub rt: u8,
+}
+
+impl LdrhUnpriv {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let offset = sign_extend(self.imm9.into(), 9);
+        let datasize = 16;
+
+        let mut address =
+            if self.rn == 31 { cpu.sp_read() } else { cpu.x_read(self.rn.into(), 64) };
+        address = address.wrapping_add(offset);
+        let data = cpu.read_memory(address as usize, datasize / 8);
+        if cpu.mmu.faulted {
+            return;
+        }
+        cpu.x_write(self.rt.into(), zero_extend(data.1, 32), true);
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let imm9 = get_bits_ct!(word, 12, 9) as u16;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rt = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::LdrhUnpriv(Self { imm9, rn, rt })
+    }
+
+    pub const LDRH_UNPRIV: InstDesc = InstDesc {
+        mask: 0b1111_1111_1110_0000_0000_1100_0000_0000,
+        value: 0b0111_1000_0100_0000_0000_1000_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+/// LDTRB
+/// Load register byte (unprivileged)
+#[derive(Debug, Clone, Copy)]
+pub struct LdrbUnpriv {
+    pub imm9: u16,
+    pub rn: u8,
+    pub rt: u8,
+}
+
+impl LdrbUnpriv {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let offset = sign_extend(self.imm9.into(), 9);
+        let datasize = 8;
+
+        let mut address =
+            if self.rn == 31 { cpu.sp_read() } else { cpu.x_read(self.rn.into(), 64) };
+        address = address.wrapping_add(offset);
+        let data = cpu.read_memory(address as usize, datasize / 8);
+        if cpu.mmu.faulted {
+            return;
+        }
+        cpu.x_write(self.rt.into(), zero_extend(data.1, 32), true);
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let imm9 = get_bits_ct!(word, 12, 9) as u16;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rt = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::LdrbUnpriv(Self { imm9, rn, rt })
+    }
+
+    pub const LDRB_UNPRIV: InstDesc = InstDesc {
+        mask: 0b1111_1111_1110_0000_0000_1100_0000_0000,
+        value: 0b0011_1000_0100_0000_0000_1000_0000_0000,
         decode: Self::decode,
     };
 }
