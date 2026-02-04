@@ -11,14 +11,14 @@ use crate::{
     cpu::Cpu,
     imm_instr::{AddImmediate, Extr, Movk, Movn, Movz, Sbc, SubImmediate, Subs},
     load_store_instr::{
-        Ldar, Ldaxr, LdpPostIndex, LdpPreIndex, LdpSignedOffset, LdpswPostIndex, LdpswPreIndex,
+        Ldar, Ldarb, Ldaxr, LdpPostIndex, LdpPreIndex, LdpSignedOffset, LdpswPostIndex, LdpswPreIndex,
         LdpswSignedOffset, LdrImmPostIdx, LdrImmPreIdx, LdrImmUnOffset, LdrLit, LdrReg, LdrUnpriv,
         LdrbPostIndex, LdrbPreIndex, LdrbRegister, LdrbUnpriv, LdrbUnsignedOff, LdrhImmPostIndex,
         LdrhImmPreIndex, LdrhImmUnOffset, LdrhRegister, LdrhUnpriv, LdrsbImmPostIndex,
         LdrsbImmPreIndex, LdrsbImmUnsignedOffset, LdrsbReg, LdrshImmPostIndex, LdrshImmPreIndex,
         LdrshImmUnsignedOffset, LdrswImmPostIndex, LdrswImmPreIndex, LdrswImmUnOffset,
         LdrswRegister, Ldur, Ldurb, Ldurh, Ldursw, Ldxp, Ldxr, Ldxrb, Prfm, StlrNoOffset, Stlrb,
-        Stlrh, Stlxp, Stlxr, Stnp, StpPostIndex, StpPreIndex, StpSignedOffset, StrImmPostIndex,
+        Stlrh, Stlxp, Stlxr, Stlxrb, Stnp, StpPostIndex, StpPreIndex, StpSignedOffset, StrImmPostIndex,
         StrImmPreIndex, StrImmUnOffset, StrRegister, StrUnpriv, StrbImmUnOffset, StrbPostIndex,
         StrbPreIndex, StrbRegister, StrbUnpriv, Strh, StrhPostIndex, StrhPreIndex, StrhUnpriv,
         StrhUnsigned, Stur, Sturb, Sturh, Stxp, Stxr, Stxrb,
@@ -39,7 +39,7 @@ use crate::{
         LdpSimdFpSignedOffset, LdrSimdFpPostIndex, LdrSimdFpPreIndex, LdrSimdFpUnsignedOffset,
         LdrSimdRegOffset, LdurSimd, Shrn, StrImdFpPostIndex, StrImdFpPreIndex,
         StrImdFpUnsignedOffset, StrPairFpPostIndex, StrPairFpPreIndex, StrPairFpSignedOffset,
-        StrSimdRegOffset, SturSimdUnscaledOffset, Umaxp,
+        StrSimdRegOffset, SturSimdUnscaledOffset, Umaxp, Uminp,
     },
 };
 
@@ -220,6 +220,7 @@ define_instructions!(
     // ----- Load Single -----
     LdrsbReg(LdrsbReg),
     Ldar(Ldar),
+    Ldarb(Ldarb),
     LdrbPostIndex(LdrbPostIndex),
     LdrbPreIndex(LdrbPreIndex),
     LdrbRegister(LdrbRegister),
@@ -274,6 +275,7 @@ define_instructions!(
     Stxp(Stxp),
     Stlxp(Stlxp),
     Stlxr(Stlxr),
+    Stlxrb(Stlxrb),
     Stxr(Stxr),
     Stxrb(Stxrb),
     // ----- Simd, FP -----
@@ -282,6 +284,7 @@ define_instructions!(
     AsimdModImm(AsimdModImm),
     LdurSimd(LdurSimd),
     Umaxp(Umaxp),
+    Uminp(Uminp),
     CmhsRegisterScalar(CmhsRegisterScalar),
     CmhsRegisterVector(CmhsRegisterVector),
     FmovGeneral(FmovGeneral),
@@ -457,6 +460,7 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     StrbUnpriv::STRB_UNPRIV,
     // ----- Load Single -----
     Ldar::LDAR,
+    Ldarb::LDARB,
     LdrsbReg::LDRSB_REG,
     LdrbPostIndex::LDRB_POST_INDEX,
     LdrbPreIndex::LDRB_PRE_INDEX,
@@ -512,6 +516,7 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     Stxp::STXP,
     Stlxp::STLXP,
     Stlxr::STLXR,
+    Stlxrb::STLXRB,
     Stxr::STXR,
     Stxrb::STXRB,
     // ----- Simd, FP -----
@@ -520,6 +525,7 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     AsimdModImm::ASIMD_MOD_IMM,
     LdurSimd::LDUR_SIMD,
     Umaxp::UMAXP,
+    Uminp::UMINP,
     CmhsRegisterScalar::CMHS_REGISTER_SCALAR,
     CmhsRegisterVector::CMHS_REGISTER_VECTOR,
     FmovGeneral::FMOV_GENERAL,

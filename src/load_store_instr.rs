@@ -1874,6 +1874,37 @@ impl Ldar {
     };
 }
 
+/// Load-acquire register byte
+#[derive(Debug, Clone, Copy)]
+pub struct Ldarb {
+    pub rn: u8,
+    pub rt: u8,
+}
+
+impl Ldarb {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let address = if self.rn == 31 { cpu.sp_read() } else { cpu.x_read(self.rn.into(), 64) };
+
+        let data = cpu.read_memory(address.try_into().unwrap(), 1);
+        if cpu.mmu.faulted {
+            return;
+        }
+        cpu.x_write(self.rt.into(), data.1, true);
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rt = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::Ldarb(Self { rn, rt })
+    }
+
+    pub const LDARB: InstDesc = InstDesc {
+        mask: 0b1111_1111_1111_1111_1111_1100_0000_0000,
+        value: 0b0000_1000_1101_1111_1111_1100_0000_0000,
+        decode: Self::decode,
+    };
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct Stxr {
     size: u8,
@@ -1974,6 +2005,58 @@ impl Stxrb {
     pub const STXRB: InstDesc = InstDesc {
         mask: 0b1111_1111_1110_0000_1111_1100_0000_0000,
         value: 0b0000_1000_0000_0000_0111_1100_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+/// Store-release exclusive register byte
+#[derive(Debug, Clone, Copy)]
+pub struct Stlxrb {
+    rs: u8,
+    rn: u8,
+    rt: u8,
+}
+
+impl Stlxrb {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let elsize = 8;
+        let dbytes = 1;
+
+        if self.rs == self.rt || (self.rn == self.rs && self.rn != 31) {
+            panic!("STLXRB: unpredictable register overlap");
+        }
+
+        let address = if self.rn == 31 { cpu.sp_read() } else { cpu.x_read(self.rn.into(), 64) };
+
+        let data = cpu.x_read(self.rt.into(), elsize);
+
+        let status = if cpu.monitor.safe(address, dbytes) {
+            cpu.write_memory(address as usize, dbytes.into(), data);
+            0u64
+        } else {
+            1u64
+        };
+        if cpu.mmu.faulted {
+            return;
+        }
+
+        if status == 0 {
+            cpu.monitor.off();
+        }
+
+        cpu.x_write(self.rs.into(), status, true);
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let rs = get_bits_ct!(word, 16, 5) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rt = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::Stlxrb(Self { rs, rn, rt })
+    }
+
+    pub const STLXRB: InstDesc = InstDesc {
+        mask: 0b1111_1111_1110_0000_1111_1100_0000_0000,
+        value: 0b0000_1000_0000_0000_1111_1100_0000_0000,
         decode: Self::decode,
     };
 }
