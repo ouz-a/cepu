@@ -5,7 +5,7 @@ use crate::{
     instruction::{InstDesc, Instruction},
     load_and_store::{ExtendType, extend_register},
     simd_fp_instr::*,
-    utils::{bits_get, elem_get, elem_set, sign_extend, BitUtils},
+    utils::{BitUtils, bits_get, elem_get, elem_set, sign_extend},
 };
 
 /// Floating-point convert/move instruction types.
@@ -1435,7 +1435,8 @@ impl Uminp {
         let operand2 = cpu.v_read(self.rm.into(), datasize);
 
         // Pairwise operation: conceptually concat = operand2:operand1
-        // Indices 0..elements are in operand1, indices elements..2*elements are in operand2
+        // Indices 0..elements are in operand1, indices elements..2*elements are in
+        // operand2
         for e in 0..elements {
             let idx1 = (2 * e) as usize;
             let idx2 = (2 * e + 1) as usize;

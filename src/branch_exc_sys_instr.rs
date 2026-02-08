@@ -253,7 +253,8 @@ impl Ccmpi {
 }
 
 /// Conditional compare negative (immediate)
-/// CCMN: If condition holds, sets flags from (Rn + imm), otherwise sets flags to nzcv
+/// CCMN: If condition holds, sets flags from (Rn + imm), otherwise sets flags
+/// to nzcv
 #[derive(Debug, Clone, Copy)]
 pub struct Ccmni {
     pub sf: bool,
