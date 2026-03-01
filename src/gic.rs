@@ -1,3 +1,5 @@
+const SPURIOUS_INTERRUPT: usize = 1023;
+
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum InterruptState {
     #[default]
@@ -38,7 +40,11 @@ impl Default for Interrupt {
 // We use 16 priority levels
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Gic {
-    interrupts: [Interrupt; 1024],
+    pub interrupts: [Interrupt; 1024],
+    /// Number of interrupts that are both enabled AND in Pending state.
+    /// Maintained incrementally so has_active_and_pending_interrupt is O(1)
+    /// in the common case (no pending interrupts).
+    pending_count: u32,
 
     // ————— DISTRIBUTOR REGISTERS —————
     /// Offset 0x00 — GICD @ 0x80000000
@@ -46,18 +52,24 @@ pub struct Gic {
     pub gicd_ctlr: u32, // Distributor control
 
     /// Offset 0x04 — GICD @ 0x80000004
+    /// Read-only
+    /// Tells kernel how many interrupts and CPUs exist
     pub gicd_typer: u32,
 
     // ————— CPU INTERFACE REGISTERS —————
     /// Offset 0x00 — GICC @ 0x80010000
-    gicc_ctlr: u32, // CPU interface control
+    pub gicc_ctlr: u32, // CPU interface control
 
     /// Offset 0x04 — GICC @ 0x80010004
     /// Provides an interrupt priority filter. Only interrupts with higher
-    /// priority than the value in this  register are signaled to the processor.
-    gicc_pmr: u32, // Priority mask
+    /// priority than the value in this  register are signaled to the
+    /// processor.
+    pub gicc_pmr: u32, // Priority mask
 
     /// Offset 0x0C — GICC @ 0x8001000C
+    /// Read-only
+    /// Read to acknowledge
+    /// Returns interrupt ID, flips Pending -> Active
     gicc_iar: u32, // Read -> get interrupt ID
 
     /// Offset 0x10 — GICC @ 0x80010010
@@ -79,6 +91,7 @@ impl Default for Gic {
         };
         Self {
             interrupts: [interrupt; 1024],
+            pending_count: 0,
             gicd_ctlr: Default::default(),
             // 1 cpu
             gicd_typer: 0b0000_0000_0000_0000_0000_0000_0001_1111,
@@ -92,15 +105,27 @@ impl Default for Gic {
 }
 
 impl Gic {
+    pub fn set_state(&mut self, id: usize, new_state: InterruptState) {
+        let was_pending = self.interrupts[id].state == InterruptState::Pending;
+        let is_pending = new_state == InterruptState::Pending;
+        if was_pending && !is_pending {
+            self.pending_count = self.pending_count.saturating_sub(1);
+        } else if !was_pending && is_pending {
+            self.pending_count += 1;
+        }
+        self.interrupts[id].state = new_state;
+    }
+
     /// Address is 0x80000000-0x80010FFF (GICD) or 0x80010000-0x80011FFF (GICC)
     /// Enforced by bus. We mask to get offset within GIC space.
-    pub fn read(&self, addr: u64) -> u32 {
+    pub fn read(&mut self, addr: u64) -> u32 {
         let addr = addr & 0x1FFFF;
         match addr {
             // ----------GICD REGISTERS----------
             // GICD registers
             0x000 => self.gicd_ctlr,
             0x004 => self.gicd_typer,
+
             // GICD_ISENABLER
             0x100..=0x17C => {
                 let req_index = (addr - 0x100) / 4; // which reg
@@ -130,8 +155,8 @@ impl Gic {
             }
 
             // GICD_ITARGETSR
-            // "In a uniprocessor implementation, all interrupts target the one processor, and
-            // the GICD_ITARGETSRs are RAZ/WI"
+            // "In a uniprocessor implementation, all interrupts target the one
+            // processor, and the GICD_ITARGETSRs are RAZ/WI"
             0x800..=0xBFC => 0,
             // GICD_ICFGRn
             0xC00..=0xCFC => {
@@ -153,6 +178,17 @@ impl Gic {
             // ----------GICC REGISTERS----------
             0x10000 => self.gicc_ctlr,
             0x10004 => self.gicc_pmr,
+            // GICC_IAR
+            0x1000C => {
+                let interrupt_id = self.get_active_and_pending_hp();
+                if interrupt_id == SPURIOUS_INTERRUPT {
+                    return SPURIOUS_INTERRUPT as u32;
+                } else {
+                    self.set_state(interrupt_id, InterruptState::Active);
+                    interrupt_id as u32
+                }
+            }
+            // GICC_EOIR
             0x10010 => self.gicc_eoir,
             // GICC_IIDR
             0x100FC => 0x0002_043B,
@@ -197,7 +233,7 @@ impl Gic {
 
                 for i in 0..32 {
                     if (val >> i) & 1 == 1 {
-                        self.interrupts[base_irq + i].state = InterruptState::Inactive;
+                        self.set_state(base_irq + i, InterruptState::Inactive);
                     }
                 }
             }
@@ -220,7 +256,8 @@ impl Gic {
 
                 for i in 0..16 {
                     // This is ignored by Linux, but we write it anyway
-                    // Linux always does N-N Model (All targeted CPUs receive the interrupt)
+                    // Linux always does N-N Model (All targeted CPUs receive
+                    // the interrupt)
                     self.interrupts[base_irq + i].is_1n = (val >> (i * 2)) & 1 != 0;
                     self.interrupts[base_irq + i].edge_triggered = (val >> (i * 2 + 1)) & 1 != 0;
                 }
@@ -234,13 +271,80 @@ impl Gic {
             0x10004 => {
                 self.gicc_pmr = val & 0xF0;
             }
+            // GICC_EOIR
+            0x10010 => {
+                // TODO: Fix priority stack
+                let val = val as usize;
+                match self.interrupts[val].state {
+                    InterruptState::Active => {
+                        self.set_state(val, InterruptState::Inactive);
+                    }
+                    InterruptState::ActiveAndPending => {
+                        self.set_state(val, InterruptState::Pending);
+                    }
+                    _ => {}
+                }
+            }
             // GICC_APRn
             0x100D0..=0x100DC => {
                 let req_index = (addr - 0x100D0) / 4;
 
                 self.gicc_apr[req_index as usize] = val;
             }
+            0xF00 => {
+                let sgi_id = (val & 0xF) as usize;
+                self.set_state(sgi_id, InterruptState::Pending);
+            }
             _ => panic!("Attempt to write unmapped GIC memory, addr {addr:x}, val {val:b}"),
         }
+    }
+
+    pub fn has_active_and_pending_interrupt(&self) -> bool {
+        if self.pending_count == 0 {
+            return false;
+        }
+        let pmr = self.gicc_pmr as u8;
+        self.interrupts.iter().any(|interrupt| {
+            interrupt.enabled
+                && interrupt.state == InterruptState::Pending
+                && interrupt.priority < pmr
+        })
+    }
+
+    pub fn active_interrupts(&self) -> Vec<usize> {
+        self.interrupts
+            .iter()
+            .enumerate()
+            .filter_map(
+                |(index, interrupt)| {
+                    if interrupt.state == InterruptState::Active { Some(index) } else { None }
+                },
+            )
+            .collect()
+    }
+
+    /// Returns index of highest priority
+    /// Interrupt that is ready and pending
+    /// If there is a tie lowest interrupt id wins
+    pub fn get_active_and_pending_hp(&self) -> usize {
+        let pmr = self.gicc_pmr as u8;
+        let mut ready_interrupt: Option<(usize, Interrupt)> = None;
+        for (index, interrupt) in self.interrupts.iter().enumerate() {
+            if interrupt.enabled
+                && interrupt.state == InterruptState::Pending
+                && interrupt.priority < pmr
+            {
+                if ready_interrupt.is_some() {
+                    let (_, intrp) = ready_interrupt.unwrap();
+                    if interrupt.priority < intrp.priority {
+                        ready_interrupt = Some((index, *interrupt));
+                    }
+                } else {
+                    ready_interrupt = Some((index, *interrupt));
+                }
+            }
+        }
+
+        if ready_interrupt.is_some() { ready_interrupt.unwrap().0 } else { SPURIOUS_INTERRUPT }
     }
 }

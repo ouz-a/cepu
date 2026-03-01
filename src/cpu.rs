@@ -8,7 +8,10 @@ use std::{
     time::{Duration, Instant},
 };
 
-use crate::{get_bits_ct, instruction::UNDEF_PANIC, memory::PhyMemStatus, mmu::Mmu, utils::*};
+use crate::{
+    get_bits_ct, gic::InterruptState, instruction::UNDEF_PANIC, memory::PhyMemStatus, mmu::Mmu,
+    utils::*,
+};
 pub const MEM_TOP: usize = crate::memory::MEMORY_SIZE;
 
 static START: OnceLock<Instant> = OnceLock::new();
@@ -58,20 +61,31 @@ pub struct Timer {
     /// Physical Timer Compare Value (CNTP_CVAL_EL0)
     pub cntp_cval_el0: u64,
     /// Physical Timer Control (CNTP_CTL_EL0)
+    /// Bit 0 —> ENABLE
+    /// Bit 1 —> IMASK
+    /// Bit 2 —> ISTATUS
     pub cntp_ctl_el0: u32,
 
-    /// Virtual Timer Compare Value (CNTV_CVAL_EL0)
+    /// Virtual Timer Compare Value (CNTV_CVAL_EL0) (in ticks)
     pub ctnv_cval_el0: u64,
-    /// Virtual Timer Control (CNTV_CTL_EL0)
+    /// Virtual Timer Control (CNTV_CTL_EL0) (in ticks)
     pub cntv_ctl_el0: u64,
 
-    ///  Counter-timer Kernel Control Register
+    // TODO: Handle this, it
+    /// Counter-timer Kernel Control Register
+    /// Bit 0 —> Allow EL0 to read physical_counter
+    /// Bit 1 —> Allow EL0 to read virtual_counter
     pub cntkctl_el1: u64,
 
     /// Physical Counter (CNTPCT_EL0)
+    /// Instead of increasing this we just call
+    /// cntp_now()
     pub cntp_ct_el0: u64,
 
     /// Physical Timer Expiry Time (nanoseconds)
+    /// Translation of CVAL value in host time
+    /// This doesn't exist in hardware.
+    /// It's emulator trick
     pub cntp_expiry_ns: AtomicU64,
 }
 
@@ -141,7 +155,8 @@ pub struct Cpu {
     // ========================================================================
     // SYSTEM CONTROL & CONFIGURATION
     // ========================================================================
-    /// System Control Register EL1 (MMU enable, cache enable, alignment checks)
+    /// System Control Register EL1 (MMU enable, cache enable, alignment
+    /// checks)
     pub sctlr_el1: u64,
     /// System Control Register EL2 (unused, reserved for future EL2 support)
     _sctlr_el2: u64,
@@ -188,8 +203,8 @@ pub struct Cpu {
     tpidr_el1: u64,
     /// Thread Pointer ID Register EL0 (user-space thread pointer, read-write)
     tpidr_el0: u64,
-    /// Thread Pointer ID Register EL0 Read-Only (user-space TLS, read-only from
-    /// EL0)
+    /// Thread Pointer ID Register EL0 Read-Only (user-space TLS, read-only
+    /// from EL0)
     tpidrro_el0: u64,
 
     // ========================================================================
@@ -275,7 +290,8 @@ impl Cpu {
         cpu.sp_el3 = 0x10000000 - 0x30000; // 256MB - 192KB
 
         // System identification registers
-        // DebugVer=9 (Debugv8p4), but BRPs=0, WRPs=0, CTX_CMPs=0 (no debug registers)
+        // DebugVer=9 (Debugv8p4), but BRPs=0, WRPs=0, CTX_CMPs=0 (no debug
+        // registers)
         cpu.id_aa64dfr0_el1 = 0x000f00f000000009;
         cpu.id_aa64pfr0_el1 = 0x11;
         cpu.id_aa64dfr1_el1 = 0;
@@ -377,14 +393,14 @@ impl Cpu {
             self.uart_debug.push_str(str::from_utf8(buf).unwrap());
             stdout().flush().unwrap();
             self.mmu.bus.uart.dr = 0;
+            self.mmu.bus.uart.ris.bit_set(5);
+            if (self.mmu.bus.uart.ris & self.mmu.bus.uart.imsc.to_bits()) != 0 {
+                self.mmu.bus.gic.set_state(33, InterruptState::Pending);
+            }
             if self.uart_debug.contains("end Kernel panic") {
                 UNDEF_PANIC.store(true, Ordering::Relaxed);
             }
         }
-    }
-
-    pub fn post_interrupt(&mut self, line: u32) -> u32 {
-        self.pending_irq.fetch_or(1 << line, Ordering::Relaxed)
     }
 
     pub fn handle_data_abort(&mut self, old_pc: &mut u64) {
@@ -417,14 +433,12 @@ impl Cpu {
     }
 
     pub fn handle_interrupts(&mut self, next_pc: &mut u64) {
-        let pending = self.pending_irq.load(Ordering::Acquire);
-        if pending == 0 || self.pstate.irq_masked() {
+        let pending = self.mmu.bus.gic.has_active_and_pending_interrupt();
+        if !pending || self.pstate.irq_masked() {
             return;
         }
         //UNDEF_PANIC.store(true, Ordering::SeqCst);
 
-        let line = pending.trailing_zeros();
-        self.pending_irq.fetch_and(!(1u32 << line), Ordering::AcqRel);
         // We return to current exception level
         let _cur_el = self.pstate.current_el;
         // We are only handling IRQ now
@@ -452,24 +466,31 @@ impl Cpu {
     pub fn timer_device_tick(&mut self) {
         let expire = self.timer.cntp_expiry_ns.load(Ordering::Relaxed);
         if expire != 0 && monotonic_ns() >= expire {
-            self.post_interrupt(27);
+            self.mmu.bus.gic.set_state(27, InterruptState::Pending);
             self.timer.cntp_expiry_ns.store(0, Ordering::Relaxed);
         }
     }
 
+    /// Translate hardware ticks into host clock
+    /// for compare value so we can actually check
+    /// if some amount of time has passed.
     pub fn timer_rearm(&mut self) {
-        if (self.timer.cntp_ctl_el0 & 1) == 0 {
+        // Enable is 0 && IMASK is 0 == Interrupt surpressed
+        if (self.timer.cntp_ctl_el0 & 1) == 0 || (self.timer.cntp_ctl_el0 & 2) != 0 {
             self.timer.cntp_expiry_ns.store(0, Ordering::Relaxed);
             return;
         }
+
         let now = cntpct_now();
         let cval = self.timer.cntp_cval_el0;
 
+        // Kernel might have wanted to trigger interrupt as soon as possible
         if now >= cval {
             self.timer.cntp_expiry_ns.store(monotonic_ns(), Ordering::Relaxed);
             return;
         }
 
+        // Kernel wants to trigger interrupt in the future
         let delta_ticks = cval.saturating_sub(now);
         let delta_ns = ((delta_ticks as u128 * 1_000_000_000u128) / CNTFRQ as u128) as u64;
         let host_expiry = monotonic_ns().saturating_add(delta_ns);
@@ -477,7 +498,7 @@ impl Cpu {
     }
 
     pub fn should_wake(&self) -> bool {
-        self.pending_irq.load(Ordering::Relaxed) != 0
+        self.mmu.bus.gic.has_active_and_pending_interrupt()
     }
 
     pub fn get_elr_elx(&self) -> u64 {
@@ -711,9 +732,13 @@ impl Cpu {
                 self.par_el1 = self.x_read(t.into(), 64);
             }
             MsrRegisters::CntvCtlEl0 => {
-                self.timer.cntv_ctl_el0 = self.x_read(t.into(), 64);
+                self.timer.cntp_ctl_el0 = self.x_read(t.into(), 64) as u32;
+                self.timer_rearm();
             }
-            MsrRegisters::CntvCvalEl0 => self.timer.cntp_cval_el0 = self.x_read(t.into(), 64),
+            MsrRegisters::CntvCvalEl0 => {
+                self.timer.cntp_cval_el0 = self.x_read(t.into(), 64);
+                self.timer_rearm();
+            }
             MsrRegisters::CntkctlEl1 => self.timer.cntkctl_el1 = self.x_read(t.into(), 64),
             MsrRegisters::ClidrEl1 => {
                 self.clidr_el1 = self.x_read(t.into(), 64);
@@ -761,6 +786,7 @@ impl Cpu {
                     panic!("Please implement CntfrqEl0 access for EL0")
                 }
             }
+            // Counter value
             MrsRegisters::CntpctEl0 => {
                 if !self.pstate.current_el.is_el0() {
                     self.x_write(t.into(), cntpct_now(), false);
@@ -768,9 +794,14 @@ impl Cpu {
                     panic!("Please implement CntpctEl0 access for EL0");
                 }
             }
+            // Timer physical control
             MrsRegisters::CntpCtlEl0 => {
                 if !self.pstate.current_el.is_el0() && !self.pstate.current_el.is_el2() {
-                    self.x_write(t.into(), self.timer.cntp_ctl_el0.into(), false);
+                    let mut ctl = self.timer.cntp_ctl_el0 as u64;
+                    if (ctl & 1) != 0 && cntpct_now() >= self.timer.cntp_cval_el0 {
+                        ctl |= 1 << 2; // ISTATUS only when ENABLE=1
+                    }
+                    self.x_write(t.into(), ctl, false);
                 } else {
                     panic!("Please implement CntpctEl0 access for EL0");
                 }
@@ -915,7 +946,12 @@ impl Cpu {
                 self.x_write(t.into(), self.id_isar0_el1, false);
             }
             MrsRegisters::CntvCtlEl0 => {
-                self.x_write(t.into(), self.timer.cntv_ctl_el0, false);
+                // Since virtual timer is alias for hardware in our emulator
+                let mut ctl = self.timer.cntp_ctl_el0 as u64;
+                if (ctl & 1) != 0 && cntpct_now() >= self.timer.cntp_cval_el0 {
+                    ctl |= 1 << 2; // ISTATUS only when ENABLE=1
+                }
+                self.x_write(t.into(), ctl, false);
             }
             MrsRegisters::CntvCvalEl0 => {
                 self.x_write(t.into(), self.timer.cntp_cval_el0, false);

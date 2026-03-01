@@ -474,7 +474,8 @@ impl AsimdModImm {
         //   cmode=1110:             MOVI (both op values)
         //   cmode=1111:             FMOV (both op values)
         //
-        // ORR/BIC condition: cmode[0]==1 AND cmode[3:2]!=11 (i.e., cmode < 12 && odd)
+        // ORR/BIC condition: cmode[0]==1 AND cmode[3:2]!=11 (i.e., cmode < 12
+        // && odd)
         let is_orr_bic = (self.cmode & 1) == 1 && (self.cmode >> 2) != 0b11;
 
         let imm128: u128 = if datasize == 128 {
@@ -1369,8 +1370,8 @@ impl Umaxp {
         let operand2 = cpu.v_read(self.rm.into(), datasize);
 
         // Pairwise operation: conceptually concat = operand2:operand1
-        // Indices 0..elements are in operand1, indices elements..2*elements are in
-        // operand2
+        // Indices 0..elements are in operand1, indices elements..2*elements are
+        // in operand2
         for e in 0..elements {
             let idx1 = (2 * e) as usize;
             let idx2 = (2 * e + 1) as usize;
@@ -1435,8 +1436,8 @@ impl Uminp {
         let operand2 = cpu.v_read(self.rm.into(), datasize);
 
         // Pairwise operation: conceptually concat = operand2:operand1
-        // Indices 0..elements are in operand1, indices elements..2*elements are in
-        // operand2
+        // Indices 0..elements are in operand1, indices elements..2*elements are
+        // in operand2
         for e in 0..elements {
             let idx1 = (2 * e) as usize;
             let idx2 = (2 * e + 1) as usize;

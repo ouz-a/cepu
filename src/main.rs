@@ -1,4 +1,5 @@
 #![feature(int_lowest_highest_one)]
+#![feature(default_field_values)]
 #![allow(clippy::too_many_arguments)]
 
 use std::{

@@ -26,7 +26,7 @@ impl Bus {
                 let val = self.gic.read(address as u64);
                 (PhyMemStatus::default(), val as u64)
             }
-            UART_RANGE_BEG..=UART_RANGE_END => self.uart.read((address - UART_RANGE_BEG) as u8),
+            UART_RANGE_BEG..=UART_RANGE_END => self.uart.read((address - UART_RANGE_BEG) as u16),
             _ => {
                 panic!("Out of bounds memory read! Range {address:x}")
             }
@@ -42,7 +42,7 @@ impl Bus {
                 PhyMemStatus::default()
             }
             UART_RANGE_BEG..=UART_RANGE_END => {
-                self.uart.write((address - UART_RANGE_BEG) as u8, value, size)
+                self.uart.write((address - UART_RANGE_BEG) as u16, value, size)
             }
             _ => {
                 panic!("Out of bounds memory write! Range {address:x}")
