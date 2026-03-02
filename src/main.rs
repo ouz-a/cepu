@@ -35,6 +35,7 @@ pub mod mmu;
 pub mod register_instr;
 pub mod simd_fp;
 pub mod simd_fp_instr;
+pub mod terminal;
 pub mod utils;
 
 pub fn run_block(cpu: &mut Cpu) {
@@ -93,6 +94,7 @@ pub fn run_block(cpu: &mut Cpu) {
             if batch_left == 0 {
                 batch_left = BATCH;
                 cpu.timer_device_tick();
+                cpu.poll_uart_rx();
             }
         } else {
             let condvar_pair = cpu.condvar.clone();

@@ -11,6 +11,77 @@ macro_rules! get_bits_ct {
     }};
 }
 
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct RingBuf<const N: usize> {
+    buf: [u8; N],
+    head: usize,
+    len: usize,
+}
+
+impl<const N: usize> Default for RingBuf<N> {
+    fn default() -> Self {
+        RingBuf { buf: [0; N], head: 0, len: 0 }
+    }
+}
+
+impl<const N: usize> RingBuf<N> {
+    pub const fn new() -> Self {
+        Self { buf: [0; N], head: 0, len: 0 }
+    }
+
+    pub fn push_back(&mut self, val: u8) {
+        assert!(self.len < N);
+        self.buf[(self.head + self.len) % N] = val;
+        self.len += 1;
+    }
+
+    pub fn push_front(&mut self, val: u8) {
+        assert!(self.len < N);
+        self.head = (self.head + N - 1) % N;
+        self.buf[self.head] = val;
+        self.len += 1;
+    }
+
+    pub fn pop_back(&mut self) -> Option<u8> {
+        if self.len == 0 {
+            return None;
+        }
+        self.len -= 1;
+        Some(self.buf[(self.head + self.len) % N])
+    }
+
+    pub fn pop_front(&mut self) -> Option<u8> {
+        if self.len == 0 {
+            return None;
+        }
+        let val = self.buf[self.head];
+        self.head = (self.head + 1) % N;
+        self.len -= 1;
+        Some(val)
+    }
+
+    pub fn get(&self, index: usize) -> Option<u8> {
+        if index >= self.len {
+            return None;
+        }
+        Some(self.buf[(self.head + index) % N])
+    }
+
+    pub fn len(&self) -> usize {
+        self.len
+    }
+    pub fn is_empty(&self) -> bool {
+        self.len == 0
+    }
+    pub fn is_full(&self) -> bool {
+        self.len == N
+    }
+    pub fn clear(&mut self) {
+        self.head = 0;
+        self.len = 0;
+    }
+}
+
 /// I find these bit operations always confusing
 ///
 /// Example: let b = `0b1011_1111_1111_1110_...`

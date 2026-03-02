@@ -1,5 +1,9 @@
 use std::io::{self, Write};
 
+use crate::utils::RingBuf;
+
+const FIFO_CAPACITY: usize = 16;
+
 use crate::memory::PhyMemStatus;
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -488,6 +492,7 @@ impl LcrH {
 pub struct Uart {
     /// Data Register, offset: 0x00
     pub dr: u8,
+    pub rx_fifo: RingBuf<FIFO_CAPACITY>,
     /// Flat Register, offset: 0x18
     pub fr: FlatRegister,
 
@@ -512,7 +517,7 @@ pub struct Uart {
 }
 
 impl Uart {
-    pub fn read(&self, address: u16) -> (PhyMemStatus, u64) {
+    pub fn read(&mut self, address: u16) -> (PhyMemStatus, u64) {
         match address {
             // DR
             0..=0x08 => self.read_dr(),
@@ -526,8 +531,14 @@ impl Uart {
             0x2C => (PhyMemStatus::default(), self.lcr_h.to_bits() as u64),
             // CR
             0x30 => self.read_cr(),
+            // IFLS
+            0x34 => (PhyMemStatus::default(), self.ifls as u64),
             // IMSC
             0x38 => self.read_imsc(),
+            // RIS
+            0x3C => (PhyMemStatus::default(), self.ris as u64),
+            // MIS = RIS & IMSC
+            0x40 => (PhyMemStatus::default(), (self.ris & self.imsc.to_bits()) as u64),
             0x090..=0xFCC => (PhyMemStatus::default(), 0),
             0xFE0 => (PhyMemStatus::default(), 0x11),
             0xFE4 => (PhyMemStatus::default(), 0x10),
@@ -571,8 +582,8 @@ impl Uart {
             }
             // IFLS
             0x34 => {
-               self.ifls = value as u8;
-               PhyMemStatus::default()
+                self.ifls = value as u8;
+                PhyMemStatus::default()
             }
             // IMSC
             0x38 => {
@@ -593,8 +604,11 @@ impl Uart {
     pub fn read_fr(&self) -> (PhyMemStatus, u64) {
         (PhyMemStatus::default(), self.fr.to_bits() as u64)
     }
-    pub fn read_dr(&self) -> (PhyMemStatus, u64) {
-        (PhyMemStatus::default(), self.dr as u64)
+    pub fn read_dr(&mut self) -> (PhyMemStatus, u64) {
+        let byte = self.rx_fifo.pop_front().unwrap_or(0);
+        self.fr.rxfe = self.rx_fifo.is_empty();
+        self.fr.rxff = false;
+        (PhyMemStatus::default(), byte as u64)
     }
 
     pub fn read_cr(&self) -> (PhyMemStatus, u64) {

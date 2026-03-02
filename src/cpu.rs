@@ -387,6 +387,7 @@ impl Cpu {
     }
 
     pub fn handle_devices(&mut self) {
+        // TX: drain written byte to stdout
         if self.mmu.bus.uart.dr != 0 {
             let buf = &[self.mmu.bus.uart.dr];
             stdout().write_all(buf).unwrap();
@@ -399,6 +400,23 @@ impl Cpu {
             }
             if self.uart_debug.contains("end Kernel panic") {
                 UNDEF_PANIC.store(true, Ordering::Relaxed);
+            }
+        }
+
+    }
+
+    pub fn poll_uart_rx(&mut self) {
+        let uart = &self.mmu.bus.uart;
+        if uart.cr.rxe && uart.imsc.rxim && !uart.rx_fifo.is_full() {
+            if let Some(byte) = crate::terminal::try_read_byte() {
+                let uart = &mut self.mmu.bus.uart;
+                uart.rx_fifo.push_back(byte);
+                uart.fr.rxfe = false;
+                uart.fr.rxff = uart.rx_fifo.is_full();
+                uart.ris = uart.ris.bit_set(4);
+                if (uart.ris & uart.imsc.to_bits()) != 0 {
+                    self.mmu.bus.gic.set_state(33, InterruptState::Pending);
+                }
             }
         }
     }
