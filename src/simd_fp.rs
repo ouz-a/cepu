@@ -70,7 +70,7 @@ impl UmovAdvsimd {
         let element = elem_get(operand, index, esize as usize);
 
         // Zero-extend to destination size and write to general-purpose register
-        cpu.x_write(self.rd.into(), element as u64, datasize == 32);
+        cpu.x_write(self.rd.into(), element, datasize == 32);
     }
 
     pub const fn decode(word: u32) -> Instruction {

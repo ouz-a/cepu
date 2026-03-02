@@ -8,7 +8,7 @@ use std::{
 
 use crate::{
     branch::branch_addr,
-    cpu::{BATCH, Cpu, INSTRUCTION_SIZE, monotonic_ns},
+    cpu::{BATCH, Cpu, INSTRUCTION_SIZE},
     image::{load_device_blob, load_initramfs, load_kernel_image},
     instruction::{
         CURRENT_PC, DESCR, UNDEF_PANIC, capture_trace, decode, print_undefined_trace,
@@ -97,29 +97,13 @@ pub fn run_block(cpu: &mut Cpu) {
                 cpu.poll_uart_rx();
             }
         } else {
-            let condvar_pair = cpu.condvar.clone();
-            let (lock, cvar) = &*condvar_pair;
-            let mut guard = lock.lock().unwrap();
-
             loop {
                 cpu.timer_device_tick();
-
+                cpu.poll_uart_rx();
                 if cpu.should_wake() {
                     break;
                 }
-
-                let now = monotonic_ns();
-                let deadline = &cpu.timer.cntp_expiry_ns;
-                let deadline = deadline.load(Ordering::Relaxed).saturating_sub(now);
-                let duration = Duration::from_nanos(deadline);
-                if deadline > 0 {
-                    let g = cvar
-                        .wait_timeout(guard, duration)
-                        .expect("Condvar failed to wait for a timeout");
-                    guard = g.0;
-                } else {
-                    guard = cvar.wait(guard).expect("Condvar failed to wait");
-                }
+                std::thread::sleep(Duration::from_millis(1));
             }
             cpu.sleeping.store(false, Ordering::Relaxed);
         }
@@ -131,12 +115,12 @@ fn main() {
     validate_tables(DESCR);
     let mut cpu = Cpu::init();
 
-    //validate_and_load_elf_header(&mut cpu, Path::new("./.executables/boot.elf"));
+    //validate_and_load_elf_header(&mut cpu,
+    // Path::new("./.executables/boot.elf"));
     load_device_blob(&mut cpu, &PathBuf::from_str("/Users/ouz/code/cepu_now/cepu.dtb").unwrap());
     load_kernel_image(&mut cpu, &PathBuf::from_str("/Users/ouz/code/cepu_now/Image").unwrap());
-    load_initramfs(&PathBuf::from_str("/Users/ouz/code/cepu_now/initramfs.cpio.gz").unwrap());
+    load_initramfs(&PathBuf::from_str("/Users/ouz/code/cepu_now/initramfs.cpio").unwrap());
 
-    // Enter raw terminal mode for interactive input
+    let _term = terminal::RawTerminal::enable();
     run_block(&mut cpu);
-    // Terminal is restored automatically when `terminal` is dropped
 }

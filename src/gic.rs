@@ -182,7 +182,7 @@ impl Gic {
             0x1000C => {
                 let interrupt_id = self.get_active_and_pending_hp();
                 if interrupt_id == SPURIOUS_INTERRUPT {
-                    return SPURIOUS_INTERRUPT as u32;
+                    SPURIOUS_INTERRUPT as u32
                 } else {
                     self.set_state(interrupt_id, InterruptState::Active);
                     interrupt_id as u32
