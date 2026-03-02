@@ -88,6 +88,53 @@ impl UmovAdvsimd {
     };
 }
 
+/// Insert vector element from general-purpose register
+/// INS <Vd>.<Ts>[<index>], <R><n>
+/// Alias: MOV (from general)
+#[derive(Clone, Copy, Debug)]
+pub struct InsAdvsimdGen {
+    pub imm5: u8,
+    pub rn: u8,
+    pub rd: u8,
+}
+
+impl InsAdvsimdGen {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        // imm5 IN 'x0000' is UNDEFINED
+        if bits_get(self.imm5.into(), 0, 4) == 0 {
+            panic!("Undefined: imm5<3:0> == 0000");
+        }
+
+        // Determine element size from lowest set bit in imm5<3:0>
+        let size = bits_get(self.imm5.into(), 0, 4).trailing_zeros();
+        let esize = (8 << size) as usize;
+
+        // Calculate index from imm5<4:size+1>
+        let index = bits_get(self.imm5.into(), (size + 1) as u8, 4 - size as u8) as usize;
+
+        // Read the source general-purpose register, truncated to esize
+        let element = cpu.x_read(self.rn.into(), esize as u8);
+
+        // Read current 128-bit vector, insert element, write back
+        let result = cpu.v_read(self.rd.into(), 128);
+        let result = elem_set(result, index, esize, element);
+        cpu.v_write(self.rd.into(), 128, result);
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let imm5 = get_bits_ct!(word, 16, 5) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rd = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::InsAdvsimdGen(Self { imm5, rn, rd })
+    }
+
+    pub const INS_ADVSIMD_GEN: InstDesc = InstDesc {
+        mask: 0b1111_1111_1110_0000_1111_1100_0000_0000,
+        value: 0b0100_1110_0000_0000_0001_1100_0000_0000,
+        decode: Self::decode,
+    };
+}
+
 /// Duplicate general-purpose register to vector
 #[derive(Clone, Copy, Debug)]
 pub struct DupGeneral {
@@ -1265,6 +1312,85 @@ impl Shrn {
     pub const SHRN_0001: InstDesc = InstDesc {
         mask: 0b1011_1111_1111_1000_1111_1100_0000_0000,
         value: 0b0000_1111_0000_1000_1000_0100_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+/// Signed shift left long (immediate)
+/// SSHLL{2} <Vd>.<Ta>, <Vn>.<Tb>, #<shift>
+/// Alias: SXTL/SXTL2 (when shift == 0)
+#[derive(Clone, Copy, Debug)]
+pub struct SshllAdvsimd {
+    pub q: u8,
+    pub immh: u8,
+    pub immb: u8,
+    pub rn: u8,
+    pub rd: u8,
+}
+
+impl SshllAdvsimd {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        if self.immh == 0 {
+            panic!("See asimdimm");
+        }
+        if self.immh & 0b1000 != 0 {
+            panic!("Undefined: immh<3> == 1");
+        }
+
+        // esize = 8 << HighestSetBitNZ(immh<2:0>)
+        let highest_set_bit = self.immh.bits_get(0, 3).highest_one().unwrap();
+        let esize = 8 << highest_set_bit;
+        let datasize: u8 = 64;
+        let part = self.q;
+        let elements = datasize / esize;
+
+        // shift = UInt(immh:immb) - esize
+        let immh_immb = ((self.immh as u32) << 3) | self.immb as u32;
+        let shift = immh_immb - esize as u32;
+
+        // Read source: lower or upper 64 bits depending on Q
+        let operand = cpu.v_part_read(self.rn.into(), part, datasize);
+
+        let mut result: u128 = 0;
+        for e in 0..elements {
+            // Sign-extend element, shift left, truncate to 2*esize
+            let raw = elem_get(operand, e as usize, esize as usize);
+            let signed = sign_extend(raw, esize) as i64 as i128;
+            let shifted = (signed << shift) as u128;
+            let dest_esize = (esize * 2) as usize;
+            let truncated = (shifted & ((1u128 << dest_esize) - 1)) as u64;
+            result = elem_set(result, e as usize, dest_esize, truncated);
+        }
+
+        cpu.v_write(self.rd.into(), datasize * 2, result);
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let q = get_bits_ct!(word, 30, 1) as u8;
+        let immh = get_bits_ct!(word, 19, 4) as u8;
+        let immb = get_bits_ct!(word, 16, 3) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rd = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::SshllAdvsimd(Self { q, immh, immb, rn, rd })
+    }
+
+    // Split into 3 variants to exclude immh=0000 (asimdimm) and immh=1xxx
+    // (RESERVED) immh = 01xx (32→64 bit elements)
+    pub const SSHLL_01XX: InstDesc = InstDesc {
+        mask: 0b1011_1111_1110_0000_1111_1100_0000_0000,
+        value: 0b0000_1111_0010_0000_1010_0100_0000_0000,
+        decode: Self::decode,
+    };
+    // immh = 001x (16→32 bit elements)
+    pub const SSHLL_001X: InstDesc = InstDesc {
+        mask: 0b1011_1111_1111_0000_1111_1100_0000_0000,
+        value: 0b0000_1111_0001_0000_1010_0100_0000_0000,
+        decode: Self::decode,
+    };
+    // immh = 0001 (8→16 bit elements)
+    pub const SSHLL_0001: InstDesc = InstDesc {
+        mask: 0b1011_1111_1111_1000_1111_1100_0000_0000,
+        value: 0b0000_1111_0000_1000_1010_0100_0000_0000,
         decode: Self::decode,
     };
 }
