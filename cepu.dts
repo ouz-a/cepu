@@ -1,0 +1,77 @@
+/dts-v1/;
+/ {
+	compatible = "cepu";
+	#address-cells = <2>;
+	#size-cells = <2>;
+
+	cpus {
+		#address-cells = <2>;
+		#size-cells = <0>;
+		
+		cpu0: cpu@0 {
+			device_type = "cpu";
+			compatible = "arm,armv8";
+			reg = <0x0 0x0>;
+			enable-method = "psci";
+		};
+	};
+
+	psci {
+		compatible = "arm,psci-1.0", "arm,psci-0.2";
+		method = "smc";
+	};
+
+	aliases {
+		serial0 = &uart0;
+	};
+	
+	chosen {
+		bootargs = "console=ttyAMA0,115200 earlycon=pl011,mmio,0x90000000 nokaslr";
+		stdout-path = "serial0:115200n8";
+		linux,initrd-start = <0x0 0x08000000>;
+		linux,initrd-end   = <0x0 0x08193800>;  /* 0x8000000 + 1651200 bytes (uncompressed cpio) */
+	};
+	
+	memory@0 {
+		device_type = "memory";
+		reg = <0x0 0x00000000 0x0 0x10000000>;  // 256MB to match emulator RAM_SIZE
+	};
+	
+	uart0: serial@9000000 {
+		compatible = "arm,pl011", "arm,primecell";
+		reg = <0x0 0x90000000 0x0 0x00001000>;
+		clock-frequency = <24000000>;
+		interrupts = <0 1 4>;
+		interrupt-parent = <&intc>;
+		clocks = <&v2m_clk24mhz>, <&v2m_clk24mhz>;
+		clock-names = "uartclk", "apb_pclk";
+	
+	};
+
+	intc: interrupt-controller@80000000 {
+		compatible = "arm,cortex-a15-gic";
+		#interrupt-cells = <3>;
+		interrupt-controller;
+		reg = <0x0 0x80000000 0x0 0x1000>,  // DIST
+		      <0x0 0x80010000 0x0 0x2000>,  // CPU
+		      <0x0 0x80030000 0x0 0x2000>,  // HYPERVISOR (unused)
+		      <0x0 0x80040000 0x0 0x2000>;  // VIRTUAL (unused)
+	};
+
+	v2m_clk24mhz: clock-24000000 {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <24000000>;
+		clock-output-names = "v2m:clk24mhz";
+	};
+
+	timer {
+		compatible = "arm,armv8-timer";
+		interrupts = <1 13 0xf08>,  /* secure physical timer */
+		             <1 14 0xf08>,  /* non-secure physical timer */
+		             <1 11 0xf08>,  /* virtual timer */
+		             <1 10 0xf08>;  /* hypervisor timer */
+		interrupt-parent = <&intc>;
+		clock-frequency = <24000000>;  /* 24 MHz - matches CNTFRQ */
+	};
+};
