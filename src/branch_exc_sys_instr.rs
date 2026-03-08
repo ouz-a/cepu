@@ -730,6 +730,43 @@ impl Sys {
         let tlbi_value: u32 = 0b1101_0101_0000_1000_1000_0000_0000_0000;
 
         if (word & tlbi_mask) == tlbi_value {
+            let crm = get_bits_ct!(word, 8, 4);
+            let op2 = get_bits_ct!(word, 5, 3);
+            let rt = get_bits_ct!(word, 0, 5) as u8;
+            let xt = cpu.x_read(rt.into(), 64);
+
+            match (crm, op2) {
+                (0b0111, 0b000) => {
+                    // VMALLE1 — nuke everything
+                    cpu.mmu.tlb_flush_all();
+                }
+                (0b0011, 0b001) | (0b0111, 0b001) => {
+                    // VAE1 / VAE1IS — invalidate by VA + ASID
+                    let vpn = xt & 0xFFF_FFFF_FFFF;
+                    let asid = (xt >> 48) as u16;
+                    cpu.mmu.tlb_invalidate_va(vpn, asid);
+                }
+                (0b0011, 0b010) => {
+                    // ASIDE1 — invalidate by ASID
+                    let asid = (xt >> 48) as u16;
+                    cpu.mmu.tlb_invalidate_asid(asid);
+                }
+                (0b0011, 0b101) | (0b0111, 0b101) => {
+                    // VALE1 / VALE1IS — same as VAE1 for us
+                    let vpn = xt & 0xFFF_FFFF_FFFF;
+                    let asid = (xt >> 48) as u16;
+                    cpu.mmu.tlb_invalidate_va(vpn, asid);
+                }
+                (0b0011, 0b011) | (0b0111, 0b011) => {
+                    // VAAE1 / VAAE1IS — invalidate VA across all ASIDs
+                    let vpn = xt & 0xFFF_FFFF_FFFF;
+                    cpu.mmu.tlb_invalidate_va_all_asids(vpn);
+                }
+                _ => {
+                    // Unknown TLBI variant — safest to flush everything
+                    cpu.mmu.tlb_flush_all();
+                }
+            }
         } else if (word & at_mask) == at_value {
             let op1 = get_bits_ct!(word, 16, 3);
             let crn = get_bits_ct!(word, 12, 4);

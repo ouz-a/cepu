@@ -13,6 +13,43 @@ pub const ENTRY_SIZE: u8 = 8;
 pub const PAGE_OFFSET_WIDTH: u8 = 12;
 pub const DESCR_ADDR_WIDTH: u8 = 36;
 
+pub const TLB_SIZE: usize = 64;
+
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct TlbEntry {
+    pub valid: bool = false,
+    pub global: bool,
+    pub virtual_page: u64,
+    pub physical_page: u64,
+    pub ap: u8,
+    pub asid: u16,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Tlb {
+    pub entries: [TlbEntry; TLB_SIZE],
+}
+
+impl Tlb {
+    pub fn insert_new_entry(&mut self, va: u64, pa: u64, ap: u8, asid: u16, global: bool) {
+        let vpage = va >> 12;
+        let index = (vpage & (TLB_SIZE as u64 - 1)) as usize;
+        let tlb_entry =
+            TlbEntry { valid: true, global, virtual_page: vpage, physical_page: pa >> 12, ap, asid };
+        self.entries[index] = tlb_entry;
+    }
+
+    pub fn index(va: u64) -> usize {
+        ((va >> 12) & (TLB_SIZE as u64 - 1)) as usize
+    }
+}
+
+impl Default for Tlb {
+    fn default() -> Self {
+        Tlb { entries: [TlbEntry::default(); 64] }
+    }
+}
+
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum FaultType {
     #[default]
@@ -24,6 +61,7 @@ pub enum FaultType {
 pub struct Mmu {
     pub bus: Bus,
     pub enabled: bool,
+    pub tlb: Tlb,
 
     pub tcr_el1: u64,
 
@@ -49,14 +87,21 @@ impl Mmu {
         current_el: ExceptionLevel,
     ) -> (PhyMemStatus, u64) {
         if self.enabled {
-            let pa = self.page_walk(address, AccessType::Read, current_el);
-            if self.faulted {
-                return (PhyMemStatus::default(), 0);
-            }
-            self.bus.read_memory(pa, size)
-        } else {
-            self.bus.read_memory(address, size)
+            let pa = if let Some(pa) = self.tlb_lookup(address, AccessType::Read, current_el) {
+                if self.faulted {
+                    return (PhyMemStatus::default(), 0);
+                }
+                pa
+            } else {
+                let pa = self.page_walk(address, AccessType::Read, current_el);
+                if self.faulted {
+                    return (PhyMemStatus::default(), 0);
+                }
+                pa
+            };
+            return self.bus.read_memory(pa, size);
         }
+        return self.bus.read_memory(address, size);
     }
 
     pub(crate) fn mmu_write(
@@ -67,10 +112,18 @@ impl Mmu {
         current_el: ExceptionLevel,
     ) -> PhyMemStatus {
         if self.enabled {
-            let pa = self.page_walk(address, AccessType::Write, current_el);
-            if self.faulted {
-                return PhyMemStatus::default();
-            }
+            let pa = if let Some(pa) = self.tlb_lookup(address, AccessType::Write, current_el) {
+                if self.faulted {
+                    return PhyMemStatus::default();
+                }
+                pa
+            } else {
+                let pa = self.page_walk(address, AccessType::Write, current_el);
+                if self.faulted {
+                    return PhyMemStatus::default();
+                }
+                pa
+            };
             self.bus.write_memory(pa, size, value)
         } else {
             self.bus.write_memory(address, size, value)
@@ -102,15 +155,17 @@ impl Mmu {
         (status, lo as u128 | ((hi as u128) << 64))
     }
 
-    fn which_base(&self, va: usize) -> usize {
-        let top_bits = bits_get(va as u64, 48, 16);
+    /// Returns base_add,globalness and asid
+    fn which_base(&self, va: usize) -> (usize, bool, u16) {
+        let global = bits_get(va as u64, 48, 16) != 0;
 
-        let base_add = if top_bits != 0 {
+        let base_add = if global {
             bits_get_in_place(self.ttbr1_el1, 12, 36)
         } else {
             bits_get_in_place(self.ttbr0_el1, 12, 36)
         };
-        base_add as usize
+        let asid = self.ttbr1_el1.bits_get(48, 16) as u16;
+        (base_add as usize, global, asid)
     }
 
     pub fn handle_fault(
@@ -132,15 +187,15 @@ impl Mmu {
         }
         0
     }
-    pub fn has_access(
-        &mut self,
-        descriptor: u64,
+
+    pub fn check_access(
+        &self,
+        ap: u8,
         access_type: AccessType,
         current_el: ExceptionLevel,
     ) -> bool {
         let unpriv = current_el.is_el0();
         let is_write = matches!(access_type, AccessType::Write);
-        let ap: u8 = descriptor.bits_get(6, 2) as u8;
 
         match ap {
             0b0 => {
@@ -168,6 +223,17 @@ impl Mmu {
         false
     }
 
+    pub fn has_access(
+        &mut self,
+        descriptor: u64,
+        access_type: AccessType,
+        current_el: ExceptionLevel,
+    ) -> bool {
+        let ap: u8 = descriptor.bits_get(6, 2) as u8;
+
+        self.check_access(ap, access_type, current_el)
+    }
+
     pub fn page_walk(
         &mut self,
         va: usize,
@@ -176,7 +242,7 @@ impl Mmu {
     ) -> usize {
         let first_level = 39;
         let levels = [30, 21, 12];
-        let base_add = self.which_base(va);
+        let (base_add, global, asid) = self.which_base(va);
         let mut block_width = 18;
 
         let entry = base_add + get_entry_offset(va, first_level);
@@ -207,6 +273,14 @@ impl Mmu {
                         bits_get_in_place(descriptor, level as u8, block_width);
                     let offset = bits_get(va.try_into().unwrap(), 0, level as u8);
                     let pa = (block_base_address + offset) as usize;
+                    let ap: u8 = descriptor.bits_get(6, 2) as u8;
+                    self.tlb.insert_new_entry(
+                        va as u64,
+                        pa as u64,
+                        ap,
+                        asid,
+                        global,
+                    );
                     return pa;
                 }
                 DescriptorKind::TablePage => {
@@ -223,6 +297,14 @@ impl Mmu {
                             bits_get_in_place(descriptor, level as u8, block_width);
                         let offset = bits_get(va.try_into().unwrap(), 0, level as u8);
                         let pa = (block_base_address + offset) as usize;
+                        let ap: u8 = descriptor.bits_get(6, 2) as u8;
+                        self.tlb.insert_new_entry(
+                            va as u64,
+                            pa as u64,
+                            ap,
+                            asid,
+                            global,
+                        );
                         return pa;
                     }
                 }
@@ -236,6 +318,60 @@ impl Mmu {
         }
 
         0
+    }
+
+    pub fn tlb_lookup(
+        &mut self,
+        address: usize,
+        access_type: AccessType,
+        current_el: ExceptionLevel,
+    ) -> Option<usize> {
+        let (_, _, asid) = self.which_base(address);
+        let va = address as u64;
+        let vpage = va >> 12;
+        let index = Tlb::index(va);
+        let entry = self.tlb.entries[index];
+
+        if entry.valid && entry.virtual_page == vpage && (entry.global || entry.asid == asid) {
+            if !self.check_access(entry.ap, access_type, current_el) {
+                self.handle_fault(address, 12, FaultType::Permission, access_type);
+                return Some(0);
+            }
+            let pa = (entry.physical_page << 12) | va.bits_get(0, 12);
+            return Some(pa as usize);
+        }
+
+        None
+    }
+
+    pub fn tlb_flush_all(&mut self) {
+        for entry in self.tlb.entries.iter_mut() {
+            entry.valid = false;
+        }
+    }
+
+    pub fn tlb_invalidate_va(&mut self, vpn: u64, asid: u16) {
+        for entry in self.tlb.entries.iter_mut() {
+            if entry.valid && entry.virtual_page == vpn && entry.asid == asid {
+                entry.valid = false;
+            }
+        }
+    }
+
+    pub fn tlb_invalidate_asid(&mut self, asid: u16) {
+        for entry in self.tlb.entries.iter_mut() {
+            if entry.valid && entry.asid == asid {
+                entry.valid = false;
+            }
+        }
+    }
+
+    pub fn tlb_invalidate_va_all_asids(&mut self, vpn: u64) {
+        for entry in self.tlb.entries.iter_mut() {
+            if entry.valid && entry.virtual_page == vpn {
+                entry.valid = false;
+            }
+        }
     }
 }
 

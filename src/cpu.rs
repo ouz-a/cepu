@@ -407,17 +407,20 @@ impl Cpu {
 
     pub fn poll_uart_rx(&mut self) {
         let uart = &self.mmu.bus.uart;
-        if uart.cr.rxe && uart.imsc.rxim && !uart.rx_fifo.is_full()
-            && let Some(byte) = crate::terminal::try_read_byte() {
-                let uart = &mut self.mmu.bus.uart;
-                uart.rx_fifo.push_back(byte);
-                uart.fr.rxfe = false;
-                uart.fr.rxff = uart.rx_fifo.is_full();
-                uart.ris = uart.ris.bit_set(4);
-                if (uart.ris & uart.imsc.to_bits()) != 0 {
-                    self.mmu.bus.gic.set_state(33, InterruptState::Pending);
-                }
+        if uart.cr.rxe
+            && uart.imsc.rxim
+            && !uart.rx_fifo.is_full()
+            && let Some(byte) = crate::terminal::try_read_byte()
+        {
+            let uart = &mut self.mmu.bus.uart;
+            uart.rx_fifo.push_back(byte);
+            uart.fr.rxfe = false;
+            uart.fr.rxff = uart.rx_fifo.is_full();
+            uart.ris = uart.ris.bit_set(4);
+            if (uart.ris & uart.imsc.to_bits()) != 0 {
+                self.mmu.bus.gic.set_state(33, InterruptState::Pending);
             }
+        }
     }
 
     pub fn handle_data_abort(&mut self, old_pc: &mut u64) {
@@ -720,6 +723,9 @@ impl Cpu {
             }
             MsrRegisters::TcrEl1 => {
                 self.mmu.tcr_el1 = self.x_read(t.into(), 64);
+                println!("TCR_EL1 = {:#066b}", self.mmu.tcr_el1);
+                println!("  A1 (bit 22) = {}", (self.mmu.tcr_el1 >> 22) & 1);
+                println!("  AS (bit 36) = {}", (self.mmu.tcr_el1 >> 36) & 1);
             }
             MsrRegisters::Ttbr0El1 => {
                 self.mmu.ttbr0_el1 = self.x_read(t.into(), 64);
