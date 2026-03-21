@@ -152,6 +152,7 @@ pub fn instruction_multiply_add(cpu: &mut Cpu, d: u8, n: u8, m: u8, a: u8, datas
     cpu.x_write(d as usize, res, is_32b);
 }
 
+#[allow(clippy::manual_checked_ops)]
 pub fn instruction_udiv(cpu: &mut Cpu, d: u8, n: u8, m: u8, datasize: u8) {
     let op1 = cpu.x_read(n as usize, datasize);
     let op2 = cpu.x_read(m as usize, datasize);
