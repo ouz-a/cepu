@@ -34,8 +34,14 @@ impl Tlb {
     pub fn insert_new_entry(&mut self, va: u64, pa: u64, ap: u8, asid: u16, global: bool) {
         let vpage = va >> 12;
         let index = (vpage & (TLB_SIZE as u64 - 1)) as usize;
-        let tlb_entry =
-            TlbEntry { valid: true, global, virtual_page: vpage, physical_page: pa >> 12, ap, asid };
+        let tlb_entry = TlbEntry {
+            valid: true,
+            global,
+            virtual_page: vpage,
+            physical_page: pa >> 12,
+            ap,
+            asid,
+        };
         self.entries[index] = tlb_entry;
     }
 
@@ -274,13 +280,7 @@ impl Mmu {
                     let offset = bits_get(va.try_into().unwrap(), 0, level as u8);
                     let pa = (block_base_address + offset) as usize;
                     let ap: u8 = descriptor.bits_get(6, 2) as u8;
-                    self.tlb.insert_new_entry(
-                        va as u64,
-                        pa as u64,
-                        ap,
-                        asid,
-                        global,
-                    );
+                    self.tlb.insert_new_entry(va as u64, pa as u64, ap, asid, global);
                     return pa;
                 }
                 DescriptorKind::TablePage => {
@@ -298,13 +298,7 @@ impl Mmu {
                         let offset = bits_get(va.try_into().unwrap(), 0, level as u8);
                         let pa = (block_base_address + offset) as usize;
                         let ap: u8 = descriptor.bits_get(6, 2) as u8;
-                        self.tlb.insert_new_entry(
-                            va as u64,
-                            pa as u64,
-                            ap,
-                            asid,
-                            global,
-                        );
+                        self.tlb.insert_new_entry(va as u64, pa as u64, ap, asid, global);
                         return pa;
                     }
                 }

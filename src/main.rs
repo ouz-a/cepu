@@ -16,28 +16,35 @@ use crate::{
     },
     memory::{MEMORY_SIZE, read_32},
 };
-
-pub mod branch;
-pub mod branch_exc_sys_instr;
+// Core
 pub mod bus;
 pub mod cpu;
+pub mod memory;
+pub mod mmu;
+
+// Instruction decode/execute
+pub mod branch;
+pub mod branch_exc_sys_instr;
 pub mod data_processing;
-pub mod devices;
-pub mod elf;
-pub mod gic;
-pub mod image;
 pub mod imm_instr;
 pub mod instruction;
 pub mod load_and_store;
 pub mod load_store_instr;
-pub mod memory;
-pub mod mmu;
 pub mod register_instr;
 pub mod simd_fp;
 pub mod simd_fp_instr;
-pub mod terminal;
-pub mod utils;
 
+// Devices
+pub mod devices;
+pub mod gic;
+pub mod terminal;
+
+// Boot/image
+pub mod elf;
+pub mod image;
+
+// Utilities
+pub mod utils;
 pub fn run_block(cpu: &mut Cpu) {
     let mut batch_left = BATCH;
 

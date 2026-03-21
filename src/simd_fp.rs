@@ -1422,21 +1422,13 @@ impl FmovGeneral {
                 if fltsize != 16 && fltsize != intsize {
                     panic!("Undefined");
                 }
-                if self.opcode.bits_get(0, 1) == 1 {
-                    FpConvOp::MovItoF
-                } else {
-                    FpConvOp::MovFtoI
-                }
+                if self.opcode.bits_get(0, 1) == 1 { FpConvOp::MovItoF } else { FpConvOp::MovFtoI }
             }
             0b11_01 => {
                 if intsize != 64 || self.ftype != 0b10 {
                     panic!("Undefined");
                 }
-                if self.opcode.bits_get(0, 1) == 1 {
-                    FpConvOp::MovItoF
-                } else {
-                    FpConvOp::MovFtoI
-                }
+                if self.opcode.bits_get(0, 1) == 1 { FpConvOp::MovItoF } else { FpConvOp::MovFtoI }
             }
             _ => panic!("Unreachable"),
         };

@@ -4,11 +4,7 @@ use std::{
 };
 
 use crate::{
-    branch_exc_sys_instr::*,
-    cpu::Cpu,
-    imm_instr::*,
-    load_store_instr::*,
-    register_instr::*,
+    branch_exc_sys_instr::*, cpu::Cpu, imm_instr::*, load_store_instr::*, register_instr::*,
     simd_fp::*,
 };
 
