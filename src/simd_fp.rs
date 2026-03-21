@@ -1416,14 +1416,13 @@ impl FmovGeneral {
         let intsize = 32 << self.sf;
         let fltsize = if self.ftype == 0b10 { 64 } else { 8 << (self.ftype ^ 0b10) };
         let part = self.rmode.bits_get(0, 1);
-        let op;
-        match opcode_rmode {
+        let op = match opcode_rmode {
             // FMOV
             0b11_00 => {
                 if fltsize != 16 && fltsize != intsize {
                     panic!("Undefined");
                 }
-                op = if self.opcode.bits_get(0, 1) == 1 {
+                if self.opcode.bits_get(0, 1) == 1 {
                     FpConvOp::MovItoF
                 } else {
                     FpConvOp::MovFtoI
@@ -1433,14 +1432,14 @@ impl FmovGeneral {
                 if intsize != 64 || self.ftype != 0b10 {
                     panic!("Undefined");
                 }
-                op = if self.opcode.bits_get(0, 1) == 1 {
+                if self.opcode.bits_get(0, 1) == 1 {
                     FpConvOp::MovItoF
                 } else {
                     FpConvOp::MovFtoI
                 }
             }
             _ => panic!("Unreachable"),
-        }
+        };
 
         match op {
             FpConvOp::MovFtoI => {
@@ -1629,13 +1628,11 @@ impl LdurSimd {
 
         let address = address.wrapping_add(offset);
 
-        let val;
-
-        if datasize == 128 {
-            val = cpu.read_memory_128bit(address as usize).1;
+        let val = if datasize == 128 {
+            cpu.read_memory_128bit(address as usize).1
         } else {
-            val = (cpu.read_memory(address as usize, datasize / 8).1) as u128;
-        }
+            (cpu.read_memory(address as usize, datasize / 8).1) as u128
+        };
 
         cpu.v_write(self.rt.into(), datasize as u8, val);
     }

@@ -101,7 +101,7 @@ impl Mmu {
             };
             return self.bus.read_memory(pa, size);
         }
-        return self.bus.read_memory(address, size);
+        self.bus.read_memory(address, size)
     }
 
     pub(crate) fn mmu_write(

@@ -599,15 +599,13 @@ fn format_u32_binary(value: u32) -> String {
 pub fn validate_tables(table: &[InstDesc]) {
     let mut clash = Vec::new();
 
-    let mut index = 1;
-    for start in table.iter() {
+    for (index, start) in (1..).zip(table.iter()) {
         for end in table[index..].iter().rev() {
             let overlap = start.mask & end.mask;
             if (start.value & overlap) == (end.value & overlap) {
                 clash.push((start, end));
             }
         }
-        index += 1;
     }
 
     if !clash.is_empty() {

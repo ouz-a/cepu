@@ -239,12 +239,10 @@ impl Gic {
             }
             // GICD_IPRIORITYRn
             0x400..=0x7FC => {
-                let mut req_index = (addr - 0x400) as usize;
                 let four_pieces: [u8; 4] = val.to_le_bytes();
 
-                for i in four_pieces.into_iter() {
+                for (req_index, i) in ((addr - 0x400) as usize..).zip(four_pieces) {
                     self.interrupts[req_index].priority = i & 0b1111_0000;
-                    req_index += 1;
                 }
             }
             // GICD_ITARGETSRn - RAZ/WI on uniprocessor
@@ -345,6 +343,6 @@ impl Gic {
             }
         }
 
-        if ready_interrupt.is_some() { ready_interrupt.unwrap().0 } else { SPURIOUS_INTERRUPT }
+        if let Some((index, _)) = ready_interrupt { index } else { SPURIOUS_INTERRUPT }
     }
 }
