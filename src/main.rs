@@ -3,10 +3,15 @@
 #![allow(clippy::too_many_arguments)]
 
 use std::{
-    collections::VecDeque, path::PathBuf, str::FromStr, sync::atomic::Ordering, time::Duration,
+    collections::VecDeque,
+    path::PathBuf,
+    str::FromStr,
+    sync::{Arc, Condvar, Mutex, atomic::Ordering},
+    time::Duration,
 };
 
 use crate::{
+    accelerator::CepuCel,
     branch::branch_addr,
     cpu::{BATCH, Cpu, INSTRUCTION_SIZE},
     image::{load_device_blob, load_initramfs, load_kernel_image},
@@ -35,6 +40,7 @@ pub mod simd_fp;
 pub mod simd_fp_instr;
 
 // Devices
+pub mod accelerator;
 pub mod devices;
 pub mod gic;
 pub mod terminal;
@@ -120,6 +126,8 @@ pub fn run_block(cpu: &mut Cpu) {
 
 fn main() {
     validate_tables(DESCR);
+    let cepu_cel = CepuCel::new();
+    let cepu_cel: Arc<(Mutex<CepuCel>, Condvar)> = Arc::new((Mutex::new(cepu_cel), Condvar::new()));
     let mut cpu = Cpu::init();
 
     //validate_and_load_elf_header(&mut cpu,
