@@ -129,6 +129,7 @@ fn main() {
     let cepu_cel = CepuCel::new();
     let cepu_cel: Arc<(Mutex<CepuCel>, Condvar)> = Arc::new((Mutex::new(cepu_cel), Condvar::new()));
     let mut cpu = Cpu::init();
+    cpu.mmu.bus.cepu_cel = cepu_cel.clone();
 
     //validate_and_load_elf_header(&mut cpu,
     // Path::new("./.executables/boot.elf"));

@@ -65,3 +65,64 @@ impl CepuCel {
         Self::default()
     }
 }
+
+/*
+1. Read
+Host
+Memory reads data from the CPU host memory into the Unified Buffer (UB).
+_
+_
+2. Read
+Weights reads weights from Weight Memory into the Weight FIFO as input to the Matrix Unit.
+_
+3. MatrixMultiply/Convolve causes the Matrix Unit to perform a matrix multiply or a convolution from the
+Unified Buffer into the Accumulators. A matrix operation takes a variable-sized B*256 input, multiplies it by a
+256x256 constant weight input, and produces a B*256 output, taking B pipelined cycles to complete.
+4. Activate performs the nonlinear function of the artificial neuron, with options for ReLU, Sigmoid, and so on. Its
+inputs are the Accumulators, and its output is the Unified Buffer. It can also perform the pooling operations needed
+for convolutions using the dedicated hardware on the die, as it is connected to nonlinear function logic.
+5. Write
+Host
+Memory writes data from the Unified Buffer into the CPU host memory.
+*/
+
+/*
+
+
+> The CPU wants the device to multiply two matrices. What does the device need to know to do that job?
+
+Memory location A ?
+A: [1.1,2.2]
+
+Memory location B ?
+B: [3.3,4.4]
+
+
+For matrix multiplication between A and B to work
+B dimension's must match A's dimension
+
+For example
+given coordinates X and Y
+Say A is a triangle at given positions
+[0, 2]
+[-1, -1]
+[1, -1]
+
+Say you want to rotate the spaceship 45 degrees
+B = [ 0.707, -0.707 ]
+    [ 0.707,  0.707 ]
+
+M = how many things you're transforming (3 corners)
+K = the dimension that connects A to B (2, because each corner has x,y and the rotation
+matrix takes x,y as input)
+N = what comes out per thing (2, still x,y)
+
+- Address of A
+- Address of B
+- Address of result
+- M, K, N
+- Data type (f32)
+
+*/
+
+

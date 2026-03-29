@@ -1,4 +1,4 @@
-use crate::{devices::Uart, gic::Gic, memory::*};
+use crate::{accelerator::REG_DOOR_BELL, devices::Uart, gic::Gic, memory::*};
 
 pub const RAM_RANGE_BEG: usize = 0;
 pub const RAM_SIZE: usize = 0x10000000;
@@ -12,10 +12,18 @@ pub const GIC_CPU_END: usize = 0x8001_1FFF;
 pub const UART_RANGE_BEG: usize = 0x9000_0000;
 pub const UART_RANGE_END: usize = UART_RANGE_BEG + 4096;
 
+pub const CEL_BEG: usize = 0xA000_0000;
+pub const CEL_END: usize = CEL_BEG + 4096;
+
+use std::sync::{Arc, Condvar, Mutex};
+
+use crate::CepuCel;
+
 #[derive(Default, Debug)]
 pub struct Bus {
     pub uart: Uart,
     pub gic: Gic,
+    pub cepu_cel: Arc<(Mutex<CepuCel>, Condvar)>,
 }
 
 impl Bus {
@@ -27,6 +35,10 @@ impl Bus {
                 (PhyMemStatus::default(), val as u64)
             }
             UART_RANGE_BEG..=UART_RANGE_END => self.uart.read((address - UART_RANGE_BEG) as u16),
+            CEL_BEG..=CEL_END => {
+                let mut cepu_cel = self.cepu_cel.0.lock().expect("Failed to lock CepuCel");
+                (PhyMemStatus::default(), cepu_cel.read(address - CEL_BEG, size))
+            }
             _ => {
                 panic!("Out of bounds memory read! Range {address:x}")
             }
@@ -44,6 +56,18 @@ impl Bus {
             UART_RANGE_BEG..=UART_RANGE_END => {
                 self.uart.write((address - UART_RANGE_BEG) as u16, value, size)
             }
+            CEL_BEG..=CEL_END => {
+                let mut cepu_cel = self.cepu_cel.0.lock().expect("Failed to lock CepuCel");
+                let address = address - CEL_BEG;
+                if address == (REG_DOOR_BELL as usize) {
+                    cepu_cel.write(address, size, value);
+                    self.cepu_cel.1.notify_one();
+                } else {
+                    cepu_cel.write(address, size, value);
+                }
+                PhyMemStatus::default()
+            }
+
             _ => {
                 panic!("Out of bounds memory write! Range {address:x}")
             }
