@@ -1,3 +1,7 @@
+use std::sync::atomic::AtomicBool;
+
+use crate::utils::BitUtils;
+
 // Register offsets (bytes from base)
 pub const REG_QUEUE_BASE: u32 = 0x00;
 pub const REG_HEAD: u32 = 0x04;
@@ -6,6 +10,10 @@ pub const REG_CONTROL: u32 = 0x0C;
 pub const REG_STATUS: u32 = 0x10;
 pub const REG_INT_STATE: u32 = 0x14;
 pub const REG_DOOR_BELL: u32 = 0x18;
+pub const REG_BUFFER_SIZE: u32 = 0x1C;
+
+pub static CEPU_CEL_INTERRUPT_FLAG: AtomicBool = AtomicBool::new(false);
+
 #[derive(Default, Debug, Clone, Copy)]
 pub enum DataType {
     F8,
@@ -15,6 +23,7 @@ pub enum DataType {
     F64,
 }
 
+#[repr(C)]
 #[derive(Default, Debug, Clone, Copy)]
 pub struct MatMul {
     pub a_addr: u64,
@@ -29,10 +38,33 @@ pub struct MatMul {
     pub data_type: DataType,
 }
 
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub enum Commands {
+    MatMul(MatMul),
+}
+
 #[derive(Default, Debug, Clone, Copy)]
 pub struct InterruptFlags {
     pub completed: bool,
     pub error: bool,
+}
+
+impl InterruptFlags {
+    pub fn to_bits(&self) -> u8 {
+        let mut bits: u8 = 0;
+        if self.completed {
+            bits = bits.bit_set(0);
+        }
+        if self.error {
+            bits = bits.bit_set(1);
+        }
+        bits
+    }
+
+    pub fn from_bits(bits: u8) -> Self {
+        Self { completed: bits.single_bit(0) == 1, error: bits.single_bit(1) == 1 }
+    }
 }
 
 #[derive(Default, Debug, Clone, Copy)]
@@ -41,12 +73,51 @@ pub struct ControlFlags {
     pub interrupts_enabled: bool,
 }
 
+impl ControlFlags {
+    pub fn to_bits(&self) -> u8 {
+        let mut bits: u8 = 0;
+        if self.device_enabled {
+            bits = bits.bit_set(0);
+        }
+        if self.interrupts_enabled {
+            bits = bits.bit_set(1);
+        }
+        bits
+    }
+
+    pub fn from_bits(bits: u8) -> Self {
+        Self {
+            device_enabled: bits.single_bit(0) == 1,
+            interrupts_enabled: bits.single_bit(1) == 1,
+        }
+    }
+}
+
 #[derive(Default, Debug, Clone, Copy)]
 pub enum DeviceStatus {
     #[default]
     Idle,
     Busy,
     Error,
+}
+
+impl DeviceStatus {
+    pub fn to_bits(&self) -> u8 {
+        match self {
+            Self::Idle => 0,
+            Self::Busy => 1,
+            Self::Error => 2,
+        }
+    }
+
+    pub fn from_bits(bits: u8) -> Self {
+        match bits {
+            0 => Self::Idle,
+            1 => Self::Busy,
+            2 => Self::Error,
+            _ => panic!("Invalid DeviceStatus bits: {bits}"),
+        }
+    }
 }
 
 #[derive(Default, Debug, Clone, Copy)]
@@ -58,11 +129,66 @@ pub struct CepuCel {
     pub control: ControlFlags,
     pub status: DeviceStatus,
     pub interrupt_state: InterruptFlags,
+    pub buffer_size: u32,
 }
 
 impl CepuCel {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub fn read(&mut self, address: usize, _size: usize) -> u64 {
+        let address = address as u32;
+        match address {
+            // REG_QUEUE_BASE
+            REG_QUEUE_BASE..REG_HEAD => self.base as u64,
+            // REG_HEAD
+            REG_HEAD..REG_TAIL => self.head as u64,
+            // REG_TAIL
+            REG_TAIL..REG_CONTROL => self.tail as u64,
+            // REG_CONTROL
+            REG_CONTROL..REG_STATUS => self.control.to_bits() as u64,
+            // REG_STATUS
+            REG_STATUS..REG_INT_STATE => self.status.to_bits() as u64,
+            // REG_INT_STATE
+            REG_INT_STATE..REG_DOOR_BELL => self.interrupt_state.to_bits() as u64,
+            // REG_DOOR_BELL
+            REG_DOOR_BELL..REG_BUFFER_SIZE => self.door_bell as u64,
+            REG_BUFFER_SIZE..0x20 => self.buffer_size as u64,
+            0x20.. => {
+                panic!("Trying to read at address {address}");
+            }
+        }
+    }
+    pub fn write(&mut self, address: usize, _size: usize, value: u64) {
+        let address = address as u32;
+        match address {
+            // REG_QUEUE_BASE
+            REG_QUEUE_BASE..REG_HEAD => self.base = value as u32,
+            // REG_HEAD
+            REG_HEAD..REG_TAIL => {
+                panic!("CPU is trying to write to HEAD");
+            }
+            // REG_TAIL
+            REG_TAIL..REG_CONTROL => self.tail = value as u16,
+            // REG_CONTROL
+            REG_CONTROL..REG_STATUS => self.control = ControlFlags::from_bits(value as u8),
+            // REG_STATUS
+            REG_STATUS..REG_INT_STATE => {
+                panic!("CPU is trying to change STATUS");
+            }
+            // REG_INT_STATE
+            REG_INT_STATE..REG_DOOR_BELL => {
+                self.interrupt_state = InterruptFlags::from_bits(value as u8)
+            }
+            // REG_DOOR_BELL
+            REG_DOOR_BELL..REG_BUFFER_SIZE => self.door_bell = value != 0,
+            // REG_BUFFER_SIZE
+            REG_BUFFER_SIZE..0x20 => self.buffer_size = value as u32,
+            0x20.. => {
+                panic!("Trying to write at address {address}");
+            }
+        }
     }
 }
 
