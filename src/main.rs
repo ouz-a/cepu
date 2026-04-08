@@ -11,7 +11,7 @@ use std::{
 };
 
 use crate::{
-    accelerator::CepuCel,
+    accelerator::{CepuCel, Commands, DeviceStatus},
     branch::branch_addr,
     cpu::{BATCH, Cpu, INSTRUCTION_SIZE},
     image::{load_device_blob, load_initramfs, load_kernel_image},
@@ -128,6 +128,7 @@ fn main() {
     validate_tables(DESCR);
     let cepu_cel = CepuCel::new();
     let cepu_cel: Arc<(Mutex<CepuCel>, Condvar)> = Arc::new((Mutex::new(cepu_cel), Condvar::new()));
+    let cepu_cel_clone = cepu_cel.clone();
     let mut cpu = Cpu::init();
     cpu.mmu.bus.cepu_cel = cepu_cel.clone();
 
@@ -137,6 +138,26 @@ fn main() {
     load_kernel_image(&mut cpu, &PathBuf::from_str("/Users/ouz/code/cepu_now/Image").unwrap());
     load_initramfs(&PathBuf::from_str("/Users/ouz/code/cepu_now/initramfs.cpio").unwrap());
 
+    let _ = std::thread::spawn(move || {
+        let (cepu_cel, cvar) = &*cepu_cel_clone;
+        let mut guard = cepu_cel.lock().unwrap();
+        loop {
+            while guard.head == guard.tail {
+                guard = cvar.wait(guard).unwrap();
+            }
+            let (base, head) = guard.get_base_head();
+            guard.status = DeviceStatus::Busy;
+            drop(guard);
+            let command = CepuCel::get_command(base, head);
+            let mut command = match command {
+                Commands::MatMul(cmd) => cmd,
+            };
+            command.work();
+            guard = cepu_cel.lock().unwrap();
+            guard.advance_then_set();
+        }
+    });
+    cepu_cel.1.notify_one();
     let _term = terminal::RawTerminal::enable();
     run_block(&mut cpu);
 }

@@ -1,6 +1,6 @@
-use std::sync::atomic::AtomicBool;
+use std::sync::atomic::{AtomicBool, Ordering};
 
-use crate::utils::BitUtils;
+use crate::{memory::MEMORY, utils::BitUtils};
 
 // Register offsets (bytes from base)
 pub const REG_QUEUE_BASE: u32 = 0x00;
@@ -36,6 +36,48 @@ pub struct MatMul {
     /// cols of B and result
     pub n: u32,
     pub data_type: DataType,
+}
+
+impl MatMul {
+    pub fn get_index(&self, addr: u64, row: u32, number_of_columns: u32, col: u32) -> usize {
+        let row = row as usize;
+        let k = number_of_columns as usize;
+        let col = col as usize;
+        let addr = addr as usize;
+        addr + (row * k + col) * 4
+    }
+
+    // Size of f32 is 4
+    pub fn work(&mut self) {
+        let a_addr = self.a_addr;
+        let b_addr = self.b_addr;
+        for row in 0..self.m {
+            for col in 0..self.n {
+                let mut sum = 0.0;
+                for i in 0..self.k {
+                    let index_a = self.get_index(a_addr, row, self.k, i);
+                    let index_b = self.get_index(b_addr, i, self.n, col);
+                    let a = unsafe {
+                        f32::from_le_bytes(MEMORY[index_a..index_a + 4].try_into().unwrap())
+                    };
+                    let b = unsafe {
+                        f32::from_le_bytes(MEMORY[index_b..index_b + 4].try_into().unwrap())
+                    };
+                    sum += a * b;
+                }
+
+                let result_index = self.get_index(self.ret_addr, row, self.n, col);
+
+                unsafe {
+                    let dst = (core::ptr::addr_of_mut!(MEMORY) as *mut u8).add(result_index);
+                    let bytes = sum.to_le_bytes();
+                    let src = bytes.as_ptr();
+
+                    core::ptr::copy_nonoverlapping(src, dst, 4);
+                }
+            }
+        }
+    }
 }
 
 #[repr(C)]
@@ -133,6 +175,27 @@ pub struct CepuCel {
 }
 
 impl CepuCel {
+    pub fn get_base_head(&self) -> (usize, usize) {
+        (self.base as usize, self.head as usize)
+    }
+
+    pub fn advance_then_set(&mut self) {
+        self.head += 1;
+        self.interrupt_state.completed = true;
+        self.interrupt_state.error = false;
+        self.status = DeviceStatus::Idle;
+        CEPU_CEL_INTERRUPT_FLAG.store(true, Ordering::SeqCst);
+    }
+
+    pub fn get_command(base: usize, head: usize) -> Commands {
+        let size_of_command = std::mem::size_of::<Commands>();
+        let index_position = size_of_command * head;
+        let start = base + index_position;
+        let command =
+            unsafe { &*(MEMORY[start..(start + size_of_command)].as_ptr() as *const Commands) };
+        *command
+    }
+
     pub fn new() -> Self {
         Self::default()
     }
@@ -250,5 +313,3 @@ N = what comes out per thing (2, still x,y)
 - Data type (f32)
 
 */
-
-
