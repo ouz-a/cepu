@@ -180,14 +180,18 @@ impl CepuCel {
     }
 
     pub fn advance_then_set(&mut self) {
-        self.head += 1;
+        if (self.head + 1) =< self.buffer_size {
+            self.head += 1;
+        }
         self.interrupt_state.completed = true;
         self.interrupt_state.error = false;
         self.status = DeviceStatus::Idle;
         CEPU_CEL_INTERRUPT_FLAG.store(true, Ordering::SeqCst);
     }
 
-    pub fn get_command(base: usize, head: usize) -> Commands {
+    pub fn get_command(&self, base: usize, head: usize) -> Commands {
+        // TODO: Document this behaviour
+        let head = head.min(self.buffer_size);
         let size_of_command = std::mem::size_of::<Commands>();
         let index_position = size_of_command * head;
         let start = base + index_position;

@@ -9,8 +9,8 @@ use std::{
 };
 
 use crate::{
-    get_bits_ct, gic::InterruptState, instruction::UNDEF_PANIC, memory::PhyMemStatus, mmu::Mmu,
-    utils::*,
+    accelerator::CEPU_CEL_INTERRUPT_FLAG, get_bits_ct, gic::InterruptState,
+    instruction::UNDEF_PANIC, memory::PhyMemStatus, mmu::Mmu, utils::*,
 };
 pub const MEM_TOP: usize = crate::memory::MEMORY_SIZE;
 
@@ -392,7 +392,7 @@ impl Cpu {
             let _byte = crate::terminal::try_read_byte().is_some();
             let buf = &[self.mmu.bus.uart.dr];
             stdout().write_all(buf).unwrap();
-            self.uart_debug.push_str(str::from_utf8(buf).unwrap());
+            self.uart_debug.push_str(&String::from_utf8_lossy(buf));
             stdout().flush().unwrap();
             self.mmu.bus.uart.dr = 0;
             self.mmu.bus.uart.ris.bit_set(5);
@@ -402,6 +402,9 @@ impl Cpu {
             if self.uart_debug.contains("end Kernel panic") {
                 UNDEF_PANIC.store(true, Ordering::Relaxed);
             }
+        } else if CEPU_CEL_INTERRUPT_FLAG.load(Ordering::Relaxed) {
+            self.mmu.bus.gic.set_state(34, InterruptState::Pending);
+            CEPU_CEL_INTERRUPT_FLAG.store(false, Ordering::Relaxed);
         }
     }
 

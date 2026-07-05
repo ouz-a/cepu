@@ -29,7 +29,7 @@
 		bootargs = "console=ttyAMA0,115200 earlycon=pl011,mmio,0x90000000 nokaslr";
 		stdout-path = "serial0:115200n8";
 		linux,initrd-start = <0x0 0x08000000>;
-		linux,initrd-end   = <0x0 0x08193800>;  /* 0x8000000 + 1651200 bytes (uncompressed cpio) */
+		linux,initrd-end   = <0x0 0x08200000>;  /* placeholder — build.sh patches cepu.dtb with exact size */
 	};
 	
 	memory@0 {
@@ -46,6 +46,13 @@
 		clocks = <&v2m_clk24mhz>, <&v2m_clk24mhz>;
 		clock-names = "uartclk", "apb_pclk";
 	
+	};
+
+	cepu_cel0: compute@a0000000 {
+		compatible = "cepu,cel";
+		reg = <0x0 0xa0000000 0x0 0x00001000>;	
+		interrupts = <0 2 4>;
+		interrupt-parent = <&intc>;
 	};
 
 	intc: interrupt-controller@80000000 {
@@ -74,4 +81,6 @@
 		interrupt-parent = <&intc>;
 		clock-frequency = <24000000>;  /* 24 MHz - matches CNTFRQ */
 	};
+
+
 };

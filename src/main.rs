@@ -149,9 +149,7 @@ fn main() {
             guard.status = DeviceStatus::Busy;
             drop(guard);
             let command = CepuCel::get_command(base, head);
-            let mut command = match command {
-                Commands::MatMul(cmd) => cmd,
-            };
+            let Commands::MatMul(mut command) = command;
             command.work();
             guard = cepu_cel.lock().unwrap();
             guard.advance_then_set();
