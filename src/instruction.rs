@@ -266,6 +266,8 @@ define_instructions!(
     Stxr(Stxr),
     Stxrb(Stxrb),
     // ----- Simd, FP -----
+    AddVectorScalar(AddVectorScalar),
+    AddVectorVectoral(AddVectorVectoral),
     AddpVector(AddpVector),
     AddpScalar(AddpScalar),
     AsimdModImm(AsimdModImm),
@@ -512,6 +514,8 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     Stxr::STXR,
     Stxrb::STXRB,
     // ----- Simd, FP -----
+    AddVectorScalar::ADD_VECTOR_SCALAR,
+    AddVectorVectoral::ADD_VECTOR_VECTORAL,
     AddpVector::ADDP_VECTOR,
     AddpScalar::ADDP_SCALAR,
     AsimdModImm::ASIMD_MOD_IMM,

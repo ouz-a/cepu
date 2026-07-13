@@ -1692,6 +1692,96 @@ impl Ext {
     };
 }
 
+/// Add vector scalar
+#[derive(Debug, Clone, Copy)]
+pub struct AddVectorScalar {
+    pub rm: u8,
+    pub rn: u8,
+    pub rd: u8,
+}
+
+impl AddVectorScalar {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let esize = 8 << 0b11;
+        let datasize = esize;
+        let elements = 1;
+
+        let mut result = 0;
+        let operand1 = cpu.v_read(self.rn.into(), datasize);
+        let operand2 = cpu.v_read(self.rm.into(), datasize);
+
+        for e in 0..elements {
+            let element1 = elem_get(operand1, e, datasize.into());
+            let element2 = elem_get(operand2, e, datasize.into());
+            let val = element1 + element2;
+            result = elem_set(result, e as usize, esize as usize, val.bits_get(0, esize));
+        }
+        cpu.v_write(self.rd.into(), datasize, result);
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let rm = get_bits_ct!(word, 16, 5) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rd = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::AddVectorScalar(Self { rm, rn, rd })
+    }
+
+    pub const ADD_VECTOR_SCALAR: InstDesc = InstDesc {
+        mask: 0b1011_1111_1110_0000_1111_1100_0000_0000,
+        value: 0b0101_1110_1110_0000_1000_0100_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+/// Add vector vectoral
+#[derive(Debug, Clone, Copy)]
+pub struct AddVectorVectoral {
+    pub q: u8,
+    pub size: u8,
+    pub rm: u8,
+    pub rn: u8,
+    pub rd: u8,
+}
+
+impl AddVectorVectoral {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let size_and_q = (self.size << 1) | self.q;
+        if size_and_q == 0b110 {
+            panic!("Undefined");
+        }
+        let esize = 8 << self.size;
+        let datasize = 64 << self.q;
+        let elements = datasize / esize;
+
+        let mut result = 0;
+        let operand1 = cpu.v_read(self.rn.into(), datasize);
+        let operand2 = cpu.v_read(self.rm.into(), datasize);
+
+        for e in 0..elements {
+            let element1 = elem_get(operand1, e as usize, datasize.into());
+            let element2 = elem_get(operand2, e as usize, datasize.into());
+            let val = element1 + element2;
+            result = elem_set(result, e as usize, esize as usize, val.bits_get(0, esize));
+        }
+        cpu.v_write(self.rd.into(), datasize, result);    
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let q = get_bits_ct!(word, 30, 1) as u8;
+        let size = get_bits_ct!(word, 22, 2) as u8;
+        let rm = get_bits_ct!(word, 16, 5) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rd = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::AddVectorVectoral(Self {q, size, rm, rn, rd })
+    }
+
+    pub const ADD_VECTOR_VECTORAL: InstDesc = InstDesc {
+        mask: 0b1011_1111_0010_0000_1111_1100_0000_0000,
+        value: 0b0000_1110_0010_0000_1000_0100_0000_0000,
+        decode: Self::decode,
+    };
+}
+
 /// Add pairwise (vector)
 #[derive(Debug, Clone, Copy)]
 pub struct AddpVector {
