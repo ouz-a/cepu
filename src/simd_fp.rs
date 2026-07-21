@@ -1277,6 +1277,35 @@ impl OrrVector {
     };
 }
 
+/// NOT (vector); alias MVN
+#[derive(Debug, Clone, Copy)]
+pub struct NotVector {
+    pub q: u8,
+    pub rn: u8,
+    pub rd: u8,
+}
+
+impl NotVector {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let datasize = 64 << self.q;
+        let operand = cpu.v_read(self.rn.into(), datasize);
+        cpu.v_write(self.rd.into(), datasize, !operand);
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let q = get_bits_ct!(word, 30, 1) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rd = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::NotVector(Self { q, rn, rd })
+    }
+
+    pub const NOT_VECTOR: InstDesc = InstDesc {
+        mask: 0b1011_1111_1111_1111_1111_1100_0000_0000,
+        value: 0b0010_1110_0010_0000_0101_1000_0000_0000,
+        decode: Self::decode,
+    };
+}
+
 /// Shift right narrow (immediate)
 #[derive(Debug, Clone, Copy)]
 pub struct Shrn {
