@@ -2691,6 +2691,59 @@ impl LdrsbReg {
     };
 }
 
+/// Load register signed halfword (register offset)
+#[derive(Debug, Clone, Copy)]
+pub struct LdrshReg {
+    pub opc: u8,
+    pub rm: u8,
+    pub option: u8,
+    pub s: bool,
+    pub rn: u8,
+    pub rt: u8,
+}
+
+impl LdrshReg {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        if bits_get(self.option.into(), 1, 1) == 0 {
+            panic!("Sub word index")
+        }
+        let extend_type = ExtendType::from_u8(self.option);
+        let regsize: u8 = 64 >> bits_get(self.opc.into(), 0, 1);
+        let shift = if self.s { 1 } else { 0 };
+
+        let offset = extend_register(cpu, self.rm, extend_type, shift, 64);
+
+        let address = if self.rn == 31 { cpu.sp_read() } else { cpu.x_read(self.rn.into(), 64) };
+
+        let address = address.wrapping_add(offset) as usize;
+
+        let data = cpu.read_memory(address, 2).1;
+
+        if cpu.mmu.faulted {
+            return;
+        }
+
+        let sign_extended = sign_extend(data, 16);
+        cpu.x_write(self.rt.into(), sign_extended, regsize == 32);
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let opc = get_bits_ct!(word, 22, 2) as u8;
+        let rm = get_bits_ct!(word, 16, 5) as u8;
+        let option = get_bits_ct!(word, 13, 3) as u8;
+        let s = get_bits_ct!(word, 12, 1) == 1;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rt = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::LdrshReg(Self { opc, rm, option, s, rn, rt })
+    }
+
+    pub const LDRSH_REG: InstDesc = InstDesc {
+        mask: 0b1111_1111_1010_0000_0000_1100_0000_0000,
+        value: 0b0111_1000_1010_0000_0000_1000_0000_0000,
+        decode: Self::decode,
+    };
+}
+
 /// Load exclusive pair of registers
 #[derive(Debug, Clone, Copy)]
 pub struct Ldxp {

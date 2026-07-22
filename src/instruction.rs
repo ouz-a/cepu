@@ -206,6 +206,7 @@ define_instructions!(
     StrbUnpriv(StrbUnpriv),
     // ----- Load Single -----
     LdrsbReg(LdrsbReg),
+    LdrshReg(LdrshReg),
     Ldar(Ldar),
     Ldarb(Ldarb),
     LdrbPostIndex(LdrbPostIndex),
@@ -467,6 +468,7 @@ pub const DESCR: &[InstDesc] = &sort_by_specificity([
     Ldar::LDAR,
     Ldarb::LDARB,
     LdrsbReg::LDRSB_REG,
+    LdrshReg::LDRSH_REG,
     LdrbPostIndex::LDRB_POST_INDEX,
     LdrbPreIndex::LDRB_PRE_INDEX,
     LdrbRegister::LDRB_REGISTER,
