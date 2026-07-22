@@ -1,4 +1,5 @@
 use crate::{
+    branch::condition_holds,
     cpu::Cpu,
     data_processing::shift_lsl,
     get_bits_ct,
@@ -1785,6 +1786,276 @@ impl Ext {
     };
 }
 
+/// FCMP / FCMPE (scalar), register or zero variant.
+/// One entry covers all four forms: opc<1> (signal_all_nans) only affects
+/// FP exception traps, which are not modeled.
+#[derive(Debug, Clone, Copy)]
+pub struct FcmpFloat {
+    pub ftype: u8,
+    pub rm: u8,
+    pub rn: u8,
+    pub opc: u8,
+}
+
+impl FcmpFloat {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        if self.ftype == 0b10 {
+            panic!("Undefined");
+        }
+        if self.ftype == 0b11 {
+            panic!("FCMP: FP16 not supported");
+        }
+        let datasize = 8 << (self.ftype ^ 0b10);
+        let cmp_with_zero = self.opc & 0b01 != 0;
+
+        let operand1 = cpu.v_read(self.rn.into(), datasize) as u64;
+        let operand2 = if cmp_with_zero { 0 } else { cpu.v_read(self.rm.into(), datasize) as u64 };
+
+        let ordering = if datasize == 32 {
+            f32::from_bits(operand1 as u32).partial_cmp(&f32::from_bits(operand2 as u32))
+        } else {
+            f64::from_bits(operand1).partial_cmp(&f64::from_bits(operand2))
+        };
+
+        let (n, z, c, v) = match ordering {
+            None => (false, false, true, true), // unordered (NaN)
+            Some(std::cmp::Ordering::Equal) => (false, true, true, false),
+            Some(std::cmp::Ordering::Less) => (true, false, false, false),
+            Some(std::cmp::Ordering::Greater) => (false, false, true, false),
+        };
+        cpu.pstate.n = n;
+        cpu.pstate.z = z;
+        cpu.pstate.c = c;
+        cpu.pstate.v = v;
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let ftype = get_bits_ct!(word, 22, 2) as u8;
+        let rm = get_bits_ct!(word, 16, 5) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let opc = get_bits_ct!(word, 3, 2) as u8;
+        Instruction::FcmpFloat(Self { ftype, rm, rn, opc })
+    }
+
+    pub const FCMP_FLOAT: InstDesc = InstDesc {
+        mask: 0b1111_1111_0010_0000_1111_1100_0000_0111,
+        value: 0b0001_1110_0010_0000_0010_0000_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+/// FABS (scalar)
+#[derive(Debug, Clone, Copy)]
+pub struct FabsFloat {
+    pub ftype: u8,
+    pub rn: u8,
+    pub rd: u8,
+}
+
+impl FabsFloat {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        if self.ftype == 0b10 {
+            panic!("Undefined");
+        }
+        if self.ftype == 0b11 {
+            panic!("FABS: FP16 not supported");
+        }
+        let esize = 8 << (self.ftype ^ 0b10);
+
+        let operand = cpu.v_read(self.rn.into(), esize) as u64;
+        // FPAbs is a pure sign-bit clear, NaNs included
+        let result = operand & !(1u64 << (esize - 1));
+        cpu.v_write(self.rd.into(), 128, result as u128);
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let ftype = get_bits_ct!(word, 22, 2) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rd = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::FabsFloat(Self { ftype, rn, rd })
+    }
+
+    pub const FABS_FLOAT: InstDesc = InstDesc {
+        mask: 0b1111_1111_0011_1111_1111_1100_0000_0000,
+        value: 0b0001_1110_0010_0000_1100_0000_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+/// FNEG (scalar)
+#[derive(Debug, Clone, Copy)]
+pub struct FnegFloat {
+    pub ftype: u8,
+    pub rn: u8,
+    pub rd: u8,
+}
+
+impl FnegFloat {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        if self.ftype == 0b10 {
+            panic!("Undefined");
+        }
+        if self.ftype == 0b11 {
+            panic!("FNEG: FP16 not supported");
+        }
+        let esize = 8 << (self.ftype ^ 0b10);
+
+        let operand = cpu.v_read(self.rn.into(), esize) as u64;
+        // FPNeg is a pure sign-bit flip, NaNs included
+        let result = operand ^ (1u64 << (esize - 1));
+        cpu.v_write(self.rd.into(), 128, result as u128);
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let ftype = get_bits_ct!(word, 22, 2) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rd = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::FnegFloat(Self { ftype, rn, rd })
+    }
+
+    pub const FNEG_FLOAT: InstDesc = InstDesc {
+        mask: 0b1111_1111_0011_1111_1111_1100_0000_0000,
+        value: 0b0001_1110_0010_0001_0100_0000_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+/// FCVT (scalar, precision conversion)
+#[derive(Debug, Clone, Copy)]
+pub struct FcvtFloat {
+    pub ftype: u8,
+    pub opc: u8,
+    pub rn: u8,
+    pub rd: u8,
+}
+
+impl FcvtFloat {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        if self.ftype == self.opc || self.ftype == 0b10 || self.opc == 0b10 {
+            panic!("Undefined");
+        }
+        if self.ftype == 0b11 || self.opc == 0b11 {
+            panic!("FCVT: FP16 not supported");
+        }
+        let srcsize = 8 << (self.ftype ^ 0b10);
+
+        let operand = cpu.v_read(self.rn.into(), srcsize) as u64;
+
+        // Only S->D and D->S remain after the checks above
+        let result = if srcsize == 32 {
+            (f32::from_bits(operand as u32) as f64).to_bits() as u128
+        } else {
+            (f64::from_bits(operand) as f32).to_bits() as u128
+        };
+        cpu.v_write(self.rd.into(), 128, result);
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let ftype = get_bits_ct!(word, 22, 2) as u8;
+        let opc = get_bits_ct!(word, 15, 2) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rd = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::FcvtFloat(Self { ftype, opc, rn, rd })
+    }
+
+    pub const FCVT_FLOAT: InstDesc = InstDesc {
+        mask: 0b1111_1111_0011_1110_0111_1100_0000_0000,
+        value: 0b0001_1110_0010_0010_0100_0000_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+/// FSUB (scalar)
+#[derive(Debug, Clone, Copy)]
+pub struct FsubFloat {
+    pub ftype: u8,
+    pub rm: u8,
+    pub rn: u8,
+    pub rd: u8,
+}
+
+impl FsubFloat {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        if self.ftype == 0b10 {
+            panic!("Undefined");
+        }
+        if self.ftype == 0b11 {
+            panic!("FSUB: FP16 not supported");
+        }
+        let esize = 8 << (self.ftype ^ 0b10);
+
+        let operand1 = cpu.v_read(self.rn.into(), esize) as u64;
+        let operand2 = cpu.v_read(self.rm.into(), esize) as u64;
+
+        let result = if esize == 32 {
+            let diff = f32::from_bits(operand1 as u32) - f32::from_bits(operand2 as u32);
+            diff.to_bits() as u128
+        } else {
+            let diff = f64::from_bits(operand1) - f64::from_bits(operand2);
+            diff.to_bits() as u128
+        };
+        cpu.v_write(self.rd.into(), 128, result);
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let ftype = get_bits_ct!(word, 22, 2) as u8;
+        let rm = get_bits_ct!(word, 16, 5) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rd = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::FsubFloat(Self { ftype, rm, rn, rd })
+    }
+
+    pub const FSUB_FLOAT: InstDesc = InstDesc {
+        mask: 0b1111_1111_0010_0000_1111_1100_0000_0000,
+        value: 0b0001_1110_0010_0000_0011_1000_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+/// FCSEL (floating-point conditional select)
+#[derive(Debug, Clone, Copy)]
+pub struct FcselFloat {
+    pub ftype: u8,
+    pub rm: u8,
+    pub cond: u8,
+    pub rn: u8,
+    pub rd: u8,
+}
+
+impl FcselFloat {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        if self.ftype == 0b10 {
+            panic!("Undefined");
+        }
+        if self.ftype == 0b11 {
+            panic!("FCSEL: FP16 not supported");
+        }
+        let datasize = 8 << (self.ftype ^ 0b10);
+
+        let result = if condition_holds(cpu, self.cond) {
+            cpu.v_read(self.rn.into(), datasize)
+        } else {
+            cpu.v_read(self.rm.into(), datasize)
+        };
+        cpu.v_write(self.rd.into(), datasize, result);
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let ftype = get_bits_ct!(word, 22, 2) as u8;
+        let rm = get_bits_ct!(word, 16, 5) as u8;
+        let cond = get_bits_ct!(word, 12, 4) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rd = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::FcselFloat(Self { ftype, rm, cond, rn, rd })
+    }
+
+    pub const FCSEL_FLOAT: InstDesc = InstDesc {
+        mask: 0b1111_1111_0010_0000_0000_1100_0000_0000,
+        value: 0b0001_1110_0010_0000_0000_1100_0000_0000,
+        decode: Self::decode,
+    };
+}
+
 /// Add vector scalar
 #[derive(Debug, Clone, Copy)]
 pub struct AddVectorScalar {
@@ -1865,7 +2136,7 @@ impl AddVectorVectoral {
         let rm = get_bits_ct!(word, 16, 5) as u8;
         let rn = get_bits_ct!(word, 5, 5) as u8;
         let rd = get_bits_ct!(word, 0, 5) as u8;
-        Instruction::AddVectorVectoral(Self {q, size, rm, rn, rd })
+        Instruction::AddVectorVectoral(Self { q, size, rm, rn, rd })
     }
 
     pub const ADD_VECTOR_VECTORAL: InstDesc = InstDesc {
@@ -2140,5 +2411,3 @@ impl LdrSimdRegOffset {
         decode: Self::decode,
     };
 }
-
-

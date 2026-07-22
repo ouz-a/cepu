@@ -38,7 +38,7 @@ pub fn str_imd_fp_instruction(
         );
     }
     if wback {
-        cpu.handle_wback_postindex(postindex, address, offset, datasize, rn);
+        cpu.handle_wback_postindex(postindex, address, offset, rn);
     }
 }
 
@@ -89,7 +89,7 @@ pub fn str_pair_fp_instruction(
     }
 
     if wback {
-        cpu.handle_wback_postindex(postindex, address, offset, datasize, rn);
+        cpu.handle_wback_postindex(postindex, address, offset, rn);
     }
 }
 
@@ -192,7 +192,7 @@ pub fn instruction_ldr_simd_fp(
     cpu.v_write(rt.into(), datasize, data1);
 
     if wback {
-        cpu.handle_wback_postindex(postindex, address, offset, datasize, rn);
+        cpu.handle_wback_postindex(postindex, address, offset, rn);
     }
 }
 
