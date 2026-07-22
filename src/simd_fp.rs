@@ -1277,6 +1277,38 @@ impl OrrVector {
     };
 }
 
+/// BIC (vector, register)
+#[derive(Debug, Clone, Copy)]
+pub struct BicVector {
+    pub q: u8,
+    pub rm: u8,
+    pub rn: u8,
+    pub rd: u8,
+}
+
+impl BicVector {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let datasize = 64 << self.q;
+        let operand1 = cpu.v_read(self.rn.into(), datasize);
+        let operand2 = cpu.v_read(self.rm.into(), datasize);
+        cpu.v_write(self.rd.into(), datasize, operand1 & !operand2);
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let q = get_bits_ct!(word, 30, 1) as u8;
+        let rm = get_bits_ct!(word, 16, 5) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rd = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::BicVector(Self { q, rm, rn, rd })
+    }
+
+    pub const BIC_VECTOR: InstDesc = InstDesc {
+        mask: 0b1011_1111_1110_0000_1111_1100_0000_0000,
+        value: 0b0000_1110_0110_0000_0001_1100_0000_0000,
+        decode: Self::decode,
+    };
+}
+
 /// NOT (vector); alias MVN
 #[derive(Debug, Clone, Copy)]
 pub struct NotVector {
@@ -1772,9 +1804,9 @@ impl AddVectorScalar {
         let operand2 = cpu.v_read(self.rm.into(), datasize);
 
         for e in 0..elements {
-            let element1 = elem_get(operand1, e, datasize.into());
-            let element2 = elem_get(operand2, e, datasize.into());
-            let val = element1 + element2;
+            let element1 = elem_get(operand1, e, esize.into());
+            let element2 = elem_get(operand2, e, esize.into());
+            let val = element1.wrapping_add(element2);
             result = elem_set(result, e as usize, esize as usize, val.bits_get(0, esize));
         }
         cpu.v_write(self.rd.into(), datasize, result);
@@ -1819,12 +1851,12 @@ impl AddVectorVectoral {
         let operand2 = cpu.v_read(self.rm.into(), datasize);
 
         for e in 0..elements {
-            let element1 = elem_get(operand1, e as usize, datasize.into());
-            let element2 = elem_get(operand2, e as usize, datasize.into());
-            let val = element1 + element2;
+            let element1 = elem_get(operand1, e as usize, esize as usize);
+            let element2 = elem_get(operand2, e as usize, esize as usize);
+            let val = element1.wrapping_add(element2);
             result = elem_set(result, e as usize, esize as usize, val.bits_get(0, esize));
         }
-        cpu.v_write(self.rd.into(), datasize, result);    
+        cpu.v_write(self.rd.into(), datasize, result);
     }
 
     pub const fn decode(word: u32) -> Instruction {
@@ -1839,6 +1871,111 @@ impl AddVectorVectoral {
     pub const ADD_VECTOR_VECTORAL: InstDesc = InstDesc {
         mask: 0b1011_1111_0010_0000_1111_1100_0000_0000,
         value: 0b0000_1110_0010_0000_1000_0100_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+/// FADD (vector), single-precision and double-precision
+#[derive(Debug, Clone, Copy)]
+pub struct FaddVector {
+    pub q: u8,
+    pub sz: u8,
+    pub rm: u8,
+    pub rn: u8,
+    pub rd: u8,
+}
+
+impl FaddVector {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let sz_and_q = (self.sz << 1) | self.q;
+        if sz_and_q == 0b10 {
+            panic!("Undefined");
+        }
+        let esize = 32 << self.sz;
+        let datasize = 64 << self.q;
+        let elements = datasize / esize;
+
+        let mut result = 0;
+        let operand1 = cpu.v_read(self.rn.into(), datasize);
+        let operand2 = cpu.v_read(self.rm.into(), datasize);
+
+        for e in 0..elements {
+            let element1 = elem_get(operand1, e as usize, esize as usize);
+            let element2 = elem_get(operand2, e as usize, esize as usize);
+            let val = if esize == 32 {
+                let sum = f32::from_bits(element1 as u32) + f32::from_bits(element2 as u32);
+                sum.to_bits() as u64
+            } else {
+                let sum = f64::from_bits(element1) + f64::from_bits(element2);
+                sum.to_bits()
+            };
+            result = elem_set(result, e as usize, esize as usize, val);
+        }
+        cpu.v_write(self.rd.into(), datasize, result);
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let q = get_bits_ct!(word, 30, 1) as u8;
+        let sz = get_bits_ct!(word, 22, 1) as u8;
+        let rm = get_bits_ct!(word, 16, 5) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rd = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::FaddVector(Self { q, sz, rm, rn, rd })
+    }
+
+    pub const FADD_VECTOR: InstDesc = InstDesc {
+        mask: 0b1011_1111_1010_0000_1111_1100_0000_0000,
+        value: 0b0000_1110_0010_0000_1101_0100_0000_0000,
+        decode: Self::decode,
+    };
+}
+
+/// FCMLT (zero, vector), single-precision and double-precision
+#[derive(Debug, Clone, Copy)]
+pub struct FcmltZeroVector {
+    pub q: u8,
+    pub sz: u8,
+    pub rn: u8,
+    pub rd: u8,
+}
+
+impl FcmltZeroVector {
+    pub fn exec(self, cpu: &mut Cpu, _old_pc: u64) {
+        let sz_and_q = (self.sz << 1) | self.q;
+        if sz_and_q == 0b10 {
+            panic!("Undefined");
+        }
+        let esize = 32 << self.sz;
+        let datasize = 64 << self.q;
+        let elements = datasize / esize;
+
+        let mut result = 0;
+        let operand = cpu.v_read(self.rn.into(), datasize);
+
+        for e in 0..elements {
+            let element = elem_get(operand, e as usize, esize as usize);
+            let test_passed = if esize == 32 {
+                f32::from_bits(element as u32) < 0.0
+            } else {
+                f64::from_bits(element) < 0.0
+            };
+            let val = if test_passed { u64::MAX.bits_get(0, esize) } else { 0 };
+            result = elem_set(result, e as usize, esize as usize, val);
+        }
+        cpu.v_write(self.rd.into(), datasize, result);
+    }
+
+    pub const fn decode(word: u32) -> Instruction {
+        let q = get_bits_ct!(word, 30, 1) as u8;
+        let sz = get_bits_ct!(word, 22, 1) as u8;
+        let rn = get_bits_ct!(word, 5, 5) as u8;
+        let rd = get_bits_ct!(word, 0, 5) as u8;
+        Instruction::FcmltZeroVector(Self { q, sz, rn, rd })
+    }
+
+    pub const FCMLT_ZERO_VECTOR: InstDesc = InstDesc {
+        mask: 0b1011_1111_1011_1111_1111_1100_0000_0000,
+        value: 0b0000_1110_1010_0000_1110_1000_0000_0000,
         decode: Self::decode,
     };
 }
@@ -2003,3 +2140,5 @@ impl LdrSimdRegOffset {
         decode: Self::decode,
     };
 }
+
+

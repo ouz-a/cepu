@@ -180,10 +180,24 @@ impl CepuCel {
     }
 
     pub fn advance_then_set(&mut self) {
-        self.head += 1;
+        assert!(
+            self.buffer_size > 0,
+            "CepuCel queue buffer size was not configured"
+        );
+
+        assert!(
+            self.buffer_size <= u16::MAX as u32 + 1,
+            "CepuCel queue buffer size does not fit the head register"
+        );
+
+        let next_head =
+            (u32::from(self.head) + 1) % self.buffer_size;
+
+        self.head = next_head as u16;
         self.interrupt_state.completed = true;
         self.interrupt_state.error = false;
         self.status = DeviceStatus::Idle;
+
         CEPU_CEL_INTERRUPT_FLAG.store(true, Ordering::SeqCst);
     }
 
