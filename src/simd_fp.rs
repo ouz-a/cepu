@@ -2078,7 +2078,7 @@ impl AddVectorScalar {
             let element1 = elem_get(operand1, e, esize.into());
             let element2 = elem_get(operand2, e, esize.into());
             let val = element1.wrapping_add(element2);
-            result = elem_set(result, e as usize, esize as usize, val.bits_get(0, esize));
+            result = elem_set(result, e, esize as usize, val.bits_get(0, esize));
         }
         cpu.v_write(self.rd.into(), datasize, result);
     }
