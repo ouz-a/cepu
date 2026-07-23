@@ -3,8 +3,6 @@
 
 use std::{
     collections::VecDeque,
-    path::PathBuf,
-    str::FromStr,
     sync::{Arc, Condvar, Mutex, atomic::Ordering},
     time::Duration,
 };
@@ -133,9 +131,10 @@ fn main() {
 
     //validate_and_load_elf_header(&mut cpu,
     // Path::new("./.executables/boot.elf"));
-    load_device_blob(&mut cpu, &PathBuf::from_str("/Users/ouz/code/cepu_now/cepu.dtb").unwrap());
-    load_kernel_image(&mut cpu, &PathBuf::from_str("/Users/ouz/code/cepu_now/Image").unwrap());
-    load_initramfs(&PathBuf::from_str("/Users/ouz/code/cepu_now/initramfs.cpio").unwrap());
+    let repo = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+    load_device_blob(&mut cpu, &repo.join("cepu.dtb"));
+    load_kernel_image(&mut cpu, &repo.join("Image"));
+    load_initramfs(&repo.join("initramfs.cpio"));
 
     let _ = std::thread::spawn(move || {
         let (cepu_cel, cvar) = &*cepu_cel_clone;

@@ -1,3 +1,13 @@
 /target
 /.*
 */.*
+
+# Build artifacts (see docs/running.md for how to generate)
+Image
+Image.bak
+initramfs/
+initramfs*.cpio*
+cepu.dtb
+*.ko
+bin/
+profile.json.gz
