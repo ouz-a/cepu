@@ -4,7 +4,13 @@ version = "0.1.0"
 edition = "2024"
 description = "AArch64 system emulator that boots Linux to a BusyBox shell"
 license = "MIT"
-repository = "https://github.com/ouz-a/cepu_now"
+repository = "https://github.com/ouz-a/cepu"
 readme = "README.md"
 
+[profile.profiling]
+inherits = "release"
+debug = true
+strip = "none"
+
 [dependencies]
+
