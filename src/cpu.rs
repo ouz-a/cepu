@@ -10,9 +10,9 @@ use std::{
 
 use crate::{
     accelerator::CEPU_CEL_INTERRUPT_FLAG, get_bits_ct, gic::InterruptState,
-    instruction::UNDEF_PANIC, memory::PhyMemStatus, mmu::Mmu, utils::*,
+    instruction::UNDEF_PANIC, memory::PhyMemStatus, mmu::Mmu, sys::*, utils::*,
 };
-pub const MEM_TOP: usize = crate::memory::MEMORY_SIZE;
+pub const MEM_TOP: usize = crate::sys::MEMORY_SIZE;
 
 static START: OnceLock<Instant> = OnceLock::new();
 pub const MAX_SLEEP_NS: u64 = 80 * 1000 * 1000;
@@ -282,6 +282,21 @@ pub struct Cpu {
 impl Cpu {
     pub fn init() -> Self {
         let mut cpu = Self { uart_debug: String::new(), ..Default::default() };
+        let address_space = Arc::get_mut(&mut cpu.mmu.bus.address_space).unwrap();
+        address_space.len = mb(256);
+        address_space.base = unsafe {
+            mmap(
+                std::ptr::null_mut(),
+                mb(256),
+                PROT_READ | PROT_WRITE,
+                MAP_ANON | MAP_PRIVATE,
+                -1,
+                0,
+            )
+        };
+        if cpu.mmu.bus.address_space.base as isize == -1 {
+            panic!("mmap failed: {}", std::io::Error::last_os_error());
+        }
         cpu.pstate.sp = 1;
 
         cpu.sp_el0 = 0x100000; // 1MB

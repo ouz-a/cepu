@@ -1,10 +1,5 @@
 use std::{fs, mem::MaybeUninit, path::Path, slice};
 
-use crate::{
-    cpu::Cpu,
-    memory::{MEMORY, MEMORY_SIZE},
-};
-
 pub const EI_NIDENT: usize = 16;
 
 pub const EI_MAG0: usize = 0;
@@ -130,7 +125,7 @@ fn read_elf64_header(buf: &[u8]) -> Option<Elf64Ehdr> {
     }
 }
 
-pub fn validate_and_load_elf_header(cpu: &mut Cpu, path: &Path) {
+pub fn validate_and_load_elf_header(path: &Path) {
     let buf = match fs::read(path) {
         Ok(dat) => dat,
         Err(err) => panic!("Failed to read ELF path {path:?} because {err}"),
@@ -140,10 +135,10 @@ pub fn validate_and_load_elf_header(cpu: &mut Cpu, path: &Path) {
         None => panic!("Data is not valid ELF file"),
     };
     validate_elf_header(&elf);
-    load_elf_header(cpu, &elf, &buf);
+    //load_elf_header(cpu, &elf, &buf);
 }
 
-fn create_program_headers<'a>(elf: &Elf64Ehdr, file: &[u8]) -> &'a [Elf64Phdr] {
+fn _create_program_headers<'a>(elf: &Elf64Ehdr, file: &[u8]) -> &'a [Elf64Phdr] {
     let phdr_size = size_of::<Elf64Phdr>();
     let start = elf.e_phoff as usize;
     let count = elf.e_phnum as usize;
@@ -160,6 +155,7 @@ fn create_program_headers<'a>(elf: &Elf64Ehdr, file: &[u8]) -> &'a [Elf64Phdr] {
     }
 }
 
+/*
 fn load_elf_header(cpu: &mut Cpu, elf: &Elf64Ehdr, file: &[u8]) {
     let headers = create_program_headers(elf, file);
 
@@ -190,3 +186,4 @@ fn load_elf_header(cpu: &mut Cpu, elf: &Elf64Ehdr, file: &[u8]) {
     cpu.pc = elf.e_entry;
     println!("Starting pc is: {}", cpu.pc);
 }
+*/

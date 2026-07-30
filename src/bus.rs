@@ -17,19 +17,75 @@ pub const CEL_END: usize = CEL_BEG + 4096;
 
 use std::sync::{Arc, Condvar, Mutex};
 
-use crate::CepuCel;
+use crate::{CepuCel, sys::*};
+
+#[derive(Default, Debug)]
+pub struct AddressSpace {
+    pub base: *mut u8,
+    pub len: usize,
+    pub dirty: Vec<u8>,
+}
+
+impl AddressSpace {
+    pub fn read(&self, address: usize, size: usize) -> (PhyMemStatus, u64) {
+        assert!(matches!(size, 1 | 2 | 4 | 8));
+        assert!(address + size <= MEMORY_SIZE);
+
+        let mut status = PhyMemStatus::default();
+        let ret_val;
+        unsafe {
+            let src = self.base.add(address);
+            let mut value = [0u8; 8];
+            core::ptr::copy_nonoverlapping(src, value.as_mut_ptr(), size);
+            ret_val = u64::from_le_bytes(value);
+        }
+        status.fault_status = FaultStatus::None;
+        (status, ret_val)
+    }
+
+    pub fn write(&self, address: usize, size: usize, value: u64) -> PhyMemStatus {
+        assert!(matches!(size, 1 | 2 | 4 | 8));
+        assert!(address + size <= MEMORY_SIZE);
+
+        let mut status = PhyMemStatus::default();
+        unsafe {
+            let dst = self.base.add(address);
+            let bytes = value.to_le_bytes();
+            let src = bytes.as_ptr();
+
+            core::ptr::copy_nonoverlapping(src, dst, size);
+        }
+        status.fault_status = FaultStatus::None;
+        status
+    }
+
+    pub fn write_slice(&self, slice: &[u8], offset: usize) {
+        unsafe {
+            std::ptr::copy_nonoverlapping(slice.as_ptr(), self.base.add(offset), slice.len());
+        }
+    }
+
+    pub fn read_struct<T>(&self, address: usize) -> T {
+        assert!(address + core::mem::size_of::<T>() <= self.len);
+        unsafe { core::ptr::read_unaligned(self.base.add(address) as *const T) }
+    }
+}
+
+unsafe impl Send for AddressSpace {}
+unsafe impl Sync for AddressSpace {}
 
 #[derive(Default, Debug)]
 pub struct Bus {
     pub uart: Uart,
     pub gic: Gic,
     pub cepu_cel: Arc<(Mutex<CepuCel>, Condvar)>,
+    pub address_space: Arc<AddressSpace>,
 }
 
 impl Bus {
     pub fn read_memory(&mut self, address: usize, size: usize) -> (PhyMemStatus, u64) {
         match address {
-            RAM_RANGE_BEG..=RAM_RANGE_END => Bus::read_memory_impl(address, size),
+            RAM_RANGE_BEG..=RAM_RANGE_END => self.address_space.read(address, size),
             GIC_DIST_BEG..=GIC_DIST_END | GIC_CPU_BEG..=GIC_CPU_END => {
                 let val = self.gic.read(address as u64);
                 (PhyMemStatus::default(), val as u64)
@@ -48,7 +104,7 @@ impl Bus {
     /// Size as in bytes not bits
     pub fn write_memory(&mut self, address: usize, size: usize, value: u64) -> PhyMemStatus {
         match address {
-            RAM_RANGE_BEG..=RAM_RANGE_END => Bus::write_memory_impl(address, size, value),
+            RAM_RANGE_BEG..=RAM_RANGE_END => self.address_space.write(address, size, value),
             GIC_DIST_BEG..=GIC_DIST_END | GIC_CPU_BEG..=GIC_CPU_END => {
                 self.gic.write(address as u64, value as u32);
                 PhyMemStatus::default()
@@ -74,35 +130,7 @@ impl Bus {
         }
     }
 
-    fn read_memory_impl(address: usize, size: usize) -> (PhyMemStatus, u64) {
-        assert!(matches!(size, 1 | 2 | 4 | 8));
-        assert!(address + size <= MEMORY_SIZE);
-
-        let mut status = PhyMemStatus::default();
-        let ret_val;
-        unsafe {
-            let src = (core::ptr::addr_of!(MEMORY) as *const u8).add(address);
-            let mut value = [0u8; 8];
-            core::ptr::copy_nonoverlapping(src, value.as_mut_ptr(), size);
-            ret_val = u64::from_le_bytes(value);
-        }
-        status.fault_status = FaultStatus::None;
-        (status, ret_val)
-    }
-
-    fn write_memory_impl(address: usize, size: usize, value: u64) -> PhyMemStatus {
-        assert!(matches!(size, 1 | 2 | 4 | 8));
-        assert!(address + size <= MEMORY_SIZE);
-
-        let mut status = PhyMemStatus::default();
-        unsafe {
-            let dst = (core::ptr::addr_of_mut!(MEMORY) as *mut u8).add(address);
-            let bytes = value.to_le_bytes();
-            let src = bytes.as_ptr();
-
-            core::ptr::copy_nonoverlapping(src, dst, size);
-        }
-        status.fault_status = FaultStatus::None;
-        status
+    pub fn write_slice(&mut self, slice: &[u8], offset: usize) {
+        self.address_space.write_slice(slice, offset);
     }
 }

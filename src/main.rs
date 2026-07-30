@@ -16,13 +16,14 @@ use crate::{
         CURRENT_PC, DESCR, UNDEF_PANIC, capture_trace, decode, print_undefined_trace,
         validate_tables,
     },
-    memory::{MEMORY_SIZE, read_32},
+    sys::MEMORY_SIZE,
 };
 // Core
 pub mod bus;
 pub mod cpu;
 pub mod memory;
 pub mod mmu;
+pub mod sys;
 
 // Instruction decode/execute
 pub mod branch;
@@ -63,7 +64,7 @@ pub fn run_block(cpu: &mut Cpu) {
             let word = if cpu.mmu.enabled {
                 cpu.read_memory(old_pc as usize, 4).1 as u32
             } else {
-                read_32(old_pc as usize)
+                cpu.read_memory(old_pc as usize, 4).1 as u32
             };
             if cpu.mmu.faulted {
                 cpu.handle_instruction_abort(&mut pc);
@@ -134,8 +135,9 @@ fn main() {
     let repo = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
     load_device_blob(&mut cpu, &repo.join("cepu.dtb"));
     load_kernel_image(&mut cpu, &repo.join("Image"));
-    load_initramfs(&repo.join("initramfs.cpio"));
+    load_initramfs(&mut cpu, &repo.join("initramfs.cpio"));
 
+    let ram_clone = cpu.mmu.bus.address_space.clone();
     let _ = std::thread::spawn(move || {
         let (cepu_cel, cvar) = &*cepu_cel_clone;
         let mut guard = cepu_cel.lock().unwrap();
@@ -146,9 +148,9 @@ fn main() {
             let (base, head) = guard.get_base_head();
             guard.status = DeviceStatus::Busy;
             drop(guard);
-            let command = CepuCel::get_command(base, head);
+            let command = CepuCel::get_command(&ram_clone, base, head);
             let Commands::MatMul(mut command) = command;
-            command.work();
+            command.work(&ram_clone);
             guard = cepu_cel.lock().unwrap();
             guard.advance_then_set();
         }

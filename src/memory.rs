@@ -1,29 +1,5 @@
 use core::ffi::c_void;
 
-pub const MEMORY_SIZE: usize = 64 << 22;
-
-pub static mut MEMORY: [u8; MEMORY_SIZE] = [0; MEMORY_SIZE];
-
-/*
-MEMORY {
-  ROM (rx)  : ORIGIN = 0x00000000, LENGTH = 0x8000
-  RAM (rwx) : ORIGIN = 0x00008000, LENGTH = 0x100000
-}
-*/
-
-pub fn read_32(address: usize) -> u32 {
-    assert!(address + 3 < MEMORY_SIZE);
-    let instruction: u32 = unsafe {
-        u32::from_le_bytes([
-            MEMORY[address],
-            MEMORY[address + 1],
-            MEMORY[address + 2],
-            MEMORY[address + 3],
-        ])
-    };
-    instruction
-}
-
 #[repr(u8)]
 #[derive(Default, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum FaultStatus {
