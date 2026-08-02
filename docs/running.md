@@ -10,7 +10,7 @@ You also need Rust nightly (`edition = "2024"`) and `dtc` (device tree compiler)
 
 ## Kernel
 
-Build a Linux arm64 kernel however you prefer. I use 6.19.11 with Clang/LLD in Docker, but any arm64 cross-compile setup works. Start from `defconfig` and tweak:
+Build a Linux arm64 kernel however you prefer. I use 7.1-rc2 from [Andreas Hindborg's rnull tree](https://git.kernel.org/pub/scm/linux/kernel/git/a.hindborg/linux.git) (branch `rnull-v7.1-rc2`, which carries the Rust block-layer bindings the CepuCel work builds on) with Clang/LLD in Docker, but any arm64 cross-compile setup works. Note that Rust support on 7.1 needs rustc >= 1.85.0 and bindgen >= 0.71.1. Start from `defconfig` and tweak:
 
 ```
 # the emulator only does 4KB pages, 48-bit VA/PA, no LPA2

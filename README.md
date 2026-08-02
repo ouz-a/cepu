@@ -3,7 +3,7 @@
 ![Cepu booting Linux to a shell](demo.gif)
 
 Cepu (short for cerebral processing unit) is an AArch64 system emulator.
-It boots Linux 6.19 to a BusyBox shell in about 3 seconds on my MacBook using a device tree and
+It boots Linux 7.1 to a BusyBox shell in about 3 seconds on my MacBook using a device tree and
 initramfs. It includes a custom accelerator device (CepuCel) and an out-of-tree
 Rust kernel driver that lets the emulator run simple CNN models.
 

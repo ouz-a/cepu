@@ -8,9 +8,9 @@ use kernel::{
     c_str,
     device::{Bound, Core, Device},
     devres::Devres,
-    dma::{CoherentAllocation, Device as _, DmaMask},
+    dma::{Coherent, Device as _, DmaMask},
     fs::File,
-    io::mem::IoMem,
+    io::{Io, mem::IoMem},
     ioctl::{_IOC_SIZE, _IOW},
     irq,
     irq::{Flags, IrqReturn},
@@ -195,9 +195,9 @@ impl Data {
 impl irq::ThreadedHandler for Data {
     fn handle_threaded(&self, dev: &Device<Bound>) -> IrqReturn {
         if let Ok(io) = self.iomem.access(dev) {
-            let state = io.read8_relaxed(REG_INT_STATE as usize);
+            let state = io.relaxed().read8(REG_INT_STATE as usize);
             dev_dbg!(dev, "irq: int_state = {:#x}\n", state);
-            io.write8_relaxed(0u8, REG_INT_STATE as usize);
+            io.relaxed().write8(0u8, REG_INT_STATE as usize);
         }
         self.signal_completion();
         IrqReturn::Handled
@@ -205,10 +205,10 @@ impl irq::ThreadedHandler for Data {
 }
 
 struct SubmissionBuffers {
-    queue: CoherentAllocation<MatMulCmd>,
-    a: CoherentAllocation<u32>,
-    b: CoherentAllocation<u32>,
-    result: CoherentAllocation<u32>,
+    queue: Coherent<[MatMulCmd]>,
+    a: Coherent<[u32]>,
+    b: Coherent<[u32]>,
+    result: Coherent<[u32]>,
     tail: Cell<u16>,
 }
 
@@ -255,16 +255,16 @@ impl DeviceState {
 
         for index in 0..a_len {
             let value = input_a_reader.read::<u32>()?;
-            kernel::dma_write!(buffers.a[index] = value)?;
+            kernel::dma_write!(buffers.a, [index]?, value);
         }
 
         for index in 0..b_len {
             let value = input_b_reader.read::<u32>()?;
-            kernel::dma_write!(buffers.b[index] = value)?;
+            kernel::dma_write!(buffers.b, [index]?, value);
         }
 
         for index in 0..result_len {
-            kernel::dma_write!(buffers.result[index] = 0xDEAD_BEEFu32)?;
+            kernel::dma_write!(buffers.result, [index]?, 0xDEAD_BEEFu32);
         }
 
         let io = self.irq.handler().iomem.try_access().ok_or(ENODEV)?;
@@ -289,22 +289,22 @@ impl DeviceState {
 
         let next_tail_index = (queue_index + 1) % QUEUE_CAPACITY;
         let next_tail = u16::try_from(next_tail_index).map_err(|_| EOVERFLOW)?;
-        let head = io.read16_relaxed(REG_HEAD as usize);
+        let head = io.relaxed().read16(REG_HEAD as usize);
 
         if next_tail == head {
             return Err(ENOSPC);
         }
 
-        kernel::dma_write!(buffers.queue[queue_index] = cmd)?;
+        kernel::dma_write!(buffers.queue, [queue_index]?, cmd);
 
         buffers.tail.set(next_tail);
 
-        io.write16_relaxed(next_tail, REG_TAIL as usize);
+        io.relaxed().write16(next_tail, REG_TAIL as usize);
 
         let completion_before = self.irq.handler().completion_snapshot();
 
         dev_dbg!(dev, "ringing doorbell\n");
-        io.write8_relaxed(1u8, REG_DOOR_BELL as usize);
+        io.relaxed().write8(1u8, REG_DOOR_BELL as usize);
 
         drop(io);
 
@@ -315,7 +315,7 @@ impl DeviceState {
         dev_dbg!(dev, "completion signalled\n");
 
         for index in 0..result_len {
-            let value = kernel::dma_read!(buffers.result[index])?;
+            let value = kernel::dma_read!(buffers.result, [index]?);
             result_writer.write::<u32>(&value)?;
         }
 
@@ -358,32 +358,28 @@ impl platform::Driver for CepuCel {
         let irq = Arc::pin_init(irq_init, GFP_KERNEL)?;
         let io = irq.handler().iomem.access(pdev.as_ref())?;
 
-        io.write8_relaxed(0b11, REG_CONTROL as usize);
-        let reg_control = io.read32_relaxed(REG_CONTROL as usize);
+        io.relaxed().write8(0b11, REG_CONTROL as usize);
+        let reg_control = io.relaxed().read32(REG_CONTROL as usize);
         dev_dbg!(dev, "control register: {}\n", reg_control);
 
         let mask = DmaMask::new::<32>();
 
         unsafe { pdev.dma_set_mask_and_coherent(mask)? };
 
-        let queue: CoherentAllocation<MatMulCmd> =
-            CoherentAllocation::alloc_coherent(dev, QUEUE_CAPACITY, GFP_KERNEL)?;
+        let queue: Coherent<[MatMulCmd]> = Coherent::zeroed_slice(dev, QUEUE_CAPACITY, GFP_KERNEL)?;
         let dma_handle = queue.dma_handle();
         dev_dbg!(dev, "queue DMA handle: {}\n", dma_handle);
 
-        io.write32_relaxed(dma_handle as u32, REG_QUEUE_BASE as usize);
-        io.write32_relaxed(QUEUE_CAPACITY as u32, REG_BUFFER_SIZE as usize);
-        let q_base = io.read32_relaxed(REG_QUEUE_BASE as usize);
+        io.relaxed().write32(dma_handle as u32, REG_QUEUE_BASE as usize);
+        io.relaxed().write32(QUEUE_CAPACITY as u32, REG_BUFFER_SIZE as usize);
+        let q_base = io.relaxed().read32(REG_QUEUE_BASE as usize);
         dev_dbg!(dev, "queue base register: {}\n", q_base);
 
-        let a: CoherentAllocation<u32> =
-            CoherentAllocation::alloc_coherent(dev, MATRIX_CAPACITY, GFP_KERNEL)?;
+        let a: Coherent<[u32]> = Coherent::zeroed_slice(dev, MATRIX_CAPACITY, GFP_KERNEL)?;
 
-        let b: CoherentAllocation<u32> =
-            CoherentAllocation::alloc_coherent(dev, MATRIX_CAPACITY, GFP_KERNEL)?;
+        let b: Coherent<[u32]> = Coherent::zeroed_slice(dev, MATRIX_CAPACITY, GFP_KERNEL)?;
 
-        let result: CoherentAllocation<u32> =
-            CoherentAllocation::alloc_coherent(dev, MATRIX_CAPACITY, GFP_KERNEL)?;
+        let result: Coherent<[u32]> = Coherent::zeroed_slice(dev, MATRIX_CAPACITY, GFP_KERNEL)?;
 
         let state = Arc::pin_init(
             try_pin_init!(DeviceState {
