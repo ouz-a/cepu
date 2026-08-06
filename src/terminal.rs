@@ -24,7 +24,7 @@ unsafe extern "C" {
     fn tcgetattr(fd: i32, termios: *mut Termios) -> i32;
     fn tcsetattr(fd: i32, action: i32, termios: *const Termios) -> i32;
     fn fcntl(fd: i32, cmd: i32, ...) -> i32;
-    fn read(fd: i32, buf: *mut u8, count: usize) -> isize;
+    fn read(fd: i32, buf: *mut core::ffi::c_void, count: usize) -> isize;
 }
 
 pub struct RawTerminal {
@@ -60,6 +60,6 @@ impl Drop for RawTerminal {
 /// Try to read one byte from stdin. Returns None if nothing available.
 pub fn try_read_byte() -> Option<u8> {
     let mut byte = 0u8;
-    let n = unsafe { read(0, &mut byte, 1) };
+    let n = unsafe { read(0, (&raw mut byte).cast(), 1) };
     if n == 1 { Some(byte) } else { None }
 }
